@@ -17,12 +17,12 @@ DIST = ROOT / "dist"
 
 CHECKLIST = [
     "exhibit.yaml status is review or published",
-    "media/manifest.yaml hashes match media-store objects",
+    "media/manifest.yaml hashes match in-repo assets or media-store objects",
     "Library folder exhibits/<slug> populated in CMS",
     "Layout built from framework template and previewed",
     "schedule/intent.yaml reflected in CMS schedules",
     "catalog entry updated",
-    "No masters committed under exhibits/ or media/",
+    "No files ≥ 2 MB (or video) committed under exhibits/ — those use the media store",
 ]
 
 

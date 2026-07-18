@@ -2,16 +2,196 @@
 exhibit: humpback-migration
 store: media-store-primary
 assets:
-  # Example placeholder — replace uri/sha256 after uploading masters to the media store.
-  - id: hero-video
-    role: hero-video
-    filename: humpback-migration-hero.mp4
-    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
-    uri: "sha256/00/0000000000000000000000000000000000000000000000000000000000000000"
-    mime: video/mp4
-    bytes: 0
-    durationSeconds: 60
+  # --- Scene 1: The Epic Journey ---
+  - id: bg-migration-map
+    role: scene-bg
+    filename: bg-migration-map.jpg
+    sha256: "b564a4aca3865ac954fc392f66ce153e61f0205907dec84e18b30323753f1589"
+    uri: exhibits/humpback-migration/media/assets/bg-migration-map.jpg
+    mime: image/jpeg
+    bytes: 460205
     xiboTags:
       - exhibit:humpback-migration
-      - role:hero-video
-    preview: hero-thumb.jpg
+      - role:scene-bg
+      - scene:1
+    preview: bg-migration-map-thumb.jpg
+
+  - id: graphic-whale-swim
+    role: scene-graphic
+    filename: graphic-whale-swim.png
+    sha256: "20701fa64628ca367b400204b1aa95bb19ce074ab56450a671a4169c639f296b"
+    uri: exhibits/humpback-migration/media/assets/graphic-whale-swim.png
+    mime: image/png
+    bytes: 586302
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:1
+    preview: graphic-whale-swim-thumb.jpg
+
+  - id: graphic-migration-route
+    role: scene-graphic
+    filename: graphic-migration-route.png
+    sha256: "5c60df6b85d42b7a5a19bf90e39f1234db2e75aa0c792cc2b1f3177f6dbd1885"
+    uri: exhibits/humpback-migration/media/assets/graphic-migration-route.png
+    mime: image/png
+    bytes: 17321
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:1
+
+  # --- Scene 2: The Cold Buffet ---
+  - id: bg-polar-seas
+    role: scene-bg
+    filename: bg-polar-seas.jpg
+    sha256: "bd92304210283e935b8659e830616c71f6f1fc03690e46c65ab3f1145c8f0bf3"
+    uri: exhibits/humpback-migration/media/assets/bg-polar-seas.jpg
+    mime: image/jpeg
+    bytes: 394040
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-bg
+      - scene:2
+    preview: bg-polar-seas-thumb.jpg
+
+  - id: graphic-krill-school
+    role: scene-graphic
+    filename: graphic-krill-school.png
+    sha256: "5fb2c2f35da33ad0d9ca5d13fcfcbf98fa906d9ac024f54b05a631a4f70f6955"
+    uri: exhibits/humpback-migration/media/assets/graphic-krill-school.png
+    mime: image/png
+    bytes: 1439281
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:2
+
+  # --- Scene 3: The Warm Nursery ---
+  - id: bg-tropical-ocean
+    role: scene-bg
+    filename: bg-tropical-ocean.jpg
+    sha256: "db63cd4d4868decb7dbb4fb2d3df36d94c0d9c6a64677c861b703840f509b8de"
+    uri: exhibits/humpback-migration/media/assets/bg-tropical-ocean.jpg
+    mime: image/jpeg
+    bytes: 422293
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-bg
+      - scene:3
+    preview: bg-tropical-ocean-thumb.jpg
+
+  - id: graphic-mother-calf
+    role: scene-graphic
+    filename: graphic-mother-calf.png
+    sha256: "0bf448a8b957e5d8e474d272e9a622d6ebbd5e98b74d4618cc99c5aaede2e0e4"
+    uri: exhibits/humpback-migration/media/assets/graphic-mother-calf.png
+    mime: image/png
+    bytes: 869996
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:3
+    preview: graphic-mother-calf-thumb.jpg
+
+  # --- Scene 4: The Ocean's Gardeners ---
+  - id: bg-nutrient-depths
+    role: scene-bg
+    filename: bg-nutrient-depths.jpg
+    sha256: "051f58bd54b51540e82f0f4ae9876eb3bd5bc27c6ccf1a41a7e72850dc625bf6"
+    uri: exhibits/humpback-migration/media/assets/bg-nutrient-depths.jpg
+    mime: image/jpeg
+    bytes: 421436
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-bg
+      - scene:4
+
+  - id: graphic-food-web
+    role: scene-graphic
+    filename: graphic-food-web.png
+    sha256: "879a0f88996b2bdb566ae150b9c065bd43f438b25def904e27c4e558bf4985e2"
+    uri: exhibits/humpback-migration/media/assets/graphic-food-web.png
+    mime: image/png
+    bytes: 573906
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:4
+
+  # --- Scene 5: The Journey's Dangers ---
+  - id: bg-open-ocean-muted
+    role: scene-bg
+    filename: bg-open-ocean-muted.jpg
+    sha256: "005fa643ff26441639d8f75888ecd08d840ae96dee9943e3110e20358e3e794c"
+    uri: exhibits/humpback-migration/media/assets/bg-open-ocean-muted.jpg
+    mime: image/jpeg
+    bytes: 189599
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-bg
+      - scene:5
+
+  - id: graphic-ship-silhouette
+    role: scene-graphic
+    filename: graphic-ship-silhouette.png
+    sha256: "6de58c03b19f9a3a41e59a1bebf08219ce525e896eb0874e59a9c1985e655f56"
+    uri: exhibits/humpback-migration/media/assets/graphic-ship-silhouette.png
+    mime: image/png
+    bytes: 237933
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:5
+
+  - id: graphic-net-warning
+    role: scene-graphic
+    filename: graphic-net-warning.png
+    sha256: "82fafcd878136170543e04dccb5cfe89aa9d33015008e704f35faae223a7a1ac"
+    uri: exhibits/humpback-migration/media/assets/graphic-net-warning.png
+    mime: image/png
+    bytes: 246454
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:5
+
+  # --- Scene 6: Be a Whale Hero ---
+  - id: bg-hero-splash
+    role: scene-bg
+    filename: bg-hero-splash.jpg
+    sha256: "0f9ab94ff3a54eae0c8b37c8360fc56bd5744b8c3d9b3e573bf07a536481987b"
+    uri: exhibits/humpback-migration/media/assets/bg-hero-splash.jpg
+    mime: image/jpeg
+    bytes: 387645
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-bg
+      - scene:6
+    preview: bg-hero-splash-thumb.jpg
+
+  - id: graphic-whale-tail
+    role: scene-graphic
+    filename: graphic-whale-tail.png
+    sha256: "a887ea17b6dd9e3390f9aae90a67c8779bc781fd34e49029fbe5eb6d3645cfd6"
+    uri: exhibits/humpback-migration/media/assets/graphic-whale-tail.png
+    mime: image/png
+    bytes: 672431
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:scene-graphic
+      - scene:6
+
+  # --- Accent overlay (full loop) ---
+  - id: accent-bubbles-loop
+    role: accent-loop
+    filename: accent-bubbles-loop.zip
+    sha256: "b76518b642b5ac0c000a88a426aefa4264afdcc0574523163b10d1c260c69879"
+    uri: exhibits/humpback-migration/media/assets/accent-bubbles-loop.zip
+    mime: application/zip
+    bytes: 881
+    durationSeconds: 90
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:accent-loop
+    preview: accent-bubbles-thumb.jpg

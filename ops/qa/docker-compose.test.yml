@@ -1,0 +1,149 @@
+# Ephemeral Xibo CMS + headless Linux player stack for visual QA.
+# Usage (from repo root or this directory):
+#   docker compose -f ops/qa/docker-compose.test.yml --env-file ops/qa/config.env up -d --build
+#
+# Tear down and remove volumes:
+#   docker compose -f ops/qa/docker-compose.test.yml down -v --remove-orphans
+
+name: xibo-qa
+
+services:
+  cms-db:
+    image: mysql:8.4
+    container_name: xibo-qa-cms-db
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-allowed-packet=256M
+    environment:
+      MYSQL_DATABASE: cms
+      MYSQL_USER: cms
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xiboQaMysqlPass16}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xiboQaRootPass16}
+    volumes:
+      - qa-db-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-ucms",
+          "-p${MYSQL_PASSWORD:-xiboQaMysqlPass16}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    networks:
+      - qa-net
+
+  cms-memcached:
+    image: memcached:alpine
+    container_name: xibo-qa-cms-memcached
+    command: memcached -m 64
+    networks:
+      - qa-net
+
+  cms-quickchart:
+    image: ianw/quickchart
+    container_name: xibo-qa-cms-quickchart
+    networks:
+      - qa-net
+
+  cms-xmr:
+    image: ghcr.io/xibosignage/xibo-xmr:1.3
+    container_name: xibo-qa-cms-xmr
+    environment:
+      XMR_DEBUG: "false"
+    ports:
+      - "${XMR_HOST_PORT:-9505}:9505"
+    networks:
+      - qa-net
+
+  cms-web:
+    image: ghcr.io/xibosignage/xibo-cms:release-4.4.4
+    container_name: xibo-qa-cms-web
+    depends_on:
+      cms-db:
+        condition: service_healthy
+      cms-xmr:
+        condition: service_started
+      cms-memcached:
+        condition: service_started
+      cms-quickchart:
+        condition: service_started
+    environment:
+      MYSQL_HOST: cms-db
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: cms
+      MYSQL_USER: cms
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xiboQaMysqlPass16}
+      XMR_HOST: cms-xmr
+      CMS_SERVER_NAME: ${CMS_SERVER_NAME:-localhost}
+      CMS_USE_MEMCACHED: "true"
+      MEMCACHED_HOST: cms-memcached
+      CMS_QUICK_CHART_URL: http://cms-quickchart:3400
+      # Fresh CMS installs bootstrap with xibo_admin / password (change in non-ephemeral envs).
+      CMS_USAGE_REPORT: "false"
+    volumes:
+      - qa-cms-library:/var/www/cms/library
+      - qa-cms-custom:/var/www/cms/custom
+      - qa-cms-backup:/var/www/backup
+    ports:
+      - "${CMS_HOST_PORT:-8080}:80"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1/login || curl -fsS http://127.0.0.1/ || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    networks:
+      - qa-net
+
+  kiosk-player:
+    build:
+      context: .
+      dockerfile: Dockerfile.player
+      args:
+        XIBO_PLAYER_SNAP_CHANNEL: ${XIBO_PLAYER_SNAP_CHANNEL:-stable}
+    image: marine-mammal-kiosks/xibo-qa-player:local
+    container_name: xibo-qa-kiosk-player
+    depends_on:
+      cms-web:
+        condition: service_healthy
+    environment:
+      DISPLAY_NUM: "99"
+      SCREEN_GEOMETRY: 1920x1080x24
+      ARTIFACTS_DIR: /artifacts
+      XIBO_CMS_URL: ${XIBO_CMS_INTERNAL_URL:-http://cms-web}
+      XIBO_CMS_KEY: ${XIBO_CMS_KEY:-}
+      XIBO_DISPLAY_NAME: ${XIBO_DISPLAY_NAME:-qa-kiosk-01}
+      XIBO_HARDWARE_KEY: ${XIBO_HARDWARE_KEY:-qa-kiosk-01-hw}
+    volumes:
+      - qa-player-artifacts:/artifacts
+      # Host bind mount so the orchestrator can write cmsSettings.xml without docker exec.
+      - ./player-runtime:/var/lib/xibo-player
+    # Player + Xvfb need broad device access for extracted snap runtimes.
+    privileged: true
+    shm_size: "1gb"
+    networks:
+      - qa-net
+    restart: unless-stopped
+
+networks:
+  qa-net:
+    driver: bridge
+
+volumes:
+  qa-db-data:
+  qa-cms-library:
+  qa-cms-custom:
+  qa-cms-backup:
+  qa-player-artifacts:

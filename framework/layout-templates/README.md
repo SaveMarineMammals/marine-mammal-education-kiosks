@@ -6,6 +6,7 @@ Reusable Xibo layout patterns. Each subdirectory is a template `id` referenced f
 | --- | --- |
 | [`full-bleed-video`](full-bleed-video/) | Single region, edge-to-edge video |
 | [`image-caption`](image-caption/) | Still + lower-third caption |
+| [`layered-stills-loop`](layered-stills-loop/) | Multi-region stills + text; motion via transitions (no video) |
 | [`html-interactive`](html-interactive/) | HTML widget shell for lightweight interactivity |
 
 Build instances in CMS from these recipes. Do not commit media-heavy layout export ZIPs here.

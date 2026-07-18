@@ -42,7 +42,7 @@
           },
           "uri": {
             "type": "string",
-            "description": "Media-store key or URL (prefer content-addressed sha256 path)."
+            "description": "Repo-relative path for in-repo assets (images/sound under 2 MB), or media-store key/URL for large/video files (prefer content-addressed sha256 path)."
           },
           "mime": {
             "type": "string"
