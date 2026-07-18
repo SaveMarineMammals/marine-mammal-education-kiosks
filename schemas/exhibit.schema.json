@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marine-mammal-education-kiosks.local/schemas/exhibit.schema.json",
+  "title": "Exhibit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "slug", "title", "status", "version"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable UUID or opaque id for the exhibit package.",
+      "minLength": 1
+    },
+    "slug": {
+      "type": "string",
+      "description": "kebab-case folder name; must not change after publish.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "review", "published", "retired"]
+    },
+    "version": {
+      "type": "string",
+      "description": "Semver for the content package.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "species": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "topics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "displayGroups": {
+      "type": "array",
+      "description": "Logical Xibo display group names (location/role).",
+      "items": { "type": "string" }
+    },
+    "layoutTemplate": {
+      "type": "string",
+      "description": "framework/layout-templates id this exhibit instantiates."
+    },
+    "media": {
+      "type": "array",
+      "description": "Optional inline media index; prefer media/manifest.yaml as source of truth.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "filename", "sha256", "uri"],
+        "properties": {
+          "role": { "type": "string" },
+          "filename": { "type": "string" },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "uri": { "type": "string" },
+          "xiboTags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

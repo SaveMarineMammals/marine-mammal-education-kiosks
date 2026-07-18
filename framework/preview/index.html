@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kiosk preview — branding &amp; layouts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/preview.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <p class="eyebrow">Marine mammal education kiosks</p>
+      <h1>Local preview</h1>
+      <p class="lede">
+        Branding tokens and layout-template mockups at 1920×1080 (scaled). Design aid only —
+        not a substitute for Xibo player playback.
+      </p>
+      <p id="status" class="status" role="status">Loading tokens…</p>
+    </header>
+
+    <main>
+      <section class="panel" aria-labelledby="branding-heading">
+        <h2 id="branding-heading">Branding</h2>
+        <p class="section-note">
+          Colors and type from <code>framework/branding/tokens.json</code>. Safe margin shown as a dashed inset on canvases.
+        </p>
+        <div id="swatches" class="swatches"></div>
+        <div class="type-specimen">
+          <p class="specimen-display" data-bind="title">Humpback Whale Migration</p>
+          <p class="specimen-body" data-bind="caption">
+            Each year, humpbacks travel thousands of miles between feeding and breeding grounds.
+          </p>
+          <p class="specimen-meta">
+            Display · <span id="font-display">Fraunces</span>
+            · Body · <span id="font-body">Source Sans 3</span>
+            · Min caption · <span id="min-caption">28</span>px
+          </p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="layouts-heading">
+        <h2 id="layouts-heading">Layout templates</h2>
+        <p class="section-note">
+          Sample copy from <code>exhibits/humpback-migration/copy/en.md</code> when available.
+          Placeholder media stands in for Library assets.
+        </p>
+
+        <div class="template-grid">
+          <article class="template-card">
+            <header>
+              <h3>full-bleed-video</h3>
+              <p>Edge-to-edge video with optional lower-third caption.</p>
+            </header>
+            <div class="stage" data-template="full-bleed-video">
+              <div class="canvas" style="width: 1920px; height: 1080px">
+                <div class="safe-margin" aria-hidden="true"></div>
+                <div class="layer media video-placeholder" role="img" aria-label="Placeholder hero video"></div>
+                <div class="layer lower-third">
+                  <p class="kicker">Now showing</p>
+                  <h4 data-bind="title">Humpback Whale Migration</h4>
+                  <p data-bind="caption">
+                    Each year, humpbacks travel thousands of miles between feeding and breeding grounds.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="template-card">
+            <header>
+              <h3>image-caption</h3>
+              <p>Full-bleed still with caption in the safe margin.</p>
+            </header>
+            <div class="stage" data-template="image-caption">
+              <div class="canvas" style="width: 1920px; height: 1080px">
+                <div class="safe-margin" aria-hidden="true"></div>
+                <div class="layer media image-placeholder" role="img" aria-label="Placeholder hero still"></div>
+                <div class="layer caption-block">
+                  <h4 data-bind="title">Humpback Whale Migration</h4>
+                  <p data-bind="caption">
+                    Each year, humpbacks travel thousands of miles between feeding and breeding grounds.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="template-card">
+            <header>
+              <h3>html-interactive</h3>
+              <p>Lightweight quiz shell for future HTML widgets.</p>
+            </header>
+            <div class="stage" data-template="html-interactive">
+              <div class="canvas interactive" style="width: 1920px; height: 1080px">
+                <div class="safe-margin" aria-hidden="true"></div>
+                <div class="interactive-shell">
+                  <p class="kicker">Explore</p>
+                  <h4 data-bind="title">Humpback Whale Migration</h4>
+                  <p class="prompt">Why do protected ocean corridors matter for migrating whales?</p>
+                  <ul class="choices">
+                    <li><button type="button">They shorten the swim</button></li>
+                    <li><button type="button" class="is-preferred">They reduce human threats along the route</button></li>
+                    <li><button type="button">They change the seasons</button></li>
+                  </ul>
+                  <p class="hint" data-bind="cta">
+                    Learn how protected ocean corridors help whales complete their journey.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Serve from the <strong>repo root</strong> so token and copy fetches resolve. See
+        <code>framework/preview/README.md</code>.
+      </p>
+    </footer>
+
+    <script src="js/preview.js" type="module"></script>
+  </body>
+</html>

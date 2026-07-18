@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../schemas/catalog.schema.json
+exhibits:
+  - id: "00000000-0000-4000-8000-000000000001"
+    slug: humpback-migration
+    title: Humpback Whale Migration
+    status: draft
+    version: 0.1.0
+    path: exhibits/humpback-migration
+    tags:
+      - whales
+      - migration
+      - pacific

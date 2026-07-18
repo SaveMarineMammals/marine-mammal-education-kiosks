@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000001"
+slug: humpback-migration
+title: Humpback Whale Migration
+status: draft
+version: 0.1.0
+summary: >
+  Follow humpback whales along their seasonal migration routes and learn why
+  protected corridors matter for marine mammal conservation.
+species:
+  - Megaptera novaeangliae
+topics:
+  - migration
+  - conservation
+  - pacific-ocean
+tags:
+  - whales
+  - migration
+  - pacific
+displayGroups:
+  - lobby
+layoutTemplate: full-bleed-video

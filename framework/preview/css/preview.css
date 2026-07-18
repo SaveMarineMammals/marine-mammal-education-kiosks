@@ -1,0 +1,420 @@
+:root {
+  --ocean-deep: #0b3d5c;
+  --ocean-mid: #1a6b8a;
+  --foam: #e8f4f8;
+  --sand: #d4c4a8;
+  --ink: #1a1a1a;
+  --accent: #c45c26;
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+  --min-caption: 28;
+  --canvas-w: 1920;
+  --canvas-h: 1080;
+  --safe-inset: 96px;
+  --stage-scale: 0.32;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--ocean-mid) 35%, transparent), transparent),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--sand) 40%, transparent), transparent),
+    linear-gradient(180deg, var(--foam), #f7fafb 40%, #eef5f7);
+  font-family: var(--font-body);
+  line-height: 1.45;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.site-header,
+.panel,
+.site-footer {
+  width: min(1120px, calc(100% - 2.5rem));
+  margin-inline: auto;
+}
+
+.site-header {
+  padding: 2.75rem 0 1.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--ocean-mid);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ocean-deep);
+}
+
+.lede {
+  max-width: 40rem;
+  margin: 0.75rem 0 0;
+  color: color-mix(in srgb, var(--ink) 72%, var(--ocean-deep));
+  font-size: 1.05rem;
+}
+
+.status {
+  margin: 1rem 0 0;
+  color: var(--ocean-mid);
+  font-size: 0.9rem;
+}
+
+.status[data-state="error"] {
+  color: var(--accent);
+}
+
+.status[data-state="ok"] {
+  color: color-mix(in srgb, var(--ocean-deep) 80%, green);
+}
+
+.panel {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem 0 0;
+}
+
+.panel h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  color: var(--ocean-deep);
+}
+
+.section-note {
+  margin: 0.5rem 0 1.25rem;
+  color: color-mix(in srgb, var(--ink) 65%, var(--ocean-mid));
+  font-size: 0.95rem;
+}
+
+.section-note code {
+  font-size: 0.85em;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.swatch {
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: white;
+  animation: rise 0.6s ease both;
+}
+
+.swatch-chip {
+  height: 72px;
+}
+
+.swatch-meta {
+  padding: 0.55rem 0.65rem 0.7rem;
+}
+
+.swatch-meta strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.swatch-meta span {
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.type-specimen {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ocean-deep) 92%, black), var(--ocean-mid));
+  color: var(--foam);
+  animation: rise 0.7s ease 0.05s both;
+}
+
+.specimen-display {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.specimen-body {
+  margin: 0.65rem 0 0;
+  max-width: 36rem;
+  font-size: 1.1rem;
+  opacity: 0.92;
+}
+
+.specimen-meta {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.template-grid {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.template-card header h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--ocean-deep);
+}
+
+.template-card header p {
+  margin: 0.35rem 0 0.85rem;
+  color: color-mix(in srgb, var(--ink) 60%, var(--ocean-mid));
+  font-size: 0.95rem;
+}
+
+.stage {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--ocean-deep) 18%, transparent);
+  background: #0a2436;
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--ocean-deep) 18%, transparent);
+  animation: rise 0.75s ease both;
+}
+
+.stage:nth-of-type(1),
+.template-card:nth-child(1) .stage {
+  animation-delay: 0.08s;
+}
+
+.template-card:nth-child(2) .stage {
+  animation-delay: 0.14s;
+}
+
+.template-card:nth-child(3) .stage {
+  animation-delay: 0.2s;
+}
+
+.canvas {
+  position: relative;
+  transform-origin: top left;
+  transform: scale(var(--stage-scale));
+  margin-bottom: calc(var(--canvas-h) * 1px * (var(--stage-scale) - 1));
+  width: calc(var(--canvas-w) * 1px);
+  height: calc(var(--canvas-h) * 1px);
+  overflow: hidden;
+  color: var(--foam);
+  transition: transform 0.35s ease;
+}
+
+.stage:hover .canvas,
+.stage:focus-within .canvas {
+  transform: scale(calc(var(--stage-scale) * 1.01));
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+}
+
+.safe-margin {
+  z-index: 5;
+  inset: var(--safe-inset);
+  border: 1px dashed color-mix(in srgb, var(--foam) 35%, transparent);
+  pointer-events: none;
+}
+
+.media {
+  background-size: cover;
+  background-position: center;
+}
+
+.video-placeholder {
+  background-image:
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--ocean-deep) 75%, black) 100%),
+    url("../assets/ocean-placeholder.svg");
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.image-placeholder {
+  background-image:
+    linear-gradient(180deg, transparent 50%, color-mix(in srgb, var(--ocean-deep) 80%, black) 100%),
+    url("../assets/ocean-placeholder.svg");
+  filter: saturate(1.05);
+}
+
+.lower-third {
+  inset: auto 0 0 0;
+  height: 38%;
+  padding: var(--safe-inset);
+  padding-top: 4rem;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ocean-deep) 88%, black));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.lower-third .kicker,
+.interactive-shell .kicker {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sand);
+}
+
+.lower-third h4,
+.caption-block h4,
+.interactive-shell h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.lower-third p,
+.caption-block p {
+  margin: 0;
+  max-width: 70%;
+  font-size: calc(var(--min-caption) * 1px);
+  line-height: 1.35;
+}
+
+.caption-block {
+  inset: auto var(--safe-inset) var(--safe-inset) var(--safe-inset);
+  top: auto;
+  height: auto;
+  padding: 1.5rem 1.75rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--ocean-deep) 78%, transparent);
+  backdrop-filter: blur(6px);
+  width: fit-content;
+  max-width: calc(100% - (var(--safe-inset) * 2));
+}
+
+.canvas.interactive {
+  background:
+    radial-gradient(800px 500px at 20% 20%, color-mix(in srgb, var(--ocean-mid) 50%, transparent), transparent),
+    linear-gradient(160deg, var(--ocean-deep), #061820 70%);
+}
+
+.interactive-shell {
+  position: absolute;
+  inset: var(--safe-inset);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  max-width: 1100px;
+}
+
+.interactive-shell .prompt {
+  margin: 0.5rem 0 0;
+  font-size: 36px;
+  max-width: 28ch;
+}
+
+.choices {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+  max-width: 900px;
+}
+
+.choices button {
+  width: 100%;
+  text-align: left;
+  border: 2px solid color-mix(in srgb, var(--foam) 35%, transparent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--ocean-deep) 40%, transparent);
+  color: var(--foam);
+  padding: 1rem 1.25rem;
+  font: inherit;
+  font-size: 30px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.choices button:hover,
+.choices button:focus-visible {
+  background: color-mix(in srgb, var(--ocean-mid) 55%, transparent);
+  border-color: var(--foam);
+  outline: none;
+  transform: translateX(6px);
+}
+
+.choices button.is-preferred {
+  border-color: var(--sand);
+}
+
+.hint {
+  margin: 1rem 0 0;
+  font-size: 26px;
+  color: color-mix(in srgb, var(--foam) 80%, var(--sand));
+}
+
+.site-footer {
+  padding: 1rem 0 2.5rem;
+  color: color-mix(in srgb, var(--ink) 55%, var(--ocean-mid));
+  font-size: 0.9rem;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  from {
+    background-position: 40% 40%;
+  }
+  to {
+    background-position: 60% 55%;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --stage-scale: 0.2;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --stage-scale: 0.155;
+  }
+
+  .site-header,
+  .panel,
+  .site-footer {
+    width: min(1120px, calc(100% - 1.25rem));
+  }
+}

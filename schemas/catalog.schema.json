@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marine-mammal-education-kiosks.local/schemas/catalog.schema.json",
+  "title": "Exhibit catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["exhibits"],
+  "properties": {
+    "exhibits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "slug", "title", "status", "version", "path"],
+        "properties": {
+          "id": { "type": "string" },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "title": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "review", "published", "retired"]
+          },
+          "version": { "type": "string" },
+          "path": {
+            "type": "string",
+            "description": "Repo-relative path to the exhibit folder."
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

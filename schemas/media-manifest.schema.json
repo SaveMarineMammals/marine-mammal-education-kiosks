@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marine-mammal-education-kiosks.local/schemas/media-manifest.schema.json",
+  "title": "Exhibit media manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["exhibit", "assets"],
+  "properties": {
+    "exhibit": {
+      "type": "string",
+      "description": "Must match the exhibit slug.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "store": {
+      "type": "string",
+      "description": "Logical media store name (e.g. nas-primary, minio-exhibits)."
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "filename", "sha256", "uri", "mime"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable asset id within the exhibit.",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "description": "How the asset is used (hero-video, caption-still, attract-loop, audio-bed, etc.)."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Original or library filename for Xibo."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "uri": {
+            "type": "string",
+            "description": "Media-store key or URL (prefer content-addressed sha256 path)."
+          },
+          "mime": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "durationSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "xiboTags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "preview": {
+            "type": "string",
+            "description": "Optional path relative to media/previews/ committed in Git."
+          }
+        }
+      }
+    }
+  }
+}

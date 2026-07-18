@@ -1,0 +1,17 @@
+# Schedule intent: Humpback Migration
+
+Logical targets for CMS scheduling (bind in Xibo; keep this file as the design intent).
+
+```yaml
+displayGroups:
+  - lobby
+priority: normal
+dayparts:
+  - name: open-hours
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "09:00"
+    end: "17:00"
+notes: >
+  Attract/idle content from framework/playlists should fill gaps when this
+  exhibit is not scheduled.
+```
