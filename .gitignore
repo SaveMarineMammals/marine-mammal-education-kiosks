@@ -15,6 +15,16 @@
 credentials.json
 secrets/
 
+# Ephemeral Xibo visual QA (ops/qa)
+ops/qa/config.env
+ops/qa/.venv/
+ops/qa/player-runtime/
+!ops/qa/player-runtime/README.md
+ops/qa/artifacts/**
+!ops/qa/artifacts/README.md
+ops/qa/fixtures/qa-sample.png
+ops/qa/shared/
+
 # OS / editor
 .DS_Store
 Thumbs.db

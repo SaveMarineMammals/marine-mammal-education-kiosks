@@ -1,2 +1,6 @@
 # Optional dependencies for tools/
 PyYAML>=6.0
+
+# Ephemeral visual QA (ops/qa/run_qa_pipeline.py) — also listed in ops/qa/requirements.txt
+# requests>=2.31
+# Pillow>=10.0

@@ -84,9 +84,16 @@ Confirm the exhibit contract catches mistakes:
 
 When finished experimenting, either keep the new exhibit as a real draft or delete the folder and run `python tools/catalog.py --write` again.
 
-## 5. Media workflow (local files only)
+## 5. Media workflow (local files)
 
-Masters stay out of Git. Local authoring path:
+**Images and sound under 2 MB** may be committed under `exhibits/<slug>/media/assets/`. Only large files (≥ 2 MB) and video use the external media store.
+
+In-repo example:
+
+1. Place a small PNG under `exhibits/humpback-migration/media/assets/`.
+2. Compute a SHA-256 and record it in `media/manifest.yaml` with a repo-relative `uri`.
+
+Large-file example:
 
 1. Place a test file under `media/humpback-migration/masters/` (gitignored).
 2. Compute a SHA-256 and record it in `exhibits/humpback-migration/media/manifest.yaml` with a store `uri` (use a placeholder until a real media store exists).
@@ -99,12 +106,34 @@ Live upload to Xibo is **not** implemented in `sync_media.py` yet — without `-
 | Piece | Needs |
 | --- | --- |
 | Live media sync to CMS | Media store + Xibo API credentials (see [`.env.example`](../.env.example)) and a completed `sync_media.py` |
+| Headless visual QA | Docker + [ops/qa/](../ops/qa/) (`run_qa_pipeline.py`) |
 | Actual kiosk playback | Xibo CMS + Xibo Linux Player on a Pi (or Linux VM) |
 | Layout rendering | Layouts built in the CMS from recipes under `framework/layout-templates/` |
 
-## 7. Next: CMS + player integration test
+## 7. Ephemeral CMS + headless player visual QA
 
-When you are ready to test real playback:
+Automated integration test without a physical Pi — see **[ops/qa/](../ops/qa/)**:
+
+```powershell
+cd ops\qa
+copy config.env.example config.env
+python -m pip install -r requirements.txt
+python run_qa_pipeline.py -v
+# or: python run_qa_pipeline.py -v --exhibit humpback-migration --duration 30
+```
+
+This boots an isolated Docker Compose stack (CMS web, MySQL, XMR, headless player
+on Xvfb 1920×1080), injects media via OAuth2, and captures the framebuffer.
+
+When the exhibit has `layouts/timeline.yaml`, the default capture is a **Chromium
+timeline preview** (scene fades/slides/text) — not the Xibo Linux Player binary.
+That hybrid path produces useful motion clips while true multi-region Xibo
+playback under Docker remains a follow-up. Artifacts land in `ops/qa/artifacts/`;
+the stack and volumes are removed on exit unless you pass `--keep-stack`.
+
+## 8. Next: production CMS + Pi integration test
+
+When you are ready to test real kiosk playback:
 
 1. Stand up **Xibo CMS Open Source Edition** (Docker is typical; see [ops/cms/README.md](../ops/cms/README.md)).
 2. Copy `.env.example` to `.env` and fill CMS URL / API credentials (never commit `.env`).

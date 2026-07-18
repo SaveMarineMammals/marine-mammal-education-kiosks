@@ -3,20 +3,23 @@ id: "00000000-0000-4000-8000-000000000001"
 slug: humpback-migration
 title: Humpback Whale Migration
 status: draft
-version: 0.1.0
+version: 0.3.0
 summary: >
-  Follow humpback whales along their seasonal migration routes and learn why
-  protected corridors matter for marine mammal conservation.
+  A 90-second looping kiosk story that teaches why humpback migrations matter,
+  written for an 8-year-old reading level and built from layered stills
+  (no video) with Xibo region transitions.
 species:
   - Megaptera novaeangliae
 topics:
   - migration
   - conservation
   - pacific-ocean
+  - food-web
 tags:
   - whales
   - migration
   - pacific
+  - kids
 displayGroups:
   - lobby
-layoutTemplate: full-bleed-video
+layoutTemplate: layered-stills-loop

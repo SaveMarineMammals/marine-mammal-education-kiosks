@@ -19,6 +19,8 @@ XIBO_CLIENT_SECRET=
 MEDIA_STORE_URI=s3://exhibits/  # or file:// path to NAS mount
 ```
 
+For an **ephemeral local CMS + headless player** used in CI-style visual QA, see [../qa/](../qa/) (`docker-compose.test.yml` + `run_qa_pipeline.py`).
+
 ## Folder taxonomy
 
 Mirror Git exhibit slugs in the Library:
@@ -43,9 +45,9 @@ Library/
 | `playlist:<name>` | Shared playlist media |
 | `status:published` | Optional; CMS may also track via folders |
 
-## Sync flow (media store → Library)
+## Sync flow (repo / media store → Library)
 
-1. Author updates `exhibits/<slug>/media/manifest.yaml` with `sha256` + store `uri`.
+1. Author updates `exhibits/<slug>/media/manifest.yaml` with `sha256` + `uri` (repo-relative for images/sound under 2 MB; store key for video / files ≥ 2 MB).
 2. `tools/sync-media` (or manual upload) copies objects whose hashes are not yet in the Library.
 3. Files land in `exhibits/<slug>/` with tags from the manifest.
 4. Layout authors attach Library items; schedules bind campaigns to **display groups** (location/role names).

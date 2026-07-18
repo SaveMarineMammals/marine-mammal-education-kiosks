@@ -13,7 +13,7 @@ This repository is the **source of truth for exhibit design and operations**. Xi
 | [`ops/`](ops/) | CMS, Pi provisioning, networking, runbooks |
 | [`tools/`](tools/) | CLI helpers (validate, sync, package, catalog) |
 | [`docs/`](docs/) | Architecture and authoring guides |
-| `media/` | Local working copies of masters (**gitignored**) |
+| `media/` | Local working copies of **large** masters (**gitignored**) |
 | `dist/` | Build/export artifacts (**gitignored**) |
 
 ## Framework vs exhibit
@@ -23,7 +23,7 @@ This repository is the **source of truth for exhibit design and operations**. Xi
 
 ## Media policy
 
-Large video and stills live in an external **media store** (NAS or S3-compatible bucket), not in Git. Each exhibit’s `media/manifest.yaml` points at content-addressed store keys. See [docs/architecture.md](docs/architecture.md).
+Only **large** files (≥ 2 MB, or any video) live in an external **media store** (NAS or S3-compatible bucket). **Images and sound under 2 MB each** may be committed under `exhibits/<slug>/media/` (or `framework/` when shared). Each exhibit’s `media/manifest.yaml` records hashes and either a repo-relative path or a store key. See [docs/architecture.md](docs/architecture.md).
 
 ## Adding an exhibit
 
@@ -31,7 +31,7 @@ Large video and stills live in an external **media store** (NAS or S3-compatible
 2. Use a stable **kebab-case** slug for the folder name (do not rename after publish).
 3. Fill in `exhibit.yaml`, `copy/`, `layouts/`, `media/manifest.yaml`, and `schedule/`.
 4. Register the exhibit in [`exhibits/_catalog.yaml`](exhibits/_catalog.yaml).
-5. Place masters under `media/<slug>/masters/` locally, then sync into the media store and Xibo.
+5. Commit images/sound under 2 MB into `exhibits/<slug>/media/assets/`; stage larger masters under `media/<slug>/masters/` for the media store, then sync into Xibo.
 
 ## Docs
 

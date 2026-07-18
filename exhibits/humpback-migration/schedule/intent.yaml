@@ -6,12 +6,16 @@ Logical targets for CMS scheduling (bind in Xibo; keep this file as the design i
 displayGroups:
   - lobby
 priority: normal
+layoutDurationSeconds: 90
+loop: continuous
 dayparts:
   - name: open-hours
     days: [mon, tue, wed, thu, fri, sat, sun]
     start: "09:00"
     end: "17:00"
 notes: >
-  Attract/idle content from framework/playlists should fill gaps when this
-  exhibit is not scheduled.
+  Schedule the layered-stills-loop layout for continuous playback during open
+  hours. Layout duration is exactly 90 seconds (6 × 15s scenes). Attract/idle
+  content from framework/playlists should fill gaps when this exhibit is not
+  scheduled. No video modules on this layout.
 ```

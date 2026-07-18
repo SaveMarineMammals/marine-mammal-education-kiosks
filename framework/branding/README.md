@@ -1,6 +1,6 @@
 # Branding
 
-Small shared visual identity assets. Prefer files under ~2 MB in Git.
+Small shared visual identity assets. Images and sound under **2 MB each** may live in Git; larger files use the media store.
 
 Preview colors and type locally via [`../preview/`](../preview/).
 

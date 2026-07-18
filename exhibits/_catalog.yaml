@@ -4,9 +4,10 @@ exhibits:
     slug: humpback-migration
     title: Humpback Whale Migration
     status: draft
-    version: 0.1.0
+    version: 0.3.0
     path: exhibits/humpback-migration
     tags:
       - whales
       - migration
       - pacific
+      - kids

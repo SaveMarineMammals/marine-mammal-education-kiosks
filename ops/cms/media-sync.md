@@ -2,7 +2,7 @@
 
 ## Goal
 
-Keep large masters out of Git while ensuring Xibo Library content matches each exhibit’s `media/manifest.yaml`.
+Keep **large** masters (video, files ≥ 2 MB) out of Git while ensuring Xibo Library content matches each exhibit’s `media/manifest.yaml`. Images and sound under 2 MB may be committed under `exhibits/<slug>/media/` and synced from the repo.
 
 ## Prerequisites
 
@@ -13,11 +13,11 @@ Keep large masters out of Git while ensuring Xibo Library content matches each e
 ## Procedure
 
 1. **Validate** manifests: `python tools/validate_exhibits.py` (or future CLI entrypoint).
-2. **Fetch** from store by `uri` into a temp dir (or stream upload).
-3. **Verify** downloaded bytes match `sha256`.
+2. **Resolve** each asset: repo-relative `uri` → read from Git tree; store `uri` → fetch from media store.
+3. **Verify** bytes match `sha256`.
 4. **Upload** to Xibo Library folder `exhibits/<slug>` if that hash/filename is missing or outdated.
 5. **Apply tags** from `xiboTags` (always include `exhibit:<slug>`).
-6. **Record** sync result in ops logs (optional); do not commit binaries.
+6. **Record** sync result in ops logs (optional); do not commit large binaries (≥ 2 MB) or video.
 
 ## Content-addressed keys
 

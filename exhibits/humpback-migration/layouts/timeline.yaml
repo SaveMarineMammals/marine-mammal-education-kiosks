@@ -1,0 +1,257 @@
+# Widget timeline script — Humpback Migration
+# Precise schedule for the 90-second looping layout.
+# Bind widgets in Xibo to these start/duration marks within each region playlist.
+
+layoutId: humpback-migration-layered-stills
+template: layered-stills-loop
+durationSeconds: 90
+loop: true
+resolution: { width: 1920, height: 1080 }
+
+regions:
+  accent:
+    # Plays for the entire layout; does not reset per scene.
+    widgets:
+      - id: accent-bubbles
+        type: html-package
+        asset: accent-bubbles-loop
+        startSeconds: 0
+        durationSeconds: 90
+        transitionIn: none
+        transitionOut: none
+        notes: Looping bubbles/spout; transparent corner overlay.
+
+  background:
+    widgets:
+      - id: bg-s1
+        type: image
+        asset: bg-migration-map
+        startSeconds: 0
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+      - id: bg-s2
+        type: image
+        asset: bg-polar-seas
+        startSeconds: 15
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+      - id: bg-s3
+        type: image
+        asset: bg-tropical-ocean
+        startSeconds: 30
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+      - id: bg-s4
+        type: image
+        asset: bg-nutrient-depths
+        startSeconds: 45
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+      - id: bg-s5
+        type: image
+        asset: bg-open-ocean-muted
+        startSeconds: 60
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+      - id: bg-s6
+        type: image
+        asset: bg-hero-splash
+        startSeconds: 75
+        durationSeconds: 15
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 800
+
+  midground:
+    widgets:
+      # Scene 1 — route fades first; whale slides in to simulate travel
+      - id: mid-s1-route
+        type: image
+        asset: graphic-migration-route
+        startSeconds: 1
+        durationSeconds: 14
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 600
+
+      - id: mid-s1-whale
+        type: image
+        asset: graphic-whale-swim
+        startSeconds: 2
+        durationSeconds: 13
+        transitionIn: slideInLeft
+        transitionOut: fade
+        transitionDurationMs: 1000
+
+      # Scene 2
+      - id: mid-s2-krill
+        type: image
+        asset: graphic-krill-school
+        startSeconds: 17
+        durationSeconds: 13
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 600
+
+      # Scene 3 — tropical bg at 30s; mother/calf slides in at 32s (swim feel)
+      - id: mid-s3-mother-calf
+        type: image
+        asset: graphic-mother-calf
+        startSeconds: 32
+        durationSeconds: 13
+        transitionIn: slideInRight
+        transitionOut: fade
+        transitionDurationMs: 1000
+
+      # Scene 4
+      - id: mid-s4-food-web
+        type: image
+        asset: graphic-food-web
+        startSeconds: 47
+        durationSeconds: 13
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 600
+
+      # Scene 5 — ship then net, staggered
+      - id: mid-s5-ship
+        type: image
+        asset: graphic-ship-silhouette
+        startSeconds: 62
+        durationSeconds: 13
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 600
+
+      - id: mid-s5-net
+        type: image
+        asset: graphic-net-warning
+        startSeconds: 64
+        durationSeconds: 11
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 600
+
+      # Scene 6
+      - id: mid-s6-tail
+        type: image
+        asset: graphic-whale-tail
+        startSeconds: 77
+        durationSeconds: 13
+        transitionIn: slideInUp
+        transitionOut: fade
+        transitionDurationMs: 800
+
+  text:
+    # Copy source: ../copy/en.md — Source Sans 3, ≥36px, dark scrim
+    widgets:
+      - id: text-s1
+        type: text
+        scene: 1
+        startSeconds: 1
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: none
+        copy: >
+          Humpback whales travel up to 5,000 miles every year!
+          That is like walking across the USA and back.
+
+      - id: text-s2
+        type: text
+        scene: 2
+        startSeconds: 16
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: none
+        copy: >
+          Summer in the Polar Seas: Time to eat!
+          Whales gulp down thousands of pounds of tiny krill to build up thick blubber.
+
+      - id: text-s3
+        type: text
+        scene: 3
+        startSeconds: 31
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: none
+        copy: >
+          Winter in the Tropics: Time for family!
+          Mothers give birth in warm waters so their babies stay safe and warm.
+
+      - id: text-s4
+        type: text
+        scene: 4
+        startSeconds: 46
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: tickerScroll
+        notes: Optional ticker if static text feels flat; keep speed readable for kids.
+        copy: >
+          Why migration matters: As whales travel, they mix up ocean nutrients.
+          This helps tiny sea plants grow, which gives us oxygen to breathe!
+
+      - id: text-s5
+        type: text
+        scene: 5
+        startSeconds: 61
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: none
+        copy: >
+          A Risky Trip: Whales must dodge big ships, plastic pollution,
+          and tangled fishing nets on their long walk through the waves.
+
+      - id: text-s6
+        type: text
+        scene: 6
+        startSeconds: 76
+        durationSeconds: 14
+        transitionIn: fadeIn
+        transitionOut: fade
+        effect: none
+        copy: >
+          You can help! Keep beaches clean, use less plastic,
+          and protect our blue planet. Enjoy the exhibit!
+
+# Second-mark cue sheet (quick CMS checklist)
+cueSheet:
+  - { t: 0, action: "background: bg-migration-map Fade In; accent running" }
+  - { t: 1, action: "midground: route Fade In; text scene 1 Fade In" }
+  - { t: 2, action: "midground: whale Slide In Left" }
+  - { t: 15, action: "background: bg-polar-seas Fade; clear scene-1 mid/text" }
+  - { t: 16, action: "text scene 2 Fade In" }
+  - { t: 17, action: "midground: krill Fade In" }
+  - { t: 30, action: "background: bg-tropical-ocean Fade" }
+  - { t: 31, action: "text scene 3 Fade In" }
+  - { t: 32, action: "midground: mother+calf Slide In Right" }
+  - { t: 45, action: "background: bg-nutrient-depths Fade" }
+  - { t: 46, action: "text scene 4 Fade In (optional ticker)" }
+  - { t: 47, action: "midground: food-web Fade In" }
+  - { t: 60, action: "background: bg-open-ocean-muted Fade" }
+  - { t: 61, action: "text scene 5 Fade In" }
+  - { t: 62, action: "midground: ship Fade In" }
+  - { t: 64, action: "midground: net warning Fade In" }
+  - { t: 75, action: "background: bg-hero-splash Fade" }
+  - { t: 76, action: "text scene 6 Fade In" }
+  - { t: 77, action: "midground: whale-tail Slide In Up" }
+  - { t: 90, action: "layout loops to t=0" }

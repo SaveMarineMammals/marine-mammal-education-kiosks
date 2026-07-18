@@ -7,7 +7,7 @@ This monorepo holds **exhibit source** (copy, layout recipes, media manifests) a
 | System | Responsibility |
 | --- | --- |
 | This repo | Source of truth for design, metadata, ops docs/scripts |
-| Media store (NAS / S3-compatible) | Large masters (video, high-res stills, audio) |
+| Media store (NAS / S3-compatible) | Large masters only (video, files ≥ 2 MB) |
 | Xibo CMS | Library, layouts, schedules, display management |
 | Xibo Linux Player (Raspberry Pi) | Playback on kiosk TVs |
 
@@ -16,8 +16,9 @@ This monorepo holds **exhibit source** (copy, layout recipes, media manifests) a
 ```text
 Author edits exhibit in Git
         |
-        v
-Masters land in media store (sha256 keys)
+        +-- images/sound under 2 MB committed under exhibits/<slug>/media/
+        |
+        +-- large/video masters → media store (sha256 keys)
         |
         v
 tools/sync-media uploads changed files into Xibo Library
@@ -34,12 +35,13 @@ Players pull layouts + media via XMDS
 
 ## Media strategy
 
-- **In Git:** YAML, copy, layout recipes, branding under ~2 MB, optional tiny preview thumbs.
-- **Optional Git LFS:** stills/clips under ~5 MB when convenient early on.
-- **Media store:** long video, large stills, audio beds — referenced by `sha256` and store URI in each exhibit’s `media/manifest.yaml`.
-- **Not in Git:** `media/` working copies, `dist/` layout export ZIPs that embed full library files, secrets/credentials.
+Only **large** files should be referenced from the external media store. Images and sound may live in this repo when each file is under **2 MB**.
 
-Prefer **content-addressed keys** in the store (e.g. `sha256/<hex-prefix>/<hex>`) so replacements are explicit and players/CMS caches stay coherent.
+- **In Git:** YAML, copy, layout recipes; **images and sound under 2 MB each** (typically under `exhibits/<slug>/media/assets/` or shared `framework/`); optional preview thumbs.
+- **Media store:** video and any file **≥ 2 MB** — referenced by `sha256` and store URI in each exhibit’s `media/manifest.yaml`.
+- **Not in Git:** root `media/` working copies of large masters, `dist/` layout export ZIPs that embed full library files, secrets/credentials.
+
+Manifest `uri` values are either **repo-relative paths** (in-repo assets) or **content-addressed store keys** (e.g. `sha256/<hex-prefix>/<hex>`) so replacements stay explicit and players/CMS caches stay coherent.
 
 ## Naming conventions
 
