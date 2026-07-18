@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: humpback-migration
+store: media-store-primary
+assets:
+  # Example placeholder — replace uri/sha256 after uploading masters to the media store.
+  - id: hero-video
+    role: hero-video
+    filename: humpback-migration-hero.mp4
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    uri: "sha256/00/0000000000000000000000000000000000000000000000000000000000000000"
+    mime: video/mp4
+    bytes: 0
+    durationSeconds: 60
+    xiboTags:
+      - exhibit:humpback-migration
+      - role:hero-video
+    preview: hero-thumb.jpg

@@ -1,0 +1,21 @@
+# Optional Git LFS for mid-size binaries committed under exhibits or framework.
+# Install Git LFS, then: git lfs install
+# Large masters still belong in the external media store — not here.
+
+# Stills and short clips under exhibits (typically keep under ~5 MB)
+exhibits/**/media/previews/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+exhibits/**/media/previews/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+exhibits/**/media/previews/**/*.png filter=lfs diff=lfs merge=lfs -text
+exhibits/**/media/previews/**/*.webp filter=lfs diff=lfs merge=lfs -text
+exhibits/**/media/previews/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+exhibits/**/media/previews/**/*.webm filter=lfs diff=lfs merge=lfs -text
+
+# Shared branding binaries (logos/fonts when added as non-text)
+framework/branding/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.png filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.webp filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.ttf filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.otf filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.woff filter=lfs diff=lfs merge=lfs -text
+framework/branding/**/*.woff2 filter=lfs diff=lfs merge=lfs -text
