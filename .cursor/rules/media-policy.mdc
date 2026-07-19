@@ -1,0 +1,13 @@
+---
+description: Media size policy — in-repo images/sound vs external media store
+alwaysApply: true
+---
+
+# Media storage policy
+
+Follow the canonical policy in [`docs/media-policy.md`](../../docs/media-policy.md)
+(also summarized in [`AGENTS.md`](../../AGENTS.md)).
+
+In short: commit images/sound **under 2 MB** under `exhibits/<slug>/media/`; send
+video and files **≥ 2 MB** to the external media store; never commit secrets or
+media-heavy Xibo export ZIPs. Full rules: `docs/media-policy.md`.

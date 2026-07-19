@@ -21,6 +21,67 @@ LAYERED_STILLS_REGIONS: dict[str, dict[str, int]] = {
     "accent": {"left": 1580, "top": 40, "width": 280, "height": 280, "zIndex": 3},
 }
 
+# glance-and-match region geometry (Zone A / B art+copy / C)
+# Hero is split so the habitat wash fills the pane (no letterboxing) while the
+# ID still sits in a lower frame. Art and copy are separated by a clear gap;
+# copy sits on an opaque scrim so pane art never shows through the bullets.
+GLANCE_AND_MATCH_REGIONS: dict[str, dict[str, int]] = {
+    "insights-bg": {"left": 800, "top": 0, "width": 1120, "height": 1080, "zIndex": 0},
+    "hero-bg": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
+    "hero-still": {"left": 40, "top": 300, "width": 720, "height": 740, "zIndex": 2},
+    "hero-labels": {"left": 24, "top": 24, "width": 752, "height": 260, "zIndex": 3},
+    "insights-art": {"left": 840, "top": 32, "width": 1040, "height": 440, "zIndex": 2},
+    # Copy ends well above the ticker so the two text bands are not adjacent.
+    "insights-copy": {"left": 840, "top": 500, "width": 1040, "height": 280, "zIndex": 3},
+    "ticker": {"left": 800, "top": 940, "width": 1120, "height": 140, "zIndex": 4},
+}
+
+
+def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str, int]]:
+    """Pick CMS region geometry from timeline template / region names."""
+    template = str(timeline.get("template") or "").strip()
+    regions = timeline.get("regions") or {}
+    region_names = set(regions.keys()) if isinstance(regions, dict) else set()
+    glance_keys = {
+        "hero",
+        "hero-bg",
+        "hero-still",
+        "hero-labels",
+        "insights",
+        "insights-bg",
+        "insights-art",
+        "insights-copy",
+        "ticker",
+    }
+    if template == "glance-and-match" or region_names & glance_keys:
+        if "hero-bg" in region_names or "hero-still" in region_names:
+            return GLANCE_AND_MATCH_REGIONS
+        # Prefer split art/copy geometry; fall back to legacy single insights pane.
+        if "insights-art" in region_names or "insights-copy" in region_names:
+            # Legacy single hero region + split insights
+            return {
+                "insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"],
+                "hero": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
+                "insights-art": GLANCE_AND_MATCH_REGIONS["insights-art"],
+                "insights-copy": GLANCE_AND_MATCH_REGIONS["insights-copy"],
+                "ticker": GLANCE_AND_MATCH_REGIONS["ticker"],
+            }
+        legacy = {
+            "hero": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
+            "insights": {
+                "left": 800,
+                "top": 0,
+                "width": 1120,
+                "height": 900,
+                "zIndex": 1,
+            },
+            "ticker": GLANCE_AND_MATCH_REGIONS["ticker"],
+        }
+        if "insights-bg" in region_names:
+            legacy = {"insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"], **legacy}
+        return legacy
+    return LAYERED_STILLS_REGIONS
+
 
 class PipelineError(RuntimeError):
     """Fatal layout publish failure."""
@@ -74,7 +135,14 @@ class XiboLayoutClient(Protocol):
 
     def add_spacer_widget(self, playlist_id: int, duration: int) -> int: ...
 
-    def add_text_widget(self, playlist_id: int, text: str, duration: int) -> int: ...
+    def add_text_widget(
+        self,
+        playlist_id: int,
+        text: str,
+        duration: int,
+        *,
+        effect: str = "none",
+    ) -> int: ...
 
     def publish_layout(self, layout_id: int) -> dict[str, Any]: ...
 
@@ -195,7 +263,21 @@ def prepare_timeline_for_qa(
 
     if image_only:
         first_image: Optional[dict[str, Any]] = None
-        for region_name in ("background", "midground", "accent", "text"):
+        # Prefer full-bleed / hero stills before smaller card icons.
+        search_order = (
+            "background",
+            "hero-bg",
+            "hero",
+            "hero-still",
+            "insights-art",
+            "insights",
+            "midground",
+            "accent",
+            "text",
+            "insights-copy",
+            "ticker",
+        )
+        for region_name in search_order:
             region = regions.get(region_name)
             if not isinstance(region, dict):
                 continue
@@ -214,6 +296,8 @@ def prepare_timeline_for_qa(
             raise PipelineError("QA image_only layout needs at least one image widget")
         duration = int(filtered.get("durationSeconds") or 90)
         first_image["durationSeconds"] = duration
+        # image_only always uses a full-canvas background region.
+        filtered["template"] = "layered-stills-loop"
         filtered["regions"] = {
             "background": {
                 "widgets": [first_image],
@@ -324,7 +408,8 @@ def fill_playlist_from_widgets(
         wtype = str(widget.get("type") or "").strip()
         if wtype == "text":
             copy = str(widget.get("copy") or "").strip()
-            client.add_text_widget(playlist_id, copy, duration)
+            effect = str(widget.get("effect") or "none").strip() or "none"
+            client.add_text_widget(playlist_id, copy, duration, effect=effect)
         elif wtype in {"image", "html-package", ""}:
             asset_id = str(widget.get("asset") or "").strip()
             media_id = media_ids.get(asset_id)
@@ -411,8 +496,12 @@ def publish_exhibit_layout(
         LOG.info("Region %s -> playlistId=%s", name, playlist_id)
         return playlist_id
 
-    midground_geometry = LAYERED_STILLS_REGIONS["midground"]
-    for region_name in ("background", "midground", "text", "accent"):
+    geometry_map = region_geometry_for_timeline(timeline)
+    LOG.info(
+        "Publishing template regions=%s",
+        list(geometry_map),
+    )
+    for region_name, base_geometry in geometry_map.items():
         region = regions_spec.get(region_name)
         if not isinstance(region, dict):
             continue
@@ -420,37 +509,25 @@ def publish_exhibit_layout(
         if not widgets:
             continue
 
-        if region_name == "midground":
-            tracks = assign_overlap_tracks(widgets)
-            for track_idx, track_widgets in enumerate(tracks):
-                if track_idx == 0:
-                    rname = "midground"
-                    geom = dict(midground_geometry)
-                else:
-                    rname = f"midground-overlay-{track_idx}"
-                    geom = dict(midground_geometry)
-                    geom["zIndex"] = midground_geometry["zIndex"] + track_idx
-                playlist_id = ensure_region(rname, geom)
-                fill_playlist_from_widgets(
-                    client,
-                    playlist_id,
-                    track_widgets,
-                    media_ids=media_ids,
-                    layout_duration=layout_duration,
-                )
-            continue
-
-        geometry = LAYERED_STILLS_REGIONS.get(region_name)
-        if geometry is None:
-            raise PipelineError(f"No geometry for region {region_name!r}")
-        playlist_id = ensure_region(region_name, geometry)
-        fill_playlist_from_widgets(
-            client,
-            playlist_id,
-            widgets,
-            media_ids=media_ids,
-            layout_duration=layout_duration,
-        )
+        # Concurrent widgets (hero stack, insight icon+text, ticker scrim+copy)
+        # need separate Xibo regions/playlists — same greedy tracks as midground.
+        tracks = assign_overlap_tracks(widgets)
+        for track_idx, track_widgets in enumerate(tracks):
+            if track_idx == 0:
+                rname = region_name
+                geom = dict(base_geometry)
+            else:
+                rname = f"{region_name}-overlay-{track_idx}"
+                geom = dict(base_geometry)
+                geom["zIndex"] = int(base_geometry.get("zIndex") or 0) + track_idx
+            playlist_id = ensure_region(rname, geom)
+            fill_playlist_from_widgets(
+                client,
+                playlist_id,
+                track_widgets,
+                media_ids=media_ids,
+                layout_duration=layout_duration,
+            )
 
     parent_id = int(draft.get("parentId") or published_layout_id)
     published = client.publish_layout(parent_id)

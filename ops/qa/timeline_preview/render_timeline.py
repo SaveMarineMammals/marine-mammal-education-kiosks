@@ -108,12 +108,21 @@ def render_text_widget(widget: dict[str, Any]) -> str:
     effect = widget.get("effect") or "none"
     copy = str(widget.get("copy") or "").strip()
     effect_class = f" effect-{effect}" if effect and effect != "none" else ""
+    if str(effect) == "tickerScroll":
+        line = " ".join(copy.split())
+        # Long enough for a visible crawl in the Chromium preview.
+        padded = f"{line}        ·        " * 6
+        body = _esc(padded)
+        band_class = " scrim band ticker-band"
+    else:
+        body = _esc(copy)
+        band_class = " scrim band"
     return (
         f'<div class="widget text-widget{effect_class}{transition_class(str(tin))}" data-widget '
         f'data-id="{_esc(str(wid))}" data-start="{start}" data-duration="{duration}" '
         f'data-transition-in="{_esc(str(tin))}" data-transition-out="{_esc(str(tout))}" '
         f'data-transition-ms="{tms}">'
-        f'<div class="scrim">{_esc(copy)}</div>'
+        f'<div class="{band_class.strip()}">{body}</div>'
         f"</div>"
     )
 
@@ -187,6 +196,35 @@ def build_layer_html(
     return f'<div class="layer" id="layer-{_esc(region_name)}">{"".join(parts)}</div>'
 
 
+def layer_order_for_timeline(timeline: dict[str, Any]) -> tuple[str, ...]:
+    template = str(timeline.get("template") or "").strip()
+    regions = timeline.get("regions") or {}
+    region_names = set(regions.keys()) if isinstance(regions, dict) else set()
+    if template == "glance-and-match" or region_names & {
+        "hero",
+        "hero-bg",
+        "hero-still",
+        "hero-labels",
+        "insights",
+        "insights-bg",
+        "insights-art",
+        "insights-copy",
+        "ticker",
+    }:
+        if "hero-bg" in region_names or "hero-still" in region_names:
+            return (
+                "insights-bg",
+                "hero-bg",
+                "hero-still",
+                "hero-labels",
+                "insights-art",
+                "insights-copy",
+                "ticker",
+            )
+        if "insights-art" in region_names or "insights-copy" in region_names:
+            return ("insights-bg", "hero", "insights-art", "insights-copy", "ticker")
+        return ("hero", "insights", "ticker")
+    return ("background", "midground", "text", "accent")
 def render_exhibit(
     slug: str,
     *,
@@ -222,7 +260,7 @@ def render_exhibit(
     shutil.copy2(STATIC_DIR / "player.js", out_dir / "player.js")
 
     regions = timeline.get("regions") or {}
-    layer_order = ("background", "midground", "text", "accent")
+    layer_order = layer_order_for_timeline(timeline)
     layers_html: list[str] = []
     for name in layer_order:
         region = regions.get(name)
@@ -239,6 +277,11 @@ def render_exhibit(
             )
         )
 
+    stage_class = (
+        "glance-and-match"
+        if ("hero" in layer_order or "hero-bg" in layer_order)
+        else "layered-stills"
+    )
     preview_cfg = {
         "slug": slug,
         "durationSeconds": loop_seconds,
@@ -246,6 +289,7 @@ def render_exhibit(
         "loop": loop,
         "width": width,
         "height": height,
+        "template": str(timeline.get("template") or stage_class),
     }
     hud = '<div id="hud">t=0.0s</div>' if show_hud else ""
     html = f"""<!DOCTYPE html>
@@ -258,7 +302,7 @@ def render_exhibit(
 <script>window.TIMELINE_PREVIEW = {json.dumps(preview_cfg)};</script>
 </head>
 <body>
-<div id="stage" style="width:{width}px;height:{height}px">
+<div id="stage" class="{stage_class}" style="width:{width}px;height:{height}px">
 {hud}
 {"".join(layers_html)}
 </div>
@@ -274,6 +318,7 @@ def render_exhibit(
         "duration_seconds": loop_seconds,
         "record_duration": record,
         "index_html": str(out_dir / "index.html"),
+        "template": preview_cfg["template"],
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
     return meta

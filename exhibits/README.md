@@ -5,6 +5,7 @@ One directory per exhibit. Slugs are **kebab-case** and must not change after pu
 | Path | Purpose |
 | --- | --- |
 | [`_catalog.yaml`](_catalog.yaml) | Registry of all exhibits |
-| [`humpback-migration/`](humpback-migration/) | Stub/example exhibit package |
+| [`asian-small-clawed-otters/`](asian-small-clawed-otters/) | Glance & Match otter tank panel |
+| [`humpback-migration/`](humpback-migration/) | Stub/example layered-stills exhibit |
 
 See [docs/exhibit-authoring.md](../docs/exhibit-authoring.md) and schemas under [`schemas/`](../schemas/).
