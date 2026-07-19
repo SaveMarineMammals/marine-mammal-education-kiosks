@@ -1,0 +1,189 @@
+# Widget timeline script — Seagrass for Manatees
+# Glance & Match: full-bleed hero wash | ID still | insight art + opaque copy | ticker.
+# Bind widgets in Xibo to these start/duration marks within each region playlist.
+# Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
+
+layoutId: seagrass-for-manatees-glance-and-match
+template: glance-and-match
+durationSeconds: 24
+loop: true
+resolution: { width: 1920, height: 1080 }
+
+regions:
+  insights-bg:
+    # Full right-pane wash — separates Zone B/C from the hero.
+    widgets:
+      - id: panel-insights
+        type: image
+        asset: bg-insights-panel
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-bg:
+    # Zone A wash — portrait asset sized to the pane (no letterbox bars).
+    widgets:
+      - id: hero-seagrass
+        type: image
+        asset: bg-hero-seagrass
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-still:
+    # Zone A ID still — lower frame only; seagrass shows full-bleed behind.
+    widgets:
+      - id: hero-manatee-id
+        type: image
+        asset: graphic-manatee-id
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        notes: Transparent PNG in the lower hero frame for 3-second tank match.
+
+  hero-labels:
+    widgets:
+      - id: hero-labels
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          West Indian Manatee
+          Trichechus manatus
+
+          About 13 feet
+          About 1,200 pounds
+          Vulnerable
+
+  insights-art:
+    # Zone B upper — card graphics only; clear gap before the copy band.
+    widgets:
+      - id: icon-food
+        type: image
+        asset: graphic-diet-seagrass
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-threat
+        type: image
+        asset: graphic-threat-meadow
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-hidden-fact
+        type: image
+        asset: graphic-fact-nursery
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-how-to-help
+        type: image
+        asset: graphic-help-protect
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+  insights-copy:
+    # Zone B lower — card bullets with band painted IN the text widget
+    # (do not use a separate scrim image; Xibo aspect-fits it and misaligns).
+    widgets:
+      - id: card-food
+        type: text
+        card: 1
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Food
+
+          - Manatees graze seagrass like cows on land
+          - One adult can eat 100 pounds a day
+          - Healthy meadows keep manatees fed
+
+      - id: card-threat
+        type: text
+        card: 2
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Threat
+
+          - Boats and dredging tear up seagrass beds
+          - Cloudy water blocks the sun plants need
+          - Lost meadows mean less food for manatees
+
+      - id: card-hidden-fact
+        type: text
+        card: 3
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Hidden Fact
+
+          - Seagrass holds sand and clears the water
+          - Baby fish hide in the blades to grow
+          - Meadows store carbon and slow storms
+
+      - id: card-how-to-help
+        type: text
+        card: 4
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          How to Help
+
+          - Go slow in marked manatee zones
+          - Keep trash and fertilizer out of water
+          - Share why seagrass meadows matter
+
+  ticker:
+    # Zone C — slim footer; one CTA via native Xibo marqueeLeft (not CSS).
+    widgets:
+      - id: ticker-cta
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: tickerScroll
+        copy: |
+          Protect seagrass — support local coastal conservation
+
+cueSheet:
+  - { t: 0, action: "hero full-bleed; Food art + copy; ticker on" }
+  - { t: 6, action: "insights: Threat art + copy" }
+  - { t: 12, action: "insights: Hidden Fact art + copy" }
+  - { t: 18, action: "insights: How to Help art + copy" }
+  - { t: 24, action: "layout loops to t=0 (hero never changes)" }

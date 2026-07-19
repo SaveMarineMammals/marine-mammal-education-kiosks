@@ -11,6 +11,17 @@ exhibits:
       - glance-and-match
       - vulnerable
       - kids
+  - id: "00000000-0000-4000-8000-000000000003"
+    slug: seagrass-for-manatees
+    title: Seagrass for Manatees
+    status: draft
+    version: 0.1.0
+    path: exhibits/seagrass-for-manatees
+    tags:
+      - manatees
+      - seagrass
+      - glance-and-match
+      - kids
   - id: "00000000-0000-4000-8000-000000000001"
     slug: humpback-migration
     title: Humpback Whale Migration
@@ -22,3 +33,4 @@ exhibits:
       - migration
       - pacific
       - kids
+

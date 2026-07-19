@@ -1,0 +1,22 @@
+# Schedule intent: Seagrass for Manatees
+
+Logical targets for CMS scheduling (bind in Xibo; keep this file as the design intent).
+
+```yaml
+displayGroups:
+  - lobby
+priority: normal
+layoutDurationSeconds: 24
+loop: continuous
+dayparts:
+  - name: open-hours
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "09:00"
+    end: "17:00"
+notes: >
+  Schedule the glance-and-match layout for continuous playback during open
+  hours beside the manatee habitat or coastal education zone. Layout duration
+  is exactly 24 seconds (4 × 6s insight cards). Zone A stays static across
+  loops. Attract/idle content from framework/playlists should fill gaps when
+  this exhibit is not scheduled. No video modules on Zone A.
+```
