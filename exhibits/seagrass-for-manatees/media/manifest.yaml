@@ -6,10 +6,10 @@ assets:
   - id: graphic-manatee-id
     role: hero-id
     filename: graphic-manatee-id.png
-    sha256: "7733bc3833a7b40a3065b8682a181b1f49ea5fcacf319180a886e44ac5039154"
+    sha256: "ed154a933b8ee3de784d745b8b6621670b5f95ee88ddcd36bb363835af1b0f43"
     uri: exhibits/seagrass-for-manatees/media/assets/graphic-manatee-id.png
     mime: image/png
-    bytes: 500983
+    bytes: 456186
     xiboTags:
       - exhibit:seagrass-for-manatees
       - role:hero-id
@@ -59,10 +59,10 @@ assets:
   - id: graphic-diet-seagrass
     role: insight-card
     filename: graphic-diet-seagrass.png
-    sha256: "e03f258997e977aa6d62265803863f96ae897689d562857d464834702f6b0265"
+    sha256: "66c87e9832e7fbcc063e169a1388b60ba3e19284c9ed409700d591f4ddc022d3"
     uri: exhibits/seagrass-for-manatees/media/assets/graphic-diet-seagrass.png
     mime: image/png
-    bytes: 540403
+    bytes: 494618
     xiboTags:
       - exhibit:seagrass-for-manatees
       - role:insight-card
@@ -72,10 +72,10 @@ assets:
   - id: graphic-threat-meadow
     role: insight-card
     filename: graphic-threat-meadow.png
-    sha256: "64d715de9288b4b41a90f380b083a9fa935e281519b4ecbef2021acca112d52a"
+    sha256: "899d3553b5af3365532122915207c161045a955cbc66a3320d6d8038eaf0de9c"
     uri: exhibits/seagrass-for-manatees/media/assets/graphic-threat-meadow.png
     mime: image/png
-    bytes: 482447
+    bytes: 458806
     xiboTags:
       - exhibit:seagrass-for-manatees
       - role:insight-card
@@ -85,10 +85,10 @@ assets:
   - id: graphic-fact-nursery
     role: insight-card
     filename: graphic-fact-nursery.png
-    sha256: "ca35ddd7618805b37b7c7fce7892241a35a0c8b8fad9901ee50199a2593982c6"
+    sha256: "33836b15c1f98cfdeccb075270a4cb202474d18bad4b3b17f518d4819b9729e8"
     uri: exhibits/seagrass-for-manatees/media/assets/graphic-fact-nursery.png
     mime: image/png
-    bytes: 695244
+    bytes: 589752
     xiboTags:
       - exhibit:seagrass-for-manatees
       - role:insight-card
@@ -98,10 +98,10 @@ assets:
   - id: graphic-help-protect
     role: insight-card
     filename: graphic-help-protect.png
-    sha256: "4bfc6dd57744f624946472d2a8b364102dbaf09f86ea7260819e6e9adbb9e44e"
+    sha256: "2a25cd27c7da3facec593411ab1774ab51385f840fad33ab4faa62457497fe07"
     uri: exhibits/seagrass-for-manatees/media/assets/graphic-help-protect.png
     mime: image/png
-    bytes: 297870
+    bytes: 294657
     xiboTags:
       - exhibit:seagrass-for-manatees
       - role:insight-card
