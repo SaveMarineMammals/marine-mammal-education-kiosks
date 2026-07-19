@@ -2,10 +2,10 @@
 """Ephemeral Xibo CMS visual QA pipeline.
 
 Spins up docker-compose.test.yml, drives the Xibo REST API (OAuth2 client
-credentials), injects media for an exhibit slug (default: humpback-migration),
-forces an XMR collectNow sync when available, captures the headless player
-framebuffer (screenshot + N-second MP4, default 30s), and runs basic Pillow
-structural checks on the screenshot.
+credentials), builds a multi-region layout from exhibits/<slug>/layouts/timeline.yaml
+when present, publishes it to CMS, forces an XMR collectNow sync when available,
+and captures the headless Xibo Linux Player framebuffer (screenshot + N-second MP4,
+default 30s). Use --preview-only for the Chromium timeline-preview escape hatch.
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
 import requests
+from pathutil import resolve_manifest_path, to_docker_path
 from PIL import Image, ImageDraw, ImageStat
 
 LOG = logging.getLogger("xibo_qa")
@@ -35,6 +35,7 @@ QA_DIR = Path(__file__).resolve().parent
 REPO_ROOT = QA_DIR.parent.parent
 EXHIBITS_DIR = REPO_ROOT / "exhibits"
 COMPOSE_FILE = QA_DIR / "docker-compose.test.yml"
+PLAYER_RUNTIME_DIR = QA_DIR / "player-runtime"
 DEFAULT_ARTIFACT_DIR = QA_DIR / "artifacts"
 DEFAULT_FIXTURE = QA_DIR / "fixtures" / "qa-sample.png"
 DEFAULT_EXHIBIT_SLUG = "humpback-migration"
@@ -42,84 +43,11 @@ DEFAULT_RECORD_DURATION = 30
 PLAYER_CONTAINER = "xibo-qa-kiosk-player"
 CMS_CONTAINER = "xibo-qa-cms-web"
 EXPECTED_SIZE = (1920, 1080)
-_WSL_MOUNT_RE = re.compile(r"^/mnt/([a-zA-Z])/(.*)$")
 _IMAGE_MIME_PREFIX = "image/"
 
 
 class PipelineError(RuntimeError):
     """Fatal pipeline failure."""
-
-
-@lru_cache(maxsize=1)
-def docker_client_os() -> str:
-    """Return docker client OS (`windows`, `linux`, …). Empty string if unknown."""
-    try:
-        result = subprocess.run(
-            ["docker", "version", "--format", "{{.Client.Os}}"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        os_name = (result.stdout or "").strip().lower()
-        if os_name in {"windows", "linux", "darwin"}:
-            return os_name
-    except (OSError, subprocess.SubprocessError):
-        pass
-
-    # WSL often wraps Windows docker.exe; the stub CLI prints an error and no Os.
-    if _running_in_wsl() and _docker_invokes_windows_cli():
-        return "windows"
-    return ""
-
-
-def _running_in_wsl() -> bool:
-    try:
-        proc_version = Path("/proc/version").read_text(encoding="utf-8", errors="ignore").lower()
-    except OSError:
-        return False
-    return "microsoft" in proc_version or "wsl" in proc_version
-
-
-def _docker_invokes_windows_cli() -> bool:
-    docker_path = shutil.which("docker")
-    if not docker_path:
-        return bool(shutil.which("docker.exe"))
-    if docker_path.lower().endswith(".exe"):
-        return True
-    try:
-        # Small shell wrappers (e.g. ~/bin/docker) typically exec docker.exe.
-        if Path(docker_path).stat().st_size < 8192:
-            body = Path(docker_path).read_text(encoding="utf-8", errors="ignore")
-            if "docker.exe" in body:
-                return True
-    except OSError:
-        pass
-    return bool(shutil.which("docker.exe"))
-
-
-def to_docker_path(path: Path | str) -> str:
-    """Translate host paths for the active Docker CLI.
-
-    When WSL calls Windows ``docker.exe``, Linux paths like ``/mnt/c/Users/...``
-    are misread as ``C:\\mnt\\c\\Users\\...``. Convert them to ``C:\\Users\\...``.
-    Native Linux Docker keeps POSIX paths unchanged.
-    """
-    resolved = Path(path).resolve()
-    text = str(resolved)
-    if docker_client_os() != "windows":
-        return text
-
-    match = _WSL_MOUNT_RE.match(text)
-    if match:
-        drive = match.group(1).upper()
-        rest = match.group(2).replace("/", "\\")
-        converted = f"{drive}:\\{rest}" if rest else f"{drive}:\\"
-        LOG.debug("docker path %s -> %s", text, converted)
-        return converted
-
-    # Already a Windows path produced on a WinPython host.
-    return text
 
 
 @dataclass
@@ -140,6 +68,12 @@ class Settings:
     record_duration: int
     keep_stack: bool
     skip_up: bool
+    preview_only: bool
+    fast: bool
+    rebuild_player: bool
+    record_video: bool
+    skip_html_packages: bool
+    image_only_layout: bool
 
     @classmethod
     def from_env(cls, args: argparse.Namespace) -> "Settings":
@@ -150,10 +84,23 @@ class Settings:
             or os.environ.get("QA_EXHIBIT_SLUG", "").strip()
             or DEFAULT_EXHIBIT_SLUG
         )
+        fast = bool(getattr(args, "fast", False)) or (
+            os.environ.get("QA_FAST", "").strip().lower() in {"1", "true", "yes"}
+        )
+        # Normal runs rebuild the player image; --fast reuses it unless --rebuild-player.
+        rebuild_player = bool(getattr(args, "rebuild_player", False))
+        if not fast and not rebuild_player:
+            rebuild_player = True
+        if fast and not getattr(args, "rebuild_player", False):
+            rebuild_player = False
+        if os.environ.get("QA_REBUILD_PLAYER", "").strip().lower() in {"1", "true", "yes"}:
+            rebuild_player = True
+
+        default_duration = 5 if fast else DEFAULT_RECORD_DURATION
         record_duration = int(
             args.duration
             if args.duration is not None
-            else os.environ.get("QA_RECORD_DURATION", DEFAULT_RECORD_DURATION)
+            else os.environ.get("QA_RECORD_DURATION", default_duration)
         )
         if record_duration < 1:
             raise PipelineError("--duration / QA_RECORD_DURATION must be >= 1")
@@ -165,6 +112,44 @@ class Settings:
             media_path = resolve_exhibit_media(exhibit_slug)
 
         layout_default = f"qa-{exhibit_slug}"
+        preview_only = bool(getattr(args, "preview_only", False)) or (
+            os.environ.get("QA_USE_TIMELINE_PREVIEW", "").strip().lower() in {"1", "true", "yes"}
+        )
+        default_wait = 20 if fast else 45
+        if args.capture_wait is not None:
+            capture_wait = int(args.capture_wait)
+        elif fast:
+            # Ignore a high QA_CAPTURE_WAIT_SECONDS from config.env during --fast.
+            capture_wait = default_wait
+        else:
+            capture_wait = int(os.environ.get("QA_CAPTURE_WAIT_SECONDS", default_wait))
+        keep_stack = bool(args.keep_stack) or fast
+        # PNG-only in --fast unless --record-video (or an explicit long --duration).
+        record_video = not fast
+        if getattr(args, "record_video", False):
+            record_video = True
+        if getattr(args, "no_video", False):
+            record_video = False
+
+        # Headless Xvfb: skip HTML packages by default (WebKitGTK paint crashes).
+        # Override with QA_SKIP_HTML_PACKAGES=0 or --include-html-packages.
+        skip_html_env = os.environ.get("QA_SKIP_HTML_PACKAGES", "").strip().lower()
+        if getattr(args, "include_html_packages", False):
+            skip_html_packages = False
+        elif getattr(args, "skip_html_packages", False):
+            skip_html_packages = True
+        elif skip_html_env in {"0", "false", "no"}:
+            skip_html_packages = False
+        elif skip_html_env in {"1", "true", "yes"}:
+            skip_html_packages = True
+        else:
+            # Default on for player mode; off for Chromium preview.
+            skip_html_packages = not preview_only
+
+        image_only_layout = bool(getattr(args, "image_only_layout", False)) or (
+            os.environ.get("QA_IMAGE_ONLY_LAYOUT", "").strip().lower() in {"1", "true", "yes"}
+        )
+
         return cls(
             cms_url=os.environ.get("XIBO_CMS_URL", "http://127.0.0.1:8080").rstrip("/"),
             admin_user=os.environ.get("XIBO_ADMIN_USER", "xibo_admin"),
@@ -174,16 +159,20 @@ class Settings:
             cms_key=os.environ.get("XIBO_CMS_KEY", "").strip(),
             display_name=os.environ.get("XIBO_DISPLAY_NAME", "qa-kiosk-01"),
             layout_name=(os.environ.get("QA_LAYOUT_NAME", "").strip() or layout_default),
-            capture_wait_seconds=int(
-                os.environ.get("QA_CAPTURE_WAIT_SECONDS", str(args.capture_wait or 45))
-            ),
+            capture_wait_seconds=capture_wait,
             compose_project=os.environ.get("QA_COMPOSE_PROJECT", "xibo-qa"),
             artifact_dir=artifact_dir,
             media_path=media_path,
             exhibit_slug=exhibit_slug,
             record_duration=record_duration,
-            keep_stack=bool(args.keep_stack),
+            keep_stack=keep_stack,
             skip_up=bool(args.skip_up),
+            preview_only=preview_only,
+            fast=fast,
+            rebuild_player=rebuild_player,
+            record_video=record_video,
+            skip_html_packages=skip_html_packages,
+            image_only_layout=image_only_layout,
         )
 
 
@@ -229,6 +218,9 @@ def run_cmd(
 
 def compose_cmd(settings: Settings, *extra: str) -> list[str]:
     env_file = QA_DIR / "config.env"
+    # Written by provision_player_cms_config so compose interpolation sees the live
+    # SERVER_KEY. Last --env-file wins over config.env's empty XIBO_CMS_KEY=.
+    runtime_env = PLAYER_RUNTIME_DIR / "compose.runtime.env"
     cmd = [
         "docker",
         "compose",
@@ -239,6 +231,8 @@ def compose_cmd(settings: Settings, *extra: str) -> list[str]:
     ]
     if env_file.is_file():
         cmd.extend(["--env-file", to_docker_path(env_file)])
+    if runtime_env.is_file():
+        cmd.extend(["--env-file", to_docker_path(runtime_env)])
     cmd.extend(extra)
     return cmd
 
@@ -357,8 +351,7 @@ def _local_paths_for_asset(exhibit_dir: Path, asset: dict[str, Any]) -> list[Pat
     candidates: list[Path] = []
     uri = str(asset.get("uri") or "").strip()
     if uri:
-        uri_path = Path(uri)
-        candidates.append(uri_path if uri_path.is_absolute() else REPO_ROOT / uri_path)
+        candidates.append(resolve_manifest_path(uri, root=REPO_ROOT))
     filename = str(asset.get("filename") or "").strip()
     if filename:
         candidates.append(exhibit_dir / "media" / "assets" / filename)
@@ -667,16 +660,77 @@ class XiboClient:
             "Set XIBO_CMS_KEY in config.env."
         )
 
+    def find_media_by_name(self, name: str) -> Optional[int]:
+        """Return mediaId for an existing library item, or None."""
+        try:
+            payload = self.request("GET", "/api/library", params={"media": name, "exactName": 1})
+        except PipelineError as exc:
+            LOG.debug("library lookup failed for %s: %s", name, exc)
+            return None
+        items = payload if isinstance(payload, list) else payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(items, list):
+            return None
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item_name = str(item.get("name") or item.get("media") or "")
+            if item_name.lower() == name.lower() or item_name.lower() == Path(name).stem.lower():
+                media_id = _extract_id(item, keys=("mediaId", "id"))
+                if media_id is not None:
+                    return media_id
+        # Fallback: first row when exactName filtered the list.
+        if items and isinstance(items[0], dict):
+            return _extract_id(items[0], keys=("mediaId", "id"))
+        return None
+
     def upload_media(self, file_path: Path, name: Optional[str] = None) -> int:
         LOG.info("Uploading media %s", file_path)
+        if not file_path.is_file():
+            raise PipelineError(f"Media file not found: {file_path}")
+
+        display_name = name or file_path.stem
+        # Xibo HTML Package module accepts ``.htz`` (zip contents), not ``.zip``.
+        # Use the stable display name as the upload basename so keep-stack reruns
+        # collide predictably and we can reuse the existing library row.
+        mime = _mime_for_path(file_path)
+        if file_path.suffix.lower() == ".zip":
+            upload_name = f"{display_name}.htz"
+            mime = "application/zip"
+            LOG.info("Uploading zip as HTML package %s (mime=%s)", upload_name, mime)
+        else:
+            upload_name = f"{display_name}{file_path.suffix.lower()}"
+
         with file_path.open("rb") as handle:
-            files = {"files": (file_path.name, handle, "application/octet-stream")}
-            data = {"name": name or file_path.stem}
+            files = {"files": (upload_name, handle, mime)}
+            data = {"name": display_name}
             payload = self.request("POST", "/api/library", files=files, data=data)
+
+        # Library upload returns 200 even on rejection; check embedded error.
+        if isinstance(payload, dict):
+            for item in payload.get("files") or []:
+                if isinstance(item, dict) and item.get("error"):
+                    err = str(item.get("error") or "")
+                    if "already own media" in err.lower():
+                        existing = self.find_media_by_name(display_name)
+                        if existing is None:
+                            # HTML packages are often stored under the .htz basename.
+                            existing = self.find_media_by_name(Path(upload_name).stem)
+                        if existing is not None:
+                            LOG.info(
+                                "Reusing existing mediaId=%s for %s (duplicate upload)",
+                                existing,
+                                display_name,
+                            )
+                            return existing
+                    raise PipelineError(
+                        f"Library rejected {upload_name}: {err} "
+                        f"(type={item.get('type')}, size={item.get('size')})"
+                    )
+
         media_id = _extract_id(payload, keys=("mediaId", "id"))
         if media_id is None:
             raise PipelineError(f"Could not parse mediaId from upload response: {payload}")
-        LOG.info("Uploaded mediaId=%s", media_id)
+        LOG.info("Uploaded mediaId=%s name=%s", media_id, display_name)
         return media_id
 
     def create_layout(self, name: str, width: int = 1920, height: int = 1080) -> dict[str, Any]:
@@ -759,14 +813,52 @@ class XiboClient:
         height: int = 1080,
         top: int = 0,
         left: int = 0,
+        name: Optional[str] = None,
+        z_index: Optional[int] = None,
     ) -> dict[str, Any]:
-        LOG.info("Adding full-bleed region to draft layoutId=%s", layout_id)
-        payload = self.request(
-            "POST",
-            f"/api/region/{layout_id}",
-            data={"width": width, "height": height, "top": top, "left": left},
+        LOG.info(
+            "Adding region %s to draft layoutId=%s (%sx%s @ %s,%s)",
+            name or "(unnamed)",
+            layout_id,
+            width,
+            height,
+            left,
+            top,
         )
+        data: dict[str, Any] = {
+            "width": width,
+            "height": height,
+            "top": top,
+            "left": left,
+        }
+        if name:
+            data["name"] = name
+        if z_index is not None:
+            data["zIndex"] = z_index
+        payload = self.request("POST", f"/api/region/{layout_id}", data=data)
         return payload[0] if isinstance(payload, list) else payload
+
+    def delete_region(self, region_id: int) -> None:
+        LOG.info("Deleting regionId=%s", region_id)
+        self.request("DELETE", f"/api/region/{region_id}")
+
+    def edit_layout(
+        self,
+        layout_id: int,
+        *,
+        name: Optional[str] = None,
+        duration: Optional[int] = None,
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        if name is not None:
+            data["name"] = name
+        if duration is not None:
+            data["duration"] = int(duration)
+        if not data:
+            return {}
+        LOG.info("Editing layoutId=%s %s", layout_id, data)
+        payload = self.request("PUT", f"/api/layout/{layout_id}", data=data)
+        return payload[0] if isinstance(payload, list) else (payload or {})
 
     def _playlist_id_from_region(self, region: dict[str, Any]) -> Optional[int]:
         playlists = region.get("regionPlaylist") or region.get("playlists") or []
@@ -778,6 +870,119 @@ class XiboClient:
             return int(value) if value is not None else None
         value = region.get("playlistId") or region.get("playlistid")
         return int(value) if value is not None else None
+
+    def _region_id(self, region: dict[str, Any]) -> Optional[int]:
+        value = region.get("regionId") or region.get("regionid")
+        return int(value) if value is not None else None
+
+    def clear_regions(self, draft_layout_id: int) -> None:
+        draft = self.get_layout(layout_id=draft_layout_id)
+        if not draft:
+            return
+        for region in draft.get("regions") or []:
+            rid = self._region_id(region)
+            if rid is not None:
+                try:
+                    self.delete_region(rid)
+                except PipelineError as exc:
+                    LOG.warning("Failed to delete regionId=%s: %s", rid, exc)
+
+    def assign_media_to_playlist(
+        self,
+        playlist_id: int,
+        media_id: int,
+        *,
+        duration: int,
+    ) -> Any:
+        LOG.info(
+            "Assigning mediaId=%s to playlistId=%s duration=%ss",
+            media_id,
+            playlist_id,
+            duration,
+        )
+        return self.request(
+            "POST",
+            f"/api/playlist/library/assign/{playlist_id}",
+            data=[("media[]", str(media_id)), ("duration", str(int(duration)))],
+        )
+
+    def add_widget(self, widget_type: str, playlist_id: int) -> dict[str, Any]:
+        LOG.info("Adding widget type=%s to playlistId=%s", widget_type, playlist_id)
+        payload = self.request("POST", f"/api/playlist/widget/{widget_type}/{playlist_id}")
+        widget = payload[0] if isinstance(payload, list) else payload
+        if not isinstance(widget, dict):
+            raise PipelineError(f"Unexpected widget add response: {payload}")
+        return widget
+
+    def edit_widget(self, widget_id: int, data: dict[str, Any] | list[tuple[str, str]]) -> Any:
+        LOG.debug("Editing widgetId=%s", widget_id)
+        return self.request("PUT", f"/api/playlist/widget/{widget_id}", data=data)
+
+    def add_spacer_widget(self, playlist_id: int, duration: int) -> int:
+        duration = max(1, int(duration))
+        widget = self.add_widget("spacer", playlist_id)
+        widget_id = int(widget.get("widgetId") or widget.get("widgetid") or 0)
+        if not widget_id:
+            raise PipelineError(f"spacer widget missing id: {widget}")
+        self.edit_widget(
+            widget_id,
+            {"duration": duration, "useDuration": 1},
+        )
+        return widget_id
+
+    def add_text_widget(self, playlist_id: int, text: str, duration: int) -> int:
+        duration = max(1, int(duration))
+        widget: Optional[dict[str, Any]] = None
+        last_error: Optional[Exception] = None
+        for path, data in (
+            (f"/api/playlist/widget/text/{playlist_id}", None),
+            (f"/api/playlist/widget/{playlist_id}", {"type": "text"}),
+        ):
+            try:
+                if data is None:
+                    payload = self.request("POST", path)
+                else:
+                    payload = self.request("POST", path, data=data)
+                candidate = payload[0] if isinstance(payload, list) else payload
+                if isinstance(candidate, dict):
+                    widget = candidate
+                    break
+            except PipelineError as exc:
+                last_error = exc
+                LOG.debug("text widget add via %s failed: %s", path, exc)
+        if widget is None:
+            raise PipelineError(f"Unable to add text widget: {last_error}")
+
+        widget_id = int(widget.get("widgetId") or widget.get("widgetid") or 0)
+        if not widget_id:
+            raise PipelineError(f"text widget missing id: {widget}")
+
+        html = (
+            "<div style=\"font-family:sans-serif;font-size:36px;line-height:1.25;"
+            "color:#ffffff;background:rgba(0,0,0,0.55);padding:24px 28px;"
+            f"box-sizing:border-box;width:100%;height:100%;\">{_escape_html(text)}</div>"
+        )
+        try:
+            self.edit_widget(
+                widget_id,
+                {
+                    "duration": duration,
+                    "useDuration": 1,
+                    "text": html,
+                    "ta_text": html,
+                },
+            )
+        except PipelineError as exc:
+            LOG.warning("text widget edit with HTML failed (%s); retrying plain text", exc)
+            self.edit_widget(
+                widget_id,
+                {
+                    "duration": duration,
+                    "useDuration": 1,
+                    "text": text,
+                },
+            )
+        return widget_id
 
     def ensure_media_on_layout(
         self,
@@ -805,26 +1010,13 @@ class XiboClient:
 
         playlist_id = self._playlist_id_from_region(regions[0])
         if not playlist_id:
-            # Region create response sometimes embeds playlist under a different key;
-            # reload once more with embeds.
             draft = self.get_layout(layout_id=draft_layout_id) or draft
             regions = draft.get("regions") or regions
             playlist_id = self._playlist_id_from_region(regions[0]) if regions else None
         if not playlist_id:
             raise PipelineError(f"Could not resolve playlistId on layout {draft_layout_id}")
 
-        LOG.info(
-            "Assigning mediaId=%s to playlistId=%s (draft layoutId=%s)",
-            media_id,
-            playlist_id,
-            draft_layout_id,
-        )
-        # PHP-style array field expected by Xibo's sanitizer.
-        self.request(
-            "POST",
-            f"/api/playlist/library/assign/{playlist_id}",
-            data=[("media[]", str(media_id)), ("duration", str(duration))],
-        )
+        self.assign_media_to_playlist(playlist_id, media_id, duration=duration)
         return draft
 
     def find_display(self, display_name: str) -> Optional[dict[str, Any]]:
@@ -877,8 +1069,33 @@ class XiboClient:
         hardware_key: str,
         display_name: str,
     ) -> None:
-        """Register a display through XMDS SOAP (same path players use)."""
-        LOG.info("Registering display via XMDS hardwareKey=%s", hardware_key)
+        """Bootstrap a display row via XMDS only when it does not exist yet.
+
+        Important: Soap5 overwrites ``xmrChannel`` on every READY RegisterDisplay.
+        A register call without XMR fields clears the channel and breaks collectNow.
+        Once the Linux player has registered, never re-register from the pipeline.
+        """
+        existing = self.find_display(display_name)
+        if existing is None:
+            # Hardware-key match (player may use default name "Display" briefly).
+            try:
+                payload = self.request("GET", "/api/display")
+                items = payload if isinstance(payload, list) else []
+            except PipelineError:
+                items = []
+            for item in items:
+                if hardware_key_matches(item, display_name):
+                    existing = item
+                    break
+        if existing is not None:
+            LOG.info(
+                "Display already present (displayId=%s); skipping pipeline XMDS register "
+                "to preserve xmrChannel",
+                existing.get("displayId"),
+            )
+            return
+
+        LOG.info("Bootstrapping display via XMDS hardwareKey=%s", hardware_key)
         body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:x="urn:xmds.xibo.org.uk">
   <soapenv:Header/>
@@ -888,10 +1105,12 @@ class XiboClient:
       <hardwareKey>{hardware_key}</hardwareKey>
       <displayName>{display_name}</displayName>
       <clientType>linux</clientType>
-      <clientVersion>1.8</clientVersion>
-      <clientCode>108</clientCode>
+      <clientVersion>1.8-R6</clientVersion>
+      <clientCode>6</clientCode>
       <operatingSystem>Linux</operatingSystem>
       <macAddress>00:11:22:33:44:55</macAddress>
+      <xmrChannel>qa-bootstrap-channel</xmrChannel>
+      <xmrPubKey></xmrPubKey>
     </x:RegisterDisplay>
   </soapenv:Body>
 </soapenv:Envelope>
@@ -1041,21 +1260,130 @@ class XiboClient:
         LOG.info("Scheduled eventId=%s", event_id)
         return event_id
 
-    def change_layout_now(self, display_group_id: int, layout_id: int, duration: int = 60) -> bool:
-        LOG.info("XMR changeLayout layoutId=%s -> displayGroupId=%s", layout_id, display_group_id)
+    def clear_schedule_for_display_group(self, display_group_id: int) -> int:
+        """Remove prior schedule events so the player does not paint stale HTML layouts.
+
+        Keep-stack QA runs accumulate overlapping priority events; the Linux player
+        then starts an old region set and SIGSEGVs in RegionImpl::start() when a
+        region has an empty media list (e.g. failed html-package).
+        """
+        deleted = 0
+        # Prefer API list; fall back to MySQL for CMS builds with awkward schedule filters.
+        event_ids: list[int] = []
+        try:
+            now = datetime.now(timezone.utc)
+            frm = int((now - timedelta(days=30)).timestamp() * 1000)
+            to = int((now + timedelta(days=30)).timestamp() * 1000)
+            data = self.request(
+                "GET",
+                "/api/schedule/data/events",
+                params={
+                    "displayGroupIds[]": display_group_id,
+                    "from": frm,
+                    "to": to,
+                },
+            )
+            rows = data if isinstance(data, list) else (data.get("data") or data.get("result") or [])
+            for row in rows or []:
+                if not isinstance(row, dict):
+                    continue
+                event = row.get("event") if isinstance(row.get("event"), dict) else row
+                eid = _extract_id(event, keys=("eventId", "id"))
+                if eid is None:
+                    eid = _extract_id(row, keys=("eventId", "id"))
+                if eid is not None:
+                    event_ids.append(int(eid))
+        except PipelineError as exc:
+            LOG.warning("Schedule API list failed (%s); using MySQL", exc)
+
+        if not event_ids:
+            sql = (
+                "SELECT l.eventId FROM lkscheduledisplaygroup l "
+                f"WHERE l.displayGroupId={int(display_group_id)}"
+            )
+            raw = mysql_scalar_multi(sql)
+            event_ids = [int(x) for x in raw if str(x).isdigit()]
+
+        for eid in sorted(set(event_ids)):
+            try:
+                self.request("DELETE", f"/api/schedule/{eid}")
+                deleted += 1
+            except PipelineError as exc:
+                LOG.warning("Could not delete schedule eventId=%s: %s", eid, exc)
+                # Last resort: direct SQL (QA ephemeral CMS only).
+                mysql_exec(
+                    "DELETE FROM schedulereminder WHERE eventId="
+                    f"{eid}; DELETE FROM scheduleexclusions WHERE eventId={eid}; "
+                    f"DELETE FROM lkscheduledisplaygroup WHERE eventId={eid}; "
+                    f"DELETE FROM schedule WHERE eventId={eid};",
+                    check=False,
+                )
+                deleted += 1
+        LOG.info(
+            "Cleared %s schedule event(s) for displayGroupId=%s",
+            deleted,
+            display_group_id,
+        )
+        return deleted
+
+    def change_layout_now(
+        self,
+        display_group_id: int,
+        layout_id: int,
+        duration: int = 60,
+        *,
+        campaign_id: Optional[int] = None,
+    ) -> bool:
+        """Push an immediate layout change over XMR.
+
+        CMS 4 ``changeLayout`` resolves via ``layoutFactory.getById(layoutId)`` or a
+        layout-specific ``campaignId``. Prefer campaignId when available — some
+        published parents 404 by layoutId alone depending on draft/publish state.
+        """
+        data: dict[str, Any] = {
+            "duration": duration,
+            "downloadRequired": 1,
+            "changeMode": "queue",
+        }
+        if campaign_id:
+            LOG.info(
+                "XMR changeLayout campaignId=%s -> displayGroupId=%s",
+                campaign_id,
+                display_group_id,
+            )
+            data["campaignId"] = int(campaign_id)
+        else:
+            LOG.info(
+                "XMR changeLayout layoutId=%s -> displayGroupId=%s",
+                layout_id,
+                display_group_id,
+            )
+            data["layoutId"] = int(layout_id)
         try:
             self.request(
                 "POST",
                 f"/api/displaygroup/{display_group_id}/action/changeLayout",
-                data={
-                    "layoutId": layout_id,
-                    "duration": duration,
-                    "downloadRequired": 1,
-                    "changeMode": "queue",
-                },
+                data=data,
             )
             return True
         except PipelineError as exc:
+            if campaign_id and layout_id:
+                LOG.warning("changeLayout via campaignId failed (%s); retrying layoutId", exc)
+                try:
+                    self.request(
+                        "POST",
+                        f"/api/displaygroup/{display_group_id}/action/changeLayout",
+                        data={
+                            "layoutId": int(layout_id),
+                            "duration": duration,
+                            "downloadRequired": 1,
+                            "changeMode": "queue",
+                        },
+                    )
+                    return True
+                except PipelineError as exc2:
+                    LOG.warning("changeLayout skipped (XMR not ready): %s", exc2)
+                    return False
             LOG.warning("changeLayout skipped (XMR not ready): %s", exc)
             return False
 
@@ -1067,6 +1395,33 @@ class XiboClient:
         except PipelineError as exc:
             LOG.warning("collectNow skipped (XMR not ready): %s", exc)
             return False
+
+
+def _escape_html(value: str) -> str:
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _mime_for_path(path: Path) -> str:
+    suffix = path.suffix.lower()
+    return {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".zip": "application/zip",
+        ".htz": "application/zip",
+        ".html": "text/html",
+        ".htm": "text/html",
+    }.get(suffix, "application/octet-stream")
 
 
 def _extract_id(payload: Any, keys: tuple[str, ...]) -> Optional[int]:
@@ -1163,6 +1518,29 @@ def mysql_scalar(sql: str) -> Optional[str]:
     return candidate or None
 
 
+def mysql_scalar_multi(sql: str) -> list[str]:
+    """Run SQL expected to return one scalar per result row."""
+    password = os.environ.get("MYSQL_PASSWORD", "xiboQaMysqlPass16")
+    cmd = [
+        "docker",
+        "exec",
+        "xibo-qa-cms-db",
+        "mysql",
+        "-N",
+        "-B",
+        "-ucms",
+        f"-p{password}",
+        "cms",
+        "-e",
+        sql,
+    ]
+    result = run_cmd(cmd, check=False)
+    if result.returncode != 0:
+        LOG.debug("mysql_scalar_multi failed: %s", (result.stderr or "").strip())
+        return []
+    return [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+
+
 def oauth_schema_ready() -> bool:
     """True when the ephemeral CMS DB has finished creating OAuth tables."""
     result = mysql_exec("SHOW TABLES LIKE 'oauth_clients';", check=False)
@@ -1211,6 +1589,64 @@ def seed_oauth_client_mysql(client_id: str, client_secret: str, name: str) -> No
     LOG.info("Seeded oauth client %s in MySQL", client_id)
 
 
+def configure_xmr_settings(
+    *,
+    private_address: str = "http://cms-xmr:8081",
+    public_address: str = "tcp://cms-xmr:9505",
+) -> None:
+    """Point CMS at the compose-network XMR container (private + public sockets).
+
+    CMS 4.2+ talks to XMR over HTTP (``XMR_ADDRESS`` = ``http://cms-xmr:8081``).
+    Legacy Linux players still subscribe on ZeroMQ (``XMR_PUB_ADDRESS`` /
+    player ``xmrNetworkAddress`` = ``tcp://cms-xmr:9505``). Fresh CMS defaults
+    the public address to ``tcp://cms.example.org:9505``, which qa-net cannot
+    resolve — seed Docker-correct values and flush memcached.
+    """
+    # Guard against SQL injection — fixed http(s)/tcp host:port forms only.
+    private_ok = re.fullmatch(r"https?://[A-Za-z0-9._-]+:\d+", private_address)
+    public_ok = re.fullmatch(r"tcp://[A-Za-z0-9._-]+:\d+", public_address)
+    if not private_ok:
+        raise PipelineError(f"Invalid XMR private address: {private_address!r}")
+    if not public_ok:
+        raise PipelineError(f"Invalid XMR public address: {public_address!r}")
+
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        if mysql_scalar("SELECT `setting` FROM `setting` WHERE `setting`='XMR_ADDRESS' LIMIT 1"):
+            break
+        time.sleep(3)
+    else:
+        raise PipelineError("CMS setting table never exposed XMR_ADDRESS")
+
+    sql = f"""
+    UPDATE `setting` SET `value`='{private_address}', userSee=0, userChange=0
+      WHERE `setting`='XMR_ADDRESS';
+    UPDATE `setting` SET `value`='{public_address}'
+      WHERE `setting`='XMR_PUB_ADDRESS';
+    """
+    result = mysql_exec(sql, check=False)
+    if result.returncode != 0:
+        raise PipelineError(
+            "Failed to configure XMR settings via MySQL. "
+            f"stderr={(result.stderr or '').strip()} stdout={(result.stdout or '').strip()}"
+        )
+
+    # Drop cached settings so cms-web reads the new addresses.
+    # Restart is more reliable than nc on the minimal memcached image.
+    flush = run_cmd(
+        ["docker", "restart", "xibo-qa-cms-memcached"],
+        check=False,
+    )
+    if flush.returncode == 0:
+        time.sleep(2)
+    LOG.info(
+        "Configured XMR private=%s public=%s (memcache_restart_rc=%s)",
+        private_address,
+        public_address,
+        flush.returncode,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Docker / capture helpers
 # ---------------------------------------------------------------------------
@@ -1225,7 +1661,6 @@ def hardware_key_matches(display: dict[str, Any], display_name: str) -> bool:
     return name == hw or str(display.get("license") or "").lower() == hw
 
 
-PLAYER_RUNTIME_DIR = QA_DIR / "player-runtime"
 TIMELINE_PREVIEW_DIR = PLAYER_RUNTIME_DIR / "timeline-preview"
 
 
@@ -1301,6 +1736,58 @@ def wait_for_player_running(*, timeout_seconds: int = 90, stable_seconds: int = 
     )
 
 
+def player_process_alive() -> bool:
+    """True when the Xibo player binary is running inside the container (not just Xvfb).
+
+    Uses ``pgrep -x player`` only — a ``-f`` path match false-positives on the
+    docker-exec shell that contains the path in its argv.
+    """
+    probe = docker_exec(
+        PLAYER_CONTAINER,
+        ["bash", "-lc", "pgrep -x player >/dev/null 2>&1"],
+        check=False,
+    )
+    return probe.returncode == 0
+
+
+def wait_for_player_process_alive(
+    *,
+    timeout_seconds: int = 60,
+    stable_seconds: int = 5,
+    poll_seconds: float = 1.0,
+) -> None:
+    """Wait until the player process stays up long enough to paint before scrot.
+
+    Avoids capturing a black Xvfb frame while the supervisor is between crashes
+    or has not yet relaunched after RegionImpl paint failures.
+    """
+    deadline = time.time() + timeout_seconds
+    alive_since: Optional[float] = None
+    while time.time() < deadline:
+        if player_process_alive():
+            if alive_since is None:
+                alive_since = time.time()
+                LOG.info("Player process detected; waiting %ss for paint settle", stable_seconds)
+            elif time.time() - alive_since >= stable_seconds:
+                LOG.info("Player process stable for %ss", stable_seconds)
+                return
+        else:
+            if alive_since is not None:
+                LOG.warning("Player process died during paint settle; waiting for relaunch")
+            alive_since = None
+        time.sleep(poll_seconds)
+    # Dump recent player log for diagnosis.
+    logs = docker_exec(
+        PLAYER_CONTAINER,
+        ["bash", "-lc", "tail -n 60 /artifacts/player.log 2>/dev/null || true"],
+        check=False,
+    )
+    raise PipelineError(
+        f"Xibo player process not stable for {stable_seconds}s within {timeout_seconds}s.\n"
+        f"player.log tail:\n{(logs.stdout or '')[-2000:]}"
+    )
+
+
 def provision_player_cms_config(
     *,
     settings: "Settings",
@@ -1308,80 +1795,157 @@ def provision_player_cms_config(
     cms_key: str,
     display_name: str,
     hardware_key: str,
+    recreate: bool = True,
 ) -> None:
-    """Write player CMS config on the host bind mount and recreate the player.
+    """Write player CMS config on the host bind mount and optionally recreate the player.
 
     Avoids ``docker exec`` into a possibly-crashed container (common while the
     snap player is still settling under Xvfb).
     """
     runtime = PLAYER_RUNTIME_DIR
-    library = runtime / "library"
     snap_common = runtime / "snap-common"
-    library.mkdir(parents=True, exist_ok=True)
     snap_common.mkdir(parents=True, exist_ok=True)
 
-    cms_xml = f"""<?xml version="1.0" encoding="utf-8"?>
-<cmsSettings>
-  <cmsAddress>{cms_url}</cmsAddress>
-  <key>{cms_key}</key>
-  <localLibrary>/var/lib/xibo-player/library</localLibrary>
-  <displayId>{hardware_key}</displayId>
-</cmsSettings>
-"""
-    player_xml = f"""<?xml version="1.0" encoding="utf-8"?>
-<playerSettings>
-  <displayName>{display_name}</displayName>
-  <sizeX>1920</sizeX>
-  <sizeY>1080</sizeY>
-  <offsetX>0</offsetX>
-  <offsetY>0</offsetY>
-  <preventSleep>true</preventSleep>
-</playerSettings>
-"""
+    # Native volume inside the container (see docker-compose XIBO_LOCAL_LIBRARY).
+    local_library = "/data/xibo-library"
+    xmr_address = os.environ.get("XIBO_XMR_ADDRESS", "tcp://cms-xmr:9505").strip()
+
+    cms_xml = (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<settings version="2">\n'
+        f"  <cmsAddress>{cms_url}</cmsAddress>\n"
+        f"  <key>{cms_key}</key>\n"
+        f"  <localLibrary>{local_library}</localLibrary>\n"
+        f"  <displayId>{hardware_key}</displayId>\n"
+        "</settings>\n"
+    )
+    player_xml = (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<settings version="2">\n'
+        f"  <displayName>{display_name}</displayName>\n"
+        "  <sizeX>1920</sizeX>\n"
+        "  <sizeY>1080</sizeY>\n"
+        "  <offsetX>0</offsetX>\n"
+        "  <offsetY>0</offsetY>\n"
+        # Snap 1.8-R6 PlayerSettings.hpp typo: loadField looks for offfsetY.
+        "  <offfsetY>0</offfsetY>\n"
+        "  <preventSleep>true</preventSleep>\n"
+        "  <collectInterval>30</collectInterval>\n"
+        "  <logLevel>debug</logLevel>\n"
+        f"  <xmrNetworkAddress>{xmr_address}</xmrNetworkAddress>\n"
+        "</settings>\n"
+    )
     config_json = json.dumps(
         {
             "cmsAddress": cms_url,
             "cmsKey": cms_key,
             "displayName": display_name,
             "displayId": hardware_key,
+            "localLibrary": local_library,
+            "xmrNetworkAddress": xmr_address,
         },
         indent=2,
     )
 
-    (runtime / "cmsSettings.xml").write_text(cms_xml, encoding="utf-8")
-    (snap_common / "cmsSettings.xml").write_text(cms_xml, encoding="utf-8")
-    (runtime / "playerSettings.xml").write_text(player_xml, encoding="utf-8")
-    (runtime / "config.json").write_text(config_json + "\n", encoding="utf-8")
+    def _write_lf(path: Path, text: str) -> None:
+        with path.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
 
-    # Fallback still for feh if timeline preview is missing.
+    _write_lf(runtime / "cmsSettings.xml", cms_xml)
+    _write_lf(snap_common / "cmsSettings.xml", cms_xml)
+    _write_lf(runtime / "playerSettings.xml", player_xml)
+    _write_lf(runtime / "config.json", config_json + "\n")
+
+    # Stale XMDS cache on the Windows bind mount can claim media is present while the
+    # native library volume is empty after `down -v`.
+    for stale in ("cacheFile.xml", "schedule.xml", "requiredFiles.xml"):
+        stale_path = runtime / stale
+        if stale_path.exists():
+            stale_path.unlink()
+            LOG.info("Removed stale player cache file %s", stale_path.name)
+
+    # Fallback still for optional feh preview mode.
     preview = runtime / "preview.png"
     if settings.media_path.is_file():
         shutil.copy2(settings.media_path, preview)
     elif not preview.is_file():
         ensure_fixture_image(DEFAULT_FIXTURE)
         shutil.copy2(DEFAULT_FIXTURE, preview)
-    LOG.info("Wrote player config under %s (preview=%s)", runtime, preview)
+    LOG.info(
+        "Wrote player config under %s (localLibrary=%s key_len=%s)",
+        runtime,
+        local_library,
+        len(cms_key),
+    )
 
-    # Recreate player with the discovered SERVER_KEY in its environment.
+    # Last compose --env-file wins over config.env's empty XIBO_CMS_KEY=, so the
+    # entrypoint always receives the live SERVER_KEY (not a stale bind-mount key).
+    runtime_env = runtime / "compose.runtime.env"
+    _write_lf(
+        runtime_env,
+        (
+            f"XIBO_CMS_KEY={cms_key}\n"
+            f"XIBO_DISPLAY_NAME={display_name}\n"
+            f"XIBO_HARDWARE_KEY={hardware_key}\n"
+            f"XIBO_CMS_INTERNAL_URL={cms_url}\n"
+            f"XIBO_XMR_ADDRESS={xmr_address}\n"
+            f"QA_USE_TIMELINE_PREVIEW={'1' if settings.preview_only else '0'}\n"
+        ),
+    )
+
     env = os.environ.copy()
     env["XIBO_CMS_KEY"] = cms_key
     env["XIBO_DISPLAY_NAME"] = display_name
     env["XIBO_HARDWARE_KEY"] = hardware_key
     env["XIBO_CMS_INTERNAL_URL"] = cms_url
-    LOG.info("Recreating %s with XIBO_CMS_KEY set", PLAYER_CONTAINER)
+    env["XIBO_LOCAL_LIBRARY"] = local_library
+    env["XIBO_XMR_ADDRESS"] = xmr_address
+    env["QA_USE_TIMELINE_PREVIEW"] = "1" if settings.preview_only else "0"
+    if not recreate:
+        LOG.info("Player config written; skipping container recreate (fast mode)")
+        return
+
+    up_args = ["up", "-d", "--no-deps", "--force-recreate", "kiosk-player"]
+    if settings.rebuild_player:
+        up_args.insert(2, "--build")
+        LOG.info(
+            "Recreating %s with --build (timeline_preview=%s library=%s xmr=%s)",
+            PLAYER_CONTAINER,
+            env["QA_USE_TIMELINE_PREVIEW"],
+            local_library,
+            xmr_address,
+        )
+    else:
+        LOG.info(
+            "Recreating %s without rebuild (timeline_preview=%s library=%s xmr=%s)",
+            PLAYER_CONTAINER,
+            env["QA_USE_TIMELINE_PREVIEW"],
+            local_library,
+            xmr_address,
+        )
     run_cmd(
-        compose_cmd(settings, "up", "-d", "--no-deps", "--force-recreate", "kiosk-player"),
+        compose_cmd(settings, *up_args),
         check=True,
         capture=False,
         env=env,
     )
 
-    wait_for_player_running(timeout_seconds=90)
+    wait_for_player_running(timeout_seconds=60 if settings.fast else 90)
+
+
+def restart_player_container(*, fast: bool = False) -> None:
+    """Bounce the player process without rebuilding the image."""
+    LOG.info("Restarting %s (no rebuild)", PLAYER_CONTAINER)
+    run_cmd(["docker", "restart", PLAYER_CONTAINER], check=True, capture=False)
+    wait_for_player_running(timeout_seconds=45 if fast else 90)
 
 
 def stack_up(settings: Settings) -> None:
     LOG.info("Starting ephemeral compose stack")
-    run_cmd(compose_cmd(settings, "up", "-d", "--build"), capture=False)
+    up_args = ["up", "-d"]
+    if settings.rebuild_player:
+        up_args.append("--build")
+    run_cmd(compose_cmd(settings, *up_args), capture=False)
 
 
 def stack_down(settings: Settings) -> None:
@@ -1402,6 +1966,8 @@ def capture_framebuffer(
     *,
     record_duration: int = DEFAULT_RECORD_DURATION,
     also_video: bool = True,
+    require_player_process: bool = True,
+    paint_stable_seconds: int = 5,
 ) -> Path:
     """Grab a PNG (and optional MP4) from the player container DISPLAY :99."""
     artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -1412,11 +1978,21 @@ def capture_framebuffer(
     local_mp4 = artifact_dir / f"clip-{stamp}.mp4"
 
     wait_for_player_running(timeout_seconds=60)
+    if require_player_process:
+        wait_for_player_process_alive(
+            timeout_seconds=90,
+            stable_seconds=paint_stable_seconds,
+        )
 
     LOG.info("Capturing screenshot via scrot on DISPLAY=:99")
     last_error: Optional[Exception] = None
     for attempt in range(1, 6):
         try:
+            if require_player_process and not player_process_alive():
+                wait_for_player_process_alive(
+                    timeout_seconds=45,
+                    stable_seconds=max(3, paint_stable_seconds // 2),
+                )
             docker_exec(
                 PLAYER_CONTAINER,
                 [
@@ -1431,6 +2007,8 @@ def capture_framebuffer(
             last_error = exc
             LOG.warning("Screenshot attempt %s/5 failed: %s", attempt, exc)
             wait_for_player_running(timeout_seconds=30)
+            if require_player_process:
+                wait_for_player_process_alive(timeout_seconds=45, stable_seconds=3)
             time.sleep(2)
     if last_error is not None:
         logs = run_cmd(["docker", "logs", "--tail", "80", PLAYER_CONTAINER], check=False)
@@ -1478,12 +2056,163 @@ def write_report(artifact_dir: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def wait_for_xmr_channel(
+    client: XiboClient,
+    display_name: str,
+    *,
+    timeout_seconds: int = 60,
+) -> Optional[dict[str, Any]]:
+    """Poll until the display reports an xmrChannel (or timeout)."""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        display = client.find_display(display_name)
+        if display and str(display.get("xmrChannel") or "").strip():
+            channel = str(display.get("xmrChannel"))
+            LOG.info(
+                "Display %s has xmrChannel=%s…",
+                display_name,
+                channel[:16],
+            )
+            return display
+        time.sleep(5)
+    LOG.warning("Display %s still missing xmrChannel after %ss", display_name, timeout_seconds)
+    return client.find_display(display_name)
+
+
+def push_layout_to_display(
+    client: XiboClient,
+    *,
+    display_name: str,
+    display_group_id: int,
+    layout_id: int,
+    change_duration: int,
+    fast: bool = False,
+    campaign_id: Optional[int] = None,
+) -> tuple[bool, bool]:
+    """Send collectNow/changeLayout once xmrChannel is present."""
+    first_wait = 10 if fast else 30
+    wait_for_xmr_channel(client, display_name, timeout_seconds=first_wait)
+    collected = client.collect_now(display_group_id)
+    changed = client.change_layout_now(
+        display_group_id,
+        layout_id,
+        duration=change_duration,
+        campaign_id=campaign_id,
+    )
+    if collected and changed:
+        return collected, changed
+    if fast:
+        return collected, changed
+    time.sleep(5)
+    wait_for_xmr_channel(client, display_name, timeout_seconds=15)
+    if not collected:
+        collected = client.collect_now(display_group_id)
+    if not changed:
+        changed = client.change_layout_now(
+            display_group_id,
+            layout_id,
+            duration=change_duration,
+            campaign_id=campaign_id,
+        )
+    return collected, changed
+
+
+def player_library_file_count() -> int:
+    probe = docker_exec(
+        PLAYER_CONTAINER,
+        [
+            "bash",
+            "-lc",
+            (
+                "lib=/data/xibo-library; "
+                "count=$(find \"$lib\" -type f ! -name '.keep' 2>/dev/null | wc -l); "
+                "echo \"library_files=$count\""
+            ),
+        ],
+        check=False,
+    )
+    for line in (probe.stdout or "").splitlines():
+        if line.startswith("library_files="):
+            try:
+                return int(line.split("=", 1)[1].strip())
+            except ValueError:
+                return 0
+    return 0
+
+
+def wait_for_player_library(
+    *,
+    min_library_files: int = 1,
+    timeout_seconds: int = 90,
+    poll_seconds: int = 5,
+) -> int:
+    """Poll until the player library has content (or timeout)."""
+    deadline = time.time() + timeout_seconds
+    count = 0
+    while time.time() < deadline:
+        count = player_library_file_count()
+        LOG.info("Player library file count=%s (want >= %s)", count, min_library_files)
+        if count >= min_library_files:
+            return count
+        time.sleep(poll_seconds)
+    assert_player_has_content(min_library_files=min_library_files)
+    return player_library_file_count()
+
+
+def assert_player_has_content(*, min_library_files: int = 1) -> None:
+    """Fail early if the player never collected CMS content into its library."""
+    probe = docker_exec(
+        PLAYER_CONTAINER,
+        [
+            "bash",
+            "-lc",
+            (
+                "lib=/data/xibo-library; "
+                "count=$(find \"$lib\" -type f ! -name '.keep' 2>/dev/null | wc -l); "
+                "echo \"library_files=$count\"; "
+                "ls -la \"$lib\" /var/lib/xibo-player/cmsSettings.xml "
+                "/var/lib/xibo-player/schedule.xml "
+                "/var/lib/xibo-player/cacheFile.xml 2>/dev/null || true; "
+                "echo '--- cmsSettings ---'; "
+                "cat /var/lib/xibo-player/cmsSettings.xml 2>/dev/null || true; "
+                "echo '--- entrypoint/player log ---'; "
+                "tail -n 80 /artifacts/player.log 2>/dev/null || true; "
+                "docker_logs=$(sed -n '1,40p' /artifacts/xvfb.log 2>/dev/null || true); "
+                "echo \"$docker_logs\""
+            ),
+        ],
+        check=False,
+    )
+    out = probe.stdout or ""
+    count = 0
+    for line in out.splitlines():
+        if line.startswith("library_files="):
+            try:
+                count = int(line.split("=", 1)[1].strip())
+            except ValueError:
+                count = 0
+            break
+    LOG.info("Player library file count=%s", count)
+    if count < min_library_files:
+        raise PipelineError(
+            "Xibo player library appears empty after sync wait — "
+            "framebuffer would not show published exhibit content.\n"
+            f"diagnostics:\n{out[-3000:]}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
 
 
 def run_pipeline(settings: Settings) -> int:
+    from exhibit_layout import (  # local package alongside this script
+        PipelineError as LayoutPipelineError,
+        publish_exhibit_layout,
+        timeline_path_for,
+    )
+
     allow_fixture = settings.media_path.resolve() == DEFAULT_FIXTURE.resolve()
     ensure_media_ready(settings.media_path, allow_generate_fixture=allow_fixture)
     settings.artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -1494,14 +2223,24 @@ def run_pipeline(settings: Settings) -> int:
         "exhibit_slug": settings.exhibit_slug,
         "record_duration": settings.record_duration,
         "media_path": str(settings.media_path),
+        "preview_only": settings.preview_only,
+        "fast": settings.fast,
+        "rebuild_player": settings.rebuild_player,
+        "skip_html_packages": settings.skip_html_packages,
+        "image_only_layout": settings.image_only_layout,
         "steps": [],
     }
     client = XiboClient(settings.cms_url)
     LOG.info(
-        "QA target exhibit=%s media=%s record_duration=%ss",
+        "QA target exhibit=%s media=%s record_duration=%ss preview_only=%s fast=%s "
+        "skip_html=%s image_only=%s",
         settings.exhibit_slug,
         settings.media_path,
         settings.record_duration,
+        settings.preview_only,
+        settings.fast,
+        settings.skip_html_packages,
+        settings.image_only_layout,
     )
 
     try:
@@ -1511,6 +2250,13 @@ def run_pipeline(settings: Settings) -> int:
 
         client.wait_until_ready()
         report["steps"].append("cms_ready")
+
+        xmr_private = os.environ.get("XIBO_XMR_PRIVATE_ADDRESS", "http://cms-xmr:8081").strip()
+        xmr_public = os.environ.get("XIBO_XMR_ADDRESS", "tcp://cms-xmr:9505").strip()
+        configure_xmr_settings(private_address=xmr_private, public_address=xmr_public)
+        report["xmr_private_address"] = xmr_private
+        report["xmr_public_address"] = xmr_public
+        report["steps"].append("xmr_configured")
 
         client_id = settings.client_id
         client_secret = settings.client_secret
@@ -1539,31 +2285,45 @@ def run_pipeline(settings: Settings) -> int:
             raise PipelineError(f"OAuth token exchange failed after retries: {token_error}")
         report["steps"].append("oauth_token")
 
-        # Discover CMS key for player if not provided.
-        cms_key = settings.cms_key
-        if not cms_key:
-            cms_key = client.get_cms_server_key()
-            LOG.info("Discovered SERVER_KEY from CMS database")
-
-        timeline_meta = prepare_timeline_preview(settings)
-        if timeline_meta:
-            report["renderer"] = "timeline-preview"
-            report["timeline_path"] = timeline_meta.get("timeline_path")
-            report["steps"].append("timeline_preview_rendered")
-        else:
-            report["renderer"] = "static-fallback"
+        # Always prefer the live CMS SERVER_KEY. config.env / XIBO_CMS_KEY drifts
+        # across `down -v` recreates while player-runtime bind mounts survive.
+        live_key = client.get_cms_server_key()
+        if settings.cms_key and settings.cms_key != live_key:
+            LOG.warning(
+                "Ignoring XIBO_CMS_KEY from env (len=%s); using live SERVER_KEY (len=%s)",
+                len(settings.cms_key),
+                len(live_key),
+            )
+        cms_key = live_key
+        LOG.info("Using SERVER_KEY from CMS database (len=%s)", len(cms_key))
 
         hardware_key = os.environ.get("XIBO_HARDWARE_KEY", "qa-kiosk-01-hw")
+        cms_internal = os.environ.get("XIBO_CMS_INTERNAL_URL", "http://cms-web")
+
+        if settings.preview_only:
+            timeline_meta = prepare_timeline_preview(settings)
+            if timeline_meta:
+                report["renderer"] = "timeline-preview"
+                report["timeline_path"] = timeline_meta.get("timeline_path")
+                report["steps"].append("timeline_preview_rendered")
+            else:
+                report["renderer"] = "static-fallback"
+        else:
+            report["renderer"] = "xibo-player"
+            # Avoid stale Chromium preview HTML confusing operators.
+            if TIMELINE_PREVIEW_DIR.is_dir():
+                shutil.rmtree(TIMELINE_PREVIEW_DIR, ignore_errors=True)
+
         provision_player_cms_config(
             settings=settings,
-            cms_url=os.environ.get("XIBO_CMS_INTERNAL_URL", "http://cms-web"),
+            cms_url=cms_internal,
             cms_key=cms_key,
             display_name=settings.display_name,
             hardware_key=hardware_key,
+            recreate=True,
         )
-        time.sleep(5)
+        time.sleep(2 if settings.fast else 5)
 
-        # Ensure a display record exists even if the player is slow to XMDS-register.
         try:
             client.register_display_via_xmds(
                 server_key=cms_key,
@@ -1573,93 +2333,190 @@ def run_pipeline(settings: Settings) -> int:
         except PipelineError as exc:
             LOG.warning("XMDS register fallback failed (player may still self-register): %s", exc)
 
-        media_id = client.upload_media(settings.media_path, name=f"{settings.exhibit_slug}-qa")
-        report["media_id"] = media_id
-        report["steps"].append("media_uploaded")
+        # Authorise as soon as the display row exists so the player's next
+        # RegisterDisplay is READY and Soap5 persists xmrChannel/xmrPubKey.
+        try:
+            early = client.wait_for_display(
+                settings.display_name,
+                timeout_seconds=60 if settings.fast else 120,
+            )
+            if int(early.get("licensed") or 0) != 1:
+                client.authorise_display(early, hardware_key=hardware_key)
+                LOG.info("Early-authorised display so XMR channel can be persisted")
+        except PipelineError as exc:
+            LOG.warning("Early display authorise skipped: %s", exc)
 
-        layout = client.create_layout(settings.layout_name)
-        published_layout_id = int(layout.get("layoutId") or layout.get("layoutid"))
-        campaign_id = int(layout.get("campaignId") or layout.get("campaignid") or published_layout_id)
+        final_layout_id: int
+        campaign_id: int
+        layout_duration = max(15, settings.record_duration)
+        # keep-stack leaves prior layouts; unique names avoid 409 rename collisions.
+        run_layout_name = f"{settings.layout_name}-{time.strftime('%H%M%S')}"
+        LOG.info("Using layout name %s", run_layout_name)
 
-        widget_duration = max(15, settings.record_duration)
-        draft = client.ensure_media_on_layout(
-            published_layout_id,
-            media_id,
-            duration=widget_duration,
-        )
-        report["draft_layout_id"] = int(draft.get("layoutId") or draft.get("layoutid") or 0)
-        report["steps"].append("layout_media_assigned")
-
-        # Publish always targets the parent/published layout id.
-        parent_id = int(draft.get("parentId") or published_layout_id)
-        published = client.publish_layout(parent_id)
-        final_layout_id = int(published.get("layoutId") or published.get("layoutid") or parent_id)
-        campaign_id = int(published.get("campaignId") or published.get("campaignid") or campaign_id)
-        report["layout_id"] = final_layout_id
-        report["campaign_id"] = campaign_id
-        report["steps"].append("layout_published")
+        if settings.preview_only:
+            # Chromium escape hatch: still publish a simple single-image layout for CMS smoke.
+            media_id = client.upload_media(
+                settings.media_path, name=f"{settings.exhibit_slug}-qa"
+            )
+            report["media_id"] = media_id
+            report["steps"].append("media_uploaded")
+            layout = client.create_layout(run_layout_name)
+            published_layout_id = int(layout.get("layoutId") or layout.get("layoutid"))
+            campaign_id = int(
+                layout.get("campaignId") or layout.get("campaignid") or published_layout_id
+            )
+            draft = client.ensure_media_on_layout(
+                published_layout_id,
+                media_id,
+                duration=max(15, settings.record_duration),
+            )
+            report["draft_layout_id"] = int(draft.get("layoutId") or draft.get("layoutid") or 0)
+            parent_id = int(draft.get("parentId") or published_layout_id)
+            published = client.publish_layout(parent_id)
+            final_layout_id = parent_id
+            campaign_id = int(
+                published.get("campaignId") or published.get("campaignid") or campaign_id
+            )
+            report["layout_id"] = final_layout_id
+            report["campaign_id"] = campaign_id
+            report["steps"].append("layout_published")
+        else:
+            timeline = timeline_path_for(settings.exhibit_slug)
+            if timeline.is_file():
+                try:
+                    published_meta = publish_exhibit_layout(
+                        client,
+                        exhibit_slug=settings.exhibit_slug,
+                        layout_name=run_layout_name,
+                        image_only=settings.image_only_layout,
+                        skip_html_packages=settings.skip_html_packages,
+                    )
+                except LayoutPipelineError as exc:
+                    raise PipelineError(str(exc)) from exc
+                final_layout_id = int(published_meta["layout_id"])
+                campaign_id = int(published_meta["campaign_id"])
+                layout_duration = int(published_meta.get("layout_duration") or layout_duration)
+                report["layout_id"] = final_layout_id
+                report["campaign_id"] = campaign_id
+                report["draft_layout_id"] = published_meta.get("draft_layout_id")
+                report["media_ids"] = published_meta.get("media_ids")
+                report["timeline_path"] = published_meta.get("timeline_path")
+                report["regions"] = published_meta.get("regions")
+                report["layout_duration"] = layout_duration
+                report["steps"].append("exhibit_layout_published")
+            else:
+                LOG.info(
+                    "No timeline.yaml for %s; falling back to single-image layout",
+                    settings.exhibit_slug,
+                )
+                media_id = client.upload_media(
+                    settings.media_path, name=f"{settings.exhibit_slug}-qa"
+                )
+                report["media_id"] = media_id
+                report["steps"].append("media_uploaded")
+                layout = client.create_layout(run_layout_name)
+                published_layout_id = int(layout.get("layoutId") or layout.get("layoutid"))
+                campaign_id = int(
+                    layout.get("campaignId") or layout.get("campaignid") or published_layout_id
+                )
+                draft = client.ensure_media_on_layout(
+                    published_layout_id,
+                    media_id,
+                    duration=max(15, settings.record_duration),
+                )
+                report["draft_layout_id"] = int(
+                    draft.get("layoutId") or draft.get("layoutid") or 0
+                )
+                parent_id = int(draft.get("parentId") or published_layout_id)
+                published = client.publish_layout(parent_id)
+                final_layout_id = parent_id
+                campaign_id = int(
+                    published.get("campaignId") or published.get("campaignid") or campaign_id
+                )
+                report["layout_id"] = final_layout_id
+                report["campaign_id"] = campaign_id
+                report["steps"].append("layout_published")
 
         display = client.wait_for_display(settings.display_name, timeout_seconds=180)
-        display_id = int(display["displayId"])
-        display_group_id = int(display["displayGroupId"])
         if int(display.get("licensed") or 0) != 1:
             client.authorise_display(display, hardware_key=hardware_key)
-            # Refresh after authorise so later edits see licensed=1 / license key.
             display = client.find_display(settings.display_name) or display
+        display_group_id = int(display["displayGroupId"])
         client.set_default_layout(display, final_layout_id, hardware_key=hardware_key)
         try:
+            cleared = client.clear_schedule_for_display_group(display_group_id)
+            report["schedule_cleared"] = cleared
             client.schedule_layout(display_group_id, campaign_id, event_name="qa-schedule")
         except PipelineError as exc:
             LOG.warning("Schedule create failed (continuing without schedule event): %s", exc)
 
-        # XMR push requires the player to have registered an xmrChannel. XMDS-only
-        # registrations (and early player boots) often lack that — treat as optional.
-        collected = client.collect_now(display_group_id)
-        change_duration = max(120, settings.record_duration + 30)
-        changed = client.change_layout_now(
-            display_group_id,
-            final_layout_id,
-            duration=change_duration,
+        # CMS Soap5 only persists xmrChannel on READY RegisterDisplay. Authorise first,
+        # then bounce the player so it re-registers while licensed and fills XMR fields.
+        # Never call pipeline XMDS register after this point (it would wipe xmrChannel).
+        if not settings.preview_only:
+            provision_player_cms_config(
+                settings=settings,
+                cms_url=cms_internal,
+                cms_key=cms_key,
+                display_name=settings.display_name,
+                hardware_key=hardware_key,
+                recreate=not settings.fast,
+            )
+            if settings.fast:
+                restart_player_container(fast=True)
+            LOG.info(
+                "Waiting for player READY RegisterDisplay to publish xmrChannel "
+                "(Soap5 ignores XMR fields while WAITING)"
+            )
+            xmr_wait = 25 if settings.fast else 90
+            display = wait_for_xmr_channel(
+                client, settings.display_name, timeout_seconds=xmr_wait
+            ) or display
+
+        change_duration = max(120, settings.record_duration + 30, layout_duration + 30)
+        collected, changed = push_layout_to_display(
+            client,
+            display_name=settings.display_name,
+            display_group_id=display_group_id,
+            layout_id=final_layout_id,
+            change_duration=change_duration,
+            fast=settings.fast,
+            campaign_id=campaign_id,
         )
         report["xmr_collect"] = collected
         report["xmr_change_layout"] = changed
         report["steps"].append("xmr_collect_and_change_layout")
 
-        # Restart player immediately before capture so the Chromium timeline clock
-        # starts at t≈0 for the recording window (CMS steps can take minutes).
-        if timeline_meta:
-            LOG.info("Restarting kiosk-player to reset timeline preview clock")
-            provision_player_cms_config(
-                settings=settings,
-                cms_url=os.environ.get("XIBO_CMS_INTERNAL_URL", "http://cms-web"),
-                cms_key=cms_key,
-                display_name=settings.display_name,
-                hardware_key=hardware_key,
-            )
-            # Short settle so Chromium paints scene 1; keep well under first scene change (15s).
+        if settings.preview_only:
             wait_s = 5
-            LOG.info(
-                "Timeline preview ready; waiting %ss for Chromium paint before capture",
-                wait_s,
-            )
+            LOG.info("Preview mode; waiting %ss for Chromium paint before capture", wait_s)
+            time.sleep(wait_s)
         else:
-            wait_s = settings.capture_wait_seconds
-            if not collected or not changed:
-                wait_s = max(wait_s, 90)
-                LOG.info(
-                    "XMR unavailable; waiting %ss for player poll / default layout sync",
-                    wait_s,
-                )
-            else:
-                LOG.info("Waiting %ss for player library sync / paint", wait_s)
-        time.sleep(wait_s)
+            wait_for_player_library(
+                min_library_files=1,
+                timeout_seconds=max(settings.capture_wait_seconds, 35 if settings.fast else 90),
+                poll_seconds=4 if settings.fast else 5,
+            )
+            # Post-XMR: require the player binary itself (not only Xvfb) before scrot.
+            paint_stable = 4 if settings.fast else 8
+            wait_for_player_process_alive(
+                timeout_seconds=max(settings.capture_wait_seconds, 45 if settings.fast else 90),
+                stable_seconds=paint_stable,
+            )
 
         screenshot = capture_framebuffer(
             settings.artifact_dir,
             record_duration=settings.record_duration,
-            also_video=True,
+            also_video=settings.record_video,
+            require_player_process=not settings.preview_only,
+            paint_stable_seconds=4 if settings.fast else 6,
         )
         report["screenshot"] = str(screenshot)
+        clip = settings.artifact_dir / screenshot.name.replace("frame-", "clip-").replace(
+            ".png", ".mp4"
+        )
+        if clip.is_file():
+            report["video"] = str(clip)
         report["steps"].append("captured")
 
         verification = verify_capture(screenshot)
@@ -1706,8 +2563,51 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--artifact-dir", help="Host directory for captures and qa-report.json")
     parser.add_argument("--capture-wait", type=int, default=None, help="Seconds to wait before capture")
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help=(
+            "Faster iteration: skip player image rebuild, keep stack, short XMR waits, "
+            "poll library instead of fixed sleep, PNG-only (implies --keep-stack)"
+        ),
+    )
+    parser.add_argument(
+        "--rebuild-player",
+        action="store_true",
+        help="Force docker compose --build for the player image (use after Dockerfile/entrypoint changes)",
+    )
+    parser.add_argument(
+        "--record-video",
+        action="store_true",
+        help="Record MP4 even in --fast mode",
+    )
+    parser.add_argument(
+        "--no-video",
+        action="store_true",
+        help="Skip MP4 capture (PNG only)",
+    )
     parser.add_argument("--keep-stack", action="store_true", help="Do not docker compose down -v on exit")
     parser.add_argument("--skip-up", action="store_true", help="Assume compose stack is already running")
+    parser.add_argument(
+        "--preview-only",
+        action="store_true",
+        help="Debug: Chromium timeline preview capture instead of Xibo Linux Player",
+    )
+    parser.add_argument(
+        "--image-only-layout",
+        action="store_true",
+        help="Bisect: publish a single-region image-only layout (QA_IMAGE_ONLY_LAYOUT=1)",
+    )
+    parser.add_argument(
+        "--skip-html-packages",
+        action="store_true",
+        help="Skip html-package widgets when publishing (default in headless player mode)",
+    )
+    parser.add_argument(
+        "--include-html-packages",
+        action="store_true",
+        help="Include html-package widgets (overrides default QA_SKIP_HTML_PACKAGES)",
+    )
     parser.add_argument("--verify-only", metavar="PNG", help="Only run Pillow verification on an existing PNG")
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
@@ -1732,6 +2632,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not COMPOSE_FILE.is_file():
         LOG.error("Missing compose file: %s", COMPOSE_FILE)
         return 2
+
+    # Ensure ops/qa is importable for exhibit_layout.
+    if str(QA_DIR) not in sys.path:
+        sys.path.insert(0, str(QA_DIR))
 
     settings = Settings.from_env(args)
     return run_pipeline(settings)

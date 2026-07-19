@@ -57,9 +57,12 @@ services:
     image: ghcr.io/xibosignage/xibo-xmr:1.3
     container_name: xibo-qa-cms-xmr
     environment:
-      XMR_DEBUG: "false"
+      # Listen (CMS→XMR) on 50001; publish (XMR→players) on 9505.
+      XMR_DEBUG: ${XMR_DEBUG:-false}
     ports:
       - "${XMR_HOST_PORT:-9505}:9505"
+      # Private listen port mapped for diagnostics; CMS reaches cms-xmr:50001 on qa-net.
+      - "${XMR_LISTEN_HOST_PORT:-50001}:50001"
     networks:
       - qa-net
 
@@ -81,8 +84,9 @@ services:
       MYSQL_DATABASE: cms
       MYSQL_USER: cms
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xiboQaMysqlPass16}
+      # Hostname of the XMR container on the compose network (CMS→XMR private port).
       XMR_HOST: cms-xmr
-      CMS_SERVER_NAME: ${CMS_SERVER_NAME:-localhost}
+      CMS_SERVER_NAME: ${CMS_SERVER_NAME:-cms-web}
       CMS_USE_MEMCACHED: "true"
       MEMCACHED_HOST: cms-memcached
       CMS_QUICK_CHART_URL: http://cms-quickchart:3400
@@ -118,6 +122,8 @@ services:
     depends_on:
       cms-web:
         condition: service_healthy
+      cms-xmr:
+        condition: service_started
     environment:
       DISPLAY_NUM: "99"
       SCREEN_GEOMETRY: 1920x1080x24
@@ -126,10 +132,18 @@ services:
       XIBO_CMS_KEY: ${XIBO_CMS_KEY:-}
       XIBO_DISPLAY_NAME: ${XIBO_DISPLAY_NAME:-qa-kiosk-01}
       XIBO_HARDWARE_KEY: ${XIBO_HARDWARE_KEY:-qa-kiosk-01-hw}
+      # Players on the compose network reach XMR publish socket here (ZeroMQ).
+      XIBO_XMR_ADDRESS: ${XIBO_XMR_ADDRESS:-tcp://cms-xmr:9505}
+      # Default off: capture the Xibo Linux Player. Set to 1 for Chromium timeline preview.
+      QA_USE_TIMELINE_PREVIEW: ${QA_USE_TIMELINE_PREVIEW:-0}
+      # Native Linux volume path (not the Windows bind mount) — snap player FileSystem::exists
+      # is unreliable on Docker Desktop bind-mounted empty dirs under /var/lib/xibo-player.
+      XIBO_LOCAL_LIBRARY: /data/xibo-library
     volumes:
       - qa-player-artifacts:/artifacts
       # Host bind mount so the orchestrator can write cmsSettings.xml without docker exec.
       - ./player-runtime:/var/lib/xibo-player
+      - qa-player-library:/data/xibo-library
     # Player + Xvfb need broad device access for extracted snap runtimes.
     privileged: true
     shm_size: "1gb"
@@ -147,3 +161,4 @@ volumes:
   qa-cms-custom:
   qa-cms-backup:
   qa-player-artifacts:
+  qa-player-library:
