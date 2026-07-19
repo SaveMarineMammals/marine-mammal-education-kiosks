@@ -18,6 +18,7 @@ not a replacement for Xibo CMS or players.
 | [`docs/architecture.md`](docs/architecture.md) | Content flow, naming, media strategy |
 | [`docs/media-policy.md`](docs/media-policy.md) | In-repo vs media-store binaries (always) |
 | [`docs/exhibit-authoring.md`](docs/exhibit-authoring.md) | New exhibit checklist |
+| [`docs/local-testing.md`](docs/local-testing.md) | Tier 1–3 quality checks (local + CI) |
 | [`framework/layout-templates/glance-and-match/`](framework/layout-templates/glance-and-match/) | Tank-side Glance & Match regions |
 | [`ops/qa/README.md`](ops/qa/README.md) | Ephemeral player capture pipeline |
 
@@ -47,6 +48,20 @@ the external media store. Never commit secrets or media-heavy Xibo export ZIPs.
   regions for that template.
 - Timeline text: YAML `|` blocks, plain ASCII, no Markdown/emoji; band color inside
   the text widget; CTA ticker via native Xibo `marqueeLeft` (see skill).
+
+### Quality checks
+
+Before opening a PR, run Tier 1 locally:
+
+```powershell
+python -m pip install -r tools/requirements.txt
+python tools/validate_exhibits.py
+python tools/catalog.py --check
+```
+
+Required on `main`: **Exhibit contract** and **Timeline preview** (path-filtered).
+Live player Docker (`qa-player` label / nightly) is optional for merge but expected
+before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbooks/publish-exhibit.md).
 
 ### Commits and PRs
 

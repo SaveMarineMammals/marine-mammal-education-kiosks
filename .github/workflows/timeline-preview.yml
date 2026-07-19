@@ -1,0 +1,99 @@
+name: Timeline preview
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: timeline-preview-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect preview paths
+    runs-on: ubuntu-latest
+    outputs:
+      preview: ${{ steps.filter.outputs.preview }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Path filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            preview:
+              - 'exhibits/*/layouts/**'
+              - 'exhibits/*/media/**'
+              - 'framework/layout-templates/**'
+              - 'ops/qa/timeline_preview/**'
+              - 'ops/qa/exhibit_layout.py'
+              - 'ops/qa/ci_timeline_preview.py'
+              - 'ops/qa/requirements.txt'
+              - '.github/workflows/timeline-preview.yml'
+
+  preview:
+    name: Run timeline preview
+    needs: changes
+    if: needs.changes.outputs.preview == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ops/qa/requirements.txt
+
+      - name: Install QA dependencies
+        run: |
+          python -m pip install -r ops/qa/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Render timeline previews and capture stills
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="origin/${{ github.base_ref }}"
+          else
+            BASE_REF="HEAD~1"
+          fi
+          python ops/qa/ci_timeline_preview.py --from-git-diff "$BASE_REF" \
+            --out ops/qa/artifacts/timeline-preview-ci
+
+      - name: Upload preview artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timeline-preview
+          path: ops/qa/artifacts/timeline-preview-ci/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Always reports so this check can be required without blocking docs-only PRs.
+  gate:
+    name: Timeline preview
+    needs: [changes, preview]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate preview result
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.changes.outputs.preview }}" != "true" ]; then
+            echo "No layout/media/preview paths changed; treating as success."
+            exit 0
+          fi
+          result="${{ needs.preview.result }}"
+          echo "Preview job result: ${result}"
+          if [ "${result}" = "success" ]; then
+            exit 0
+          fi
+          exit 1
