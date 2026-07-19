@@ -110,6 +110,7 @@ def capture_still(index_html: Path, still_path: Path, *, width: int, height: int
         ) from exc
 
     uri = index_html.resolve().as_uri()
+    still_path.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": width, "height": height})
@@ -129,9 +130,13 @@ def frame_is_non_black(still_path: Path, *, min_nonzero_ratio: float = 0.01) -> 
     with Image.open(still_path) as im:
         rgb = im.convert("RGB")
         width, height = rgb.size
-        pixels = list(rgb.getdata())
-    total = len(pixels) or 1
-    nonzero = sum(1 for r, g, b in pixels if r > 8 or g > 8 or b > 8)
+        raw = rgb.tobytes()
+    total = (len(raw) // 3) or 1
+    nonzero = sum(
+        1
+        for i in range(0, len(raw), 3)
+        if raw[i] > 8 or raw[i + 1] > 8 or raw[i + 2] > 8
+    )
     ratio = nonzero / total
     stats = {
         "width": width,
@@ -142,7 +147,16 @@ def frame_is_non_black(still_path: Path, *, min_nonzero_ratio: float = 0.01) -> 
     return ratio >= min_nonzero_ratio, stats
 
 
+def rel_to_root(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return resolved.as_posix()
+
+
 def preview_one(slug: str, out_root: Path) -> dict[str, Any]:
+    out_root = out_root.resolve()
     exhibit_out = out_root / slug
     exhibit_out.mkdir(parents=True, exist_ok=True)
     regions = region_names(slug)
@@ -162,8 +176,8 @@ def preview_one(slug: str, out_root: Path) -> dict[str, Any]:
         result["errors"].append(str(exc))
         return result
 
-    index_html = Path(meta["index_html"])
-    still_path = exhibit_out / "still.png"
+    index_html = Path(meta["index_html"]).resolve()
+    still_path = (exhibit_out / "still.png").resolve()
     width = 1920
     height = 1080
     try:
@@ -173,7 +187,7 @@ def preview_one(slug: str, out_root: Path) -> dict[str, Any]:
         return result
 
     ok_frame, stats = frame_is_non_black(still_path)
-    result["still"] = str(still_path.relative_to(ROOT)).replace("\\", "/")
+    result["still"] = rel_to_root(still_path)
     result["frame"] = stats
     if not ok_frame:
         result["errors"].append(
@@ -202,6 +216,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    out_root = args.out
+    if not out_root.is_absolute():
+        out_root = (ROOT / out_root).resolve()
+    else:
+        out_root = out_root.resolve()
+
     if args.exhibit:
         slugs = list(dict.fromkeys(args.exhibit))
     elif args.from_git_diff:
@@ -214,8 +234,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "exhibits": [],
                 "message": "no timeline exhibits in diff",
             }
-            args.out.mkdir(parents=True, exist_ok=True)
-            (args.out / "qa-report.json").write_text(
+            out_root.mkdir(parents=True, exist_ok=True)
+            (out_root / "qa-report.json").write_text(
                 json.dumps(report, indent=2) + "\n", encoding="utf-8"
             )
             return 0
@@ -226,7 +246,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("error: no exhibits with layouts/timeline.yaml found", file=sys.stderr)
         return 1
 
-    out_root = args.out
     out_root.mkdir(parents=True, exist_ok=True)
     results = [preview_one(slug, out_root) for slug in slugs]
     failed = [r for r in results if not r.get("ok")]
