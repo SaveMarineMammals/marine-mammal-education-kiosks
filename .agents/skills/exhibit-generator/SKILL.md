@@ -1,4 +1,4 @@
-﻿---
+---
 name: exhibit-generator
 description: >-
   Create a new Glance & Match educational exhibit package under exhibits/<slug>/
@@ -147,7 +147,7 @@ of truth for what the player shows.
 
 ## Media rules
 
-Follow `.cursor/rules/media-policy.mdc` and `docs/architecture.md` (Media strategy):
+Follow `docs/media-policy.md` and `docs/architecture.md` (Media strategy):
 
 - Every committed image/sound **under 2 MB**; record `sha256`, `mime`, `bytes`,
   repo-relative `uri` in `media/manifest.yaml`.

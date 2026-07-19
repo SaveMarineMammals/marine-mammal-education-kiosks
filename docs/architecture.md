@@ -37,6 +37,8 @@ Players pull layouts + media via XMDS
 
 Only **large** files should be referenced from the external media store. Images and sound may live in this repo when each file is under **2 MB**.
 
+Operational checklist for agents and authors: [`media-policy.md`](media-policy.md).
+
 - **In Git:** YAML, copy, layout recipes; **images and sound under 2 MB each** (typically under `exhibits/<slug>/media/assets/` or shared `framework/`); optional preview thumbs.
 - **Media store:** video and any file **≥ 2 MB** — referenced by `sha256` and store URI in each exhibit’s `media/manifest.yaml`.
 - **Not in Git:** root `media/` working copies of large masters, `dist/` layout export ZIPs that embed full library files, secrets/credentials.
