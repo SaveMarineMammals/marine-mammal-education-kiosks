@@ -48,9 +48,28 @@ Same commands locally: [docs/local-testing.md](docs/local-testing.md).
 
 ## Docs
 
-- [Architecture](docs/architecture.md) — Xibo + media flow
-- [Exhibit authoring](docs/exhibit-authoring.md) — how to add content
-- [Local testing](docs/local-testing.md) — Tier 1–3 validation on your machine
-- [Layout preview](framework/preview/) — branding + template mockups in the browser
-- [Ops](ops/) — CMS, players, runbooks
-- [Publish exhibit](ops/runbooks/publish-exhibit.md) — pre-publish QA gates
+| Document | Description |
+| --- | --- |
+| [Architecture](docs/architecture.md) | Xibo + media flow |
+| [Exhibit authoring](docs/exhibit-authoring.md) | How to add content |
+| [Local testing](docs/local-testing.md) | Tier 1–3 validation on your machine |
+| [Layout preview](framework/preview/) | Branding + template mockups in the browser |
+| [Ops](ops/) | CMS, players, runbooks |
+| [Publish exhibit](ops/runbooks/publish-exhibit.md) | Pre-publish QA gates |
+| [AGENTS.md](AGENTS.md) | Guide for AI coding agents |
+| [Contributing](CONTRIBUTING.md) | How to contribute |
+| [Code of Conduct](CODE_OF_CONDUCT.md) | Community standards |
+
+## License
+
+Code and documentation in this repository: [Apache 2.0](LICENSE)
+
+Copyright 2026 Marine Mammal Education Kiosks Contributors.
+
+Exhibit media may carry separate attribution; see each exhibit’s `media/ASSETS.md`
+and [framework/branding/attribution.md](framework/branding/attribution.md).
+
+## Community
+
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Questions about authoring,
+ops, or contribution scope can be opened as GitHub Discussions or issues.
