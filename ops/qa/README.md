@@ -5,9 +5,10 @@ Isolated Docker Compose stack that boots Xibo CMS (web, MySQL, XMR), a headless
 the REST API, and records the live player framebuffer.
 
 **Default path:** when `exhibits/<slug>/layouts/timeline.yaml` exists, the
-pipeline uploads local assets, builds a multi-region `layered-stills-loop`
-layout in CMS, publishes it, schedules it to the QA display, and captures
-`scrot` + `ffmpeg` from the snap player.
+pipeline uploads local assets, builds a multi-region layout in CMS from the
+timeline template (`layered-stills-loop` or `glance-and-match`), publishes it,
+schedules it to the QA display, and captures `scrot` + `ffmpeg` from the snap
+player.
 
 **Escape hatch:** `--preview-only` (or `QA_USE_TIMELINE_PREVIEW=1`) renders a
 Chromium timeline preview instead of recording the Xibo player.

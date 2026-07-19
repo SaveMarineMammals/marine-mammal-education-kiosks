@@ -1,5 +1,16 @@
 # yaml-language-server: $schema=../schemas/catalog.schema.json
 exhibits:
+  - id: "00000000-0000-4000-8000-000000000002"
+    slug: asian-small-clawed-otters
+    title: Asian Small-Clawed Otters
+    status: draft
+    version: 0.1.0
+    path: exhibits/asian-small-clawed-otters
+    tags:
+      - otters
+      - glance-and-match
+      - vulnerable
+      - kids
   - id: "00000000-0000-4000-8000-000000000001"
     slug: humpback-migration
     title: Humpback Whale Migration

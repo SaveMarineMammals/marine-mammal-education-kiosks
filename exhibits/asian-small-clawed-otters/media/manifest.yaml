@@ -1,0 +1,123 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: asian-small-clawed-otters
+store: media-store-primary
+assets:
+  # --- Zone A: Hero identification ---
+  - id: graphic-otter-silhouette
+    role: hero-id
+    filename: graphic-otter-silhouette.png
+    sha256: "3bb420c51d0b36437a6881c862438753c7a5a900fae3262566419b2c95571f62"
+    uri: exhibits/asian-small-clawed-otters/media/assets/graphic-otter-silhouette.png
+    mime: image/png
+    bytes: 1604188
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:hero-id
+      - zone:a
+    preview: graphic-otter-silhouette-thumb.jpg
+
+  - id: bg-hero-wetland
+    role: hero-bg
+    filename: bg-hero-wetland.jpg
+    sha256: "af5ebd0fd188c68de479101e192357572d46c1d92bef3a562279f6135293b2ab"
+    uri: exhibits/asian-small-clawed-otters/media/assets/bg-hero-wetland.jpg
+    mime: image/jpeg
+    bytes: 108044
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:hero-bg
+      - zone:a
+    preview: bg-hero-wetland-thumb.jpg
+
+  # --- Zone B: Right pane + cards ---
+  - id: bg-insights-panel
+    role: insights-bg
+    filename: bg-insights-panel.jpg
+    sha256: "ad16bbdf7a1b7ef29853bedf5df63a5ad97875c15ace7772ee339d0fb940ce4f"
+    uri: exhibits/asian-small-clawed-otters/media/assets/bg-insights-panel.jpg
+    mime: image/jpeg
+    bytes: 82937
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insights-bg
+      - zone:b
+    preview: bg-insights-panel-thumb.jpg
+
+  - id: bg-insights-copy-scrim
+    role: insights-copy-scrim
+    filename: bg-insights-copy-scrim.png
+    sha256: "90f6f0b0806c9fe9f7685ce64798fac03a7315ab71b03f6e9611e00ab95ddba7"
+    uri: exhibits/asian-small-clawed-otters/media/assets/bg-insights-copy-scrim.png
+    mime: image/png
+    bytes: 2631
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insights-copy-scrim
+      - zone:b
+    preview: bg-insights-copy-scrim-thumb.jpg
+
+  - id: graphic-diet-paws
+    role: insight-card
+    filename: graphic-diet-paws.png
+    sha256: "4e7e3055d59416218b38096dc5e509a4c5cdbe2312c799b266f7ff4ee3754a82"
+    uri: exhibits/asian-small-clawed-otters/media/assets/graphic-diet-paws.png
+    mime: image/png
+    bytes: 1506293
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insight-card
+      - card:diet
+    preview: graphic-diet-paws-thumb.jpg
+
+  - id: graphic-threat-wetland
+    role: insight-card
+    filename: graphic-threat-wetland.png
+    sha256: "6069f37b0a4694b38a5add9948a17b0443fdd77cbfa82f0ea6b9dd4a8cde860f"
+    uri: exhibits/asian-small-clawed-otters/media/assets/graphic-threat-wetland.png
+    mime: image/png
+    bytes: 1585882
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insight-card
+      - card:threat
+    preview: graphic-threat-wetland-thumb.jpg
+
+  - id: graphic-fact-family
+    role: insight-card
+    filename: graphic-fact-family.png
+    sha256: "48691d772c44e54ca06a5c70b931ed7d3789a4bc42d764aefc1386a45d743814"
+    uri: exhibits/asian-small-clawed-otters/media/assets/graphic-fact-family.png
+    mime: image/png
+    bytes: 1736237
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insight-card
+      - card:hidden-fact
+    preview: graphic-fact-family-thumb.jpg
+
+  - id: graphic-help-donate
+    role: insight-card
+    filename: graphic-help-donate.png
+    sha256: "64b8569c095b660fbee307c65f0512f66c2e94483b9d0c2c15f50742ad98a619"
+    uri: exhibits/asian-small-clawed-otters/media/assets/graphic-help-donate.png
+    mime: image/png
+    bytes: 1113900
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:insight-card
+      - card:how-to-help
+    preview: graphic-help-donate-thumb.jpg
+
+  # --- Zone C: Ticker scrim ---
+  - id: bg-ticker-scrim
+    role: ticker
+    filename: bg-ticker-scrim.png
+    sha256: "53287f6874da7ce3dee0e7fdaf1827d99502cf07ec55598b85e7c792ddd086d8"
+    uri: exhibits/asian-small-clawed-otters/media/assets/bg-ticker-scrim.png
+    mime: image/png
+    bytes: 1331
+    xiboTags:
+      - exhibit:asian-small-clawed-otters
+      - role:ticker
+      - zone:c
+    preview: bg-ticker-scrim-thumb.jpg

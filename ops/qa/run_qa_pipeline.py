@@ -930,7 +930,14 @@ class XiboClient:
         )
         return widget_id
 
-    def add_text_widget(self, playlist_id: int, text: str, duration: int) -> int:
+    def add_text_widget(
+        self,
+        playlist_id: int,
+        text: str,
+        duration: int,
+        *,
+        effect: str = "none",
+    ) -> int:
         duration = max(1, int(duration))
         widget: Optional[dict[str, Any]] = None
         last_error: Optional[Exception] = None
@@ -957,31 +964,58 @@ class XiboClient:
         if not widget_id:
             raise PipelineError(f"text widget missing id: {widget}")
 
-        html = (
-            "<div style=\"font-family:sans-serif;font-size:36px;line-height:1.25;"
-            "color:#ffffff;background:rgba(0,0,0,0.55);padding:24px 28px;"
-            f"box-sizing:border-box;width:100%;height:100%;\">{_escape_html(text)}</div>"
-        )
+        effect_key = (effect or "none").strip()
+        plain = " ".join(text.split())
+        # Paint the band inside the text widget so background and glyphs share
+        # one box. Separate scrim images get aspect-fitted by the player and
+        # drift away from the text.
+        band_bg = "#0A2A3A"
+        if effect_key == "tickerScroll":
+            html = (
+                "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
+                "font-size:34px;line-height:1.2;font-weight:600;color:#E8F4F8;"
+                f"background:{band_bg};padding:28px 32px;box-sizing:border-box;"
+                "width:100%;height:100%;white-space:nowrap;\">"
+                f"{_escape_html(plain)}</div>"
+            )
+            edit_payload: dict[str, Any] = {
+                "duration": duration,
+                "useDuration": 1,
+                "text": html,
+                "ta_text": html,
+                # Native player marquee — CSS @keyframes do not run in Xibo text.
+                "effect": "marqueeLeft",
+                "speed": 1,
+            }
+        else:
+            html = (
+                "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
+                "font-size:36px;line-height:1.35;font-weight:600;color:#F4F8FC;"
+                f"background:{band_bg};padding:24px 28px;box-sizing:border-box;"
+                "width:100%;height:100%;white-space:pre-wrap;\">"
+                f"{_escape_html(text)}</div>"
+            )
+            edit_payload = {
+                "duration": duration,
+                "useDuration": 1,
+                "text": html,
+                "ta_text": html,
+                "effect": "noTransition",
+                "speed": 1,
+            }
         try:
-            self.edit_widget(
-                widget_id,
-                {
-                    "duration": duration,
-                    "useDuration": 1,
-                    "text": html,
-                    "ta_text": html,
-                },
-            )
+            self.edit_widget(widget_id, edit_payload)
         except PipelineError as exc:
-            LOG.warning("text widget edit with HTML failed (%s); retrying plain text", exc)
-            self.edit_widget(
-                widget_id,
-                {
-                    "duration": duration,
-                    "useDuration": 1,
-                    "text": text,
-                },
-            )
+            LOG.warning("text widget edit with HTML/effect failed (%s); retrying plain", exc)
+            fallback = {
+                "duration": duration,
+                "useDuration": 1,
+                "text": plain if effect_key == "tickerScroll" else text,
+            }
+            if effect_key == "tickerScroll":
+                fallback["effect"] = "marqueeLeft"
+                fallback["speed"] = 1
+            self.edit_widget(widget_id, fallback)
         return widget_id
 
     def ensure_media_on_layout(

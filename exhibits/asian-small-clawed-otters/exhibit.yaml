@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000002"
+slug: asian-small-clawed-otters
+title: Asian Small-Clawed Otters
+status: draft
+version: 0.1.0
+summary: >
+  A Glance & Match tank-side panel that helps visitors identify Asian
+  small-clawed otters in under 3 seconds, then pages through Diet, Threat,
+  Hidden Fact, and How to Help cards with a continuous local-donation CTA.
+species:
+  - Aonyx cinereus
+topics:
+  - otters
+  - wetlands
+  - conservation
+  - southeast-asia
+tags:
+  - otters
+  - glance-and-match
+  - vulnerable
+  - kids
+displayGroups:
+  - lobby
+layoutTemplate: glance-and-match
