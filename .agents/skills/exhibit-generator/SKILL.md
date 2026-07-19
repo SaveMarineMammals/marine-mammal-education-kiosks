@@ -152,7 +152,7 @@ Follow `docs/media-policy.md` and `docs/architecture.md` (Media strategy):
 - Every committed image/sound **under 2 MB**; record `sha256`, `mime`, `bytes`,
   repo-relative `uri` in `media/manifest.yaml`.
 - Hero ID and card icons: **transparent PNG** (key out solid black mattes after
-  generation if needed).
+  generation if needed — see **Black-key / shadow preservation** below).
 - Required washes:
   - Left `hero-bg` habitat JPEG at **pane pixel size** (800x1080) or cover-cropped
   - Right `insights-bg` pane JPEG
@@ -162,6 +162,47 @@ Follow `docs/media-policy.md` and `docs/architecture.md` (Media strategy):
 
 When generating media in-session: write files under `exhibits/<slug>/media/assets/`,
 update hashes in the manifest, and bind every asset from `layouts/timeline.yaml`.
+
+### Black-key / shadow preservation (critical)
+
+Generated stills often sit on a solid black backdrop that must become alpha. A
+naive “make every near-black pixel transparent” pass **destroys legitimate dark
+detail** and must not ship.
+
+**Failure mode (seen in production content):** eyes, skin creases, whisker pits,
+contact shadows on sand, shadows between seagrass blades, turtle shell spots, and
+other recessed darks punch through to the habitat wash — the wash color shows
+inside the animal/card art instead of opaque black/gray shadow.
+
+**Do not:**
+
+- Threshold every pixel with `max(R,G,B) <= N` (or similar) to alpha across the
+  whole image.
+- Assume “dark = background.” Crease lines are often pure black and form thin
+  tunnels from the exterior matte into eyes and folds; a simple edge flood through
+  all near-black pixels follows those tunnels and hollows out the subject.
+
+**Do:**
+
+1. Build a **subject mask** from non-black / colored content (`max >` a strict
+   black threshold, e.g. ~8–12).
+2. **Morphologically close** the subject (dilate then erode with a sizable radius)
+   so thin black crease tunnels are sealed into the subject.
+3. **Fill holes** in the subject mask (eyes and enclosed shadows become interior).
+4. Optionally dilate a few pixels to protect contact shadows along the silhouette.
+5. Make transparent only **exterior** near-black that is edge-connected **outside**
+   that protected mask.
+6. Force protected near-black pixels to stay **fully opaque** (restore eyes/creases
+   as solid dark RGB + alpha 255).
+7. As a safety net, fill any remaining **interior transparent islands** (holes not
+   connected to the image edge) with opaque black.
+
+**Verify before shipping:** composite each keyed PNG on a loud solid color
+(hot pink or teal). Count **enclosed** background-colored pixels inside the
+subject — that count must be **zero** (or only JPEG edge fuzz on lossy checks).
+Spot-check eyes, crease folds, hand/sand shadows, and dense grass gaps: they must
+read as opaque darks, not wash-through holes. Update `media/manifest.yaml` hashes
+after any re-key.
 
 ## QA pipeline compatibility (mandatory)
 
@@ -177,6 +218,8 @@ update hashes in the manifest, and bind every asset from `layouts/timeline.yaml`
   - No letterbox bars on the hero
   - Text band background aligned with glyphs (not a floating box)
   - CTA crawls in the recorded video (native marquee), not a truncated static line
+  - Hero/card transparent PNGs: no wash-through holes in eyes, creases, or
+    contact shadows (see Black-key / shadow preservation)
 
 Reference: `ops/qa/README.md`, `framework/layout-templates/glance-and-match/README.md`,
 `exhibits/asian-small-clawed-otters/` (working reference package).
@@ -190,6 +233,8 @@ Reference: `ops/qa/README.md`, `framework/layout-templates/glance-and-match/READ
 - [ ] Text band color inside text widgets (no separate scrim images)
 - [ ] `insights-bg` separation between left and right
 - [ ] Transparent hero/card PNGs; habitat + pane JPEG washes
+- [ ] Black-key preserves opaque eyes/creases/contact shadows (loud-color
+      composite; zero enclosed punch-through)
 - [ ] Plain CMS copy with `|` line breaks; no Markdown/emoji in timeline
 - [ ] Catalog + `exhibit.yaml` + schedule intent + media manifest hashes
 
@@ -215,3 +260,8 @@ Reference: `ops/qa/README.md`, `framework/layout-templates/glance-and-match/READ
 13. Separate scrim **images** behind text — aspect-fit centers the box while text
     stays left-aligned (misaligned highlight).
 14. Repeating the donate CTA in both How to Help bullets and the ticker.
+15. Global near-black → alpha keying on hero/card PNGs — punches out eyes,
+    skin creases, sand/hand contact shadows, seagrass gaps, and other dark
+    detail so the habitat wash shows through. Key **exterior matte only**
+    (subject close + hole-fill + protected opaque darks); verify on a loud
+    solid composite before shipping.
