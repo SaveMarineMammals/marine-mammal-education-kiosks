@@ -1,0 +1,92 @@
+name: QA player capture
+
+# Expensive ephemeral Xibo CMS + headless Linux Player capture.
+# Not a required merge check — run on demand, nightly, or via the qa-player label.
+
+on:
+  workflow_dispatch:
+    inputs:
+      exhibit:
+        description: Exhibit slug (empty = pipeline default)
+        required: false
+        type: string
+      preview_only:
+        description: Use Chromium timeline preview instead of Xibo player
+        required: false
+        type: boolean
+        default: false
+      duration:
+        description: Record duration seconds
+        required: false
+        type: string
+        default: "30"
+  schedule:
+    # Nightly 06:00 UTC
+    - cron: "0 6 * * *"
+  pull_request:
+    types: [labeled, synchronize, opened, reopened]
+
+concurrency:
+  group: qa-player-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  player-capture:
+    name: QA player capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # PRs only when labeled; always for dispatch/schedule.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'qa-player'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ops/qa/requirements.txt
+
+      - name: Install QA dependencies
+        run: python -m pip install -r ops/qa/requirements.txt
+
+      - name: Prepare QA config
+        working-directory: ops/qa
+        run: |
+          cp config.env.example config.env
+          # Ephemeral CI stack; defaults from example are fine.
+
+      - name: Run player capture pipeline
+        working-directory: ops/qa
+        env:
+          QA_FAST: "1"
+        run: |
+          ARGS=(-v --duration "${{ github.event.inputs.duration || '30' }}")
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.exhibit }}" ]; then
+            ARGS+=(--exhibit "${{ github.event.inputs.exhibit }}")
+          fi
+          if [ "${{ github.event.inputs.preview_only }}" = "true" ]; then
+            ARGS+=(--preview-only)
+          fi
+          # Nightly: prefer a published/review Glance & Match reference when present.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ -f ../../exhibits/asian-small-clawed-otters/layouts/timeline.yaml ]; then
+              ARGS+=(--exhibit asian-small-clawed-otters)
+            fi
+          fi
+          python run_qa_pipeline.py "${ARGS[@]}"
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-player-capture
+          path: ops/qa/artifacts/
+          retention-days: 7
+          if-no-files-found: warn

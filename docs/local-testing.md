@@ -5,7 +5,9 @@ How to verify this monorepo on a developer machine **without** needing Raspberry
 ## Prerequisites
 
 - **Python 3.10+** on your PATH (preview server and exhibit CLI tools)
-- Git (optional Git LFS only if you add binary previews under LFS rules)
+- Git with **Git LFS** (`git lfs install`, then `git lfs pull` after clone) so
+  exhibit media under `exhibits/*/media/assets/` is real binaries — CI checkouts
+  use `lfs: true` for the same reason
 
 From the repo root:
 
@@ -19,7 +21,7 @@ cd C:\Users\jeff\Projects\marine-mammal-education-kiosks
 python -m pip install -r tools/requirements.txt
 ```
 
-This installs PyYAML for the exhibit/catalog tools. The preview server uses only the Python standard library.
+This installs PyYAML and jsonschema for the exhibit/catalog tools. The preview server uses only the Python standard library.
 
 ## 2. Preview branding and layout templates
 
@@ -35,11 +37,19 @@ You should see token swatches, a type specimen, and three 1920×1080 template st
 
 This is a design aid only — final playback validation still needs Xibo.
 
-## 3. Run the tooling smoke tests
+## 3. Run the tooling smoke tests (Tier 1 contract)
+
+Same commands GitHub Actions runs on every PR (`Exhibit contract`):
 
 ```powershell
+python -m pip install -r tools/requirements.txt
 python tools/validate_exhibits.py
 python tools/catalog.py --check
+```
+
+Optional packaging / sync dry-runs:
+
+```powershell
 python tools/sync_media.py --exhibit humpback-migration --dry-run
 python tools/package_exhibit.py --exhibit humpback-migration
 ```
@@ -48,10 +58,14 @@ python tools/package_exhibit.py --exhibit humpback-migration
 
 | Command | Success looks like |
 | --- | --- |
-| `validate_exhibits.py` | `OK: 1 exhibit(s) passed structural validation` |
-| `catalog.py --check` | `OK: catalog matches 1 exhibit(s)` |
+| `validate_exhibits.py` | `OK: N exhibit(s) passed contract validation` |
+| `catalog.py --check` | `OK: catalog matches N exhibit(s)` |
 | `sync_media.py --dry-run` | Lists planned Library uploads; ends with `Dry run only; no uploads performed.` |
 | `package_exhibit.py` | Writes `dist/humpback-migration-checklist.txt` (under gitignored `dist/`) |
+
+`validate_exhibits.py` enforces JSON Schema, media policy (no ≥2 MB / video in Git,
+manifest sha256/bytes), Glance & Match region ids, CMS-safe timeline copy, and a
+lightweight secret-pattern scan.
 
 Validate a single exhibit:
 
@@ -97,22 +111,38 @@ Large-file example:
 
 1. Place a test file under `media/humpback-migration/masters/` (gitignored).
 2. Compute a SHA-256 and record it in `exhibits/humpback-migration/media/manifest.yaml` with a store `uri` (use a placeholder until a real media store exists).
-3. Confirm `validate_exhibits.py` still passes (it checks structure/slug alignment, not that the store object exists yet).
+3. Confirm `validate_exhibits.py` still passes for store URIs (it verifies on-disk hashes for repo-relative assets only).
 
 Live upload to Xibo is **not** implemented in `sync_media.py` yet — without `--dry-run` it exits with a “not implemented” message. Manual CMS upload steps are in [ops/cms/media-sync.md](../ops/cms/media-sync.md).
 
-## 6. What this does *not* test yet
+## 6. Timeline preview smoke (Tier 2)
+
+When you change layouts or media, run the same Chromium still-capture CI uses
+(`Timeline preview` workflow — no CMS/Docker):
+
+```powershell
+python -m pip install -r ops/qa/requirements.txt
+python -m playwright install chromium
+python ops/qa/ci_timeline_preview.py --exhibit asian-small-clawed-otters
+```
+
+Artifacts land under `ops/qa/artifacts/timeline-preview-ci/` (`still.png` +
+`qa-report.json`). The job asserts non-empty timeline regions and a non-black frame.
+
+## 7. What this does *not* test yet
 
 | Piece | Needs |
 | --- | --- |
 | Live media sync to CMS | Media store + Xibo API credentials (see [`.env.example`](../.env.example)) and a completed `sync_media.py` |
-| Headless visual QA | Docker + [ops/qa/](../ops/qa/) (`run_qa_pipeline.py`) |
+| Live Xibo player capture | Docker + [ops/qa/](../ops/qa/) (`run_qa_pipeline.py`) or the `qa-player` GitHub label / workflow |
 | Actual kiosk playback | Xibo CMS + Xibo Linux Player on a Pi (or Linux VM) |
-| Layout rendering | Layouts built in the CMS from recipes under `framework/layout-templates/` |
+| Layout rendering in CMS | Layouts built in the CMS from recipes under `framework/layout-templates/` |
 
-## 7. Ephemeral CMS + headless player visual QA
+## 8. Ephemeral CMS + headless player visual QA (Tier 3)
 
-Automated integration test without a physical Pi — see **[ops/qa/](../ops/qa/)**:
+Automated integration test without a physical Pi — see **[ops/qa/](../ops/qa/)**.
+This is **not** a required PR check (cost + flake). Run locally, via
+**Actions → QA player capture**, or by adding the `qa-player` label to a PR:
 
 ```powershell
 cd ops\qa
@@ -131,7 +161,7 @@ Use `--preview-only` (or `QA_USE_TIMELINE_PREVIEW=1`) for the Chromium timeline
 preview escape hatch. Artifacts land in `ops/qa/artifacts/`; the stack and
 volumes are removed on exit unless you pass `--keep-stack`.
 
-## 8. Next: production CMS + Pi integration test
+## 9. Next: production CMS + Pi integration test
 
 When you are ready to test real kiosk playback:
 

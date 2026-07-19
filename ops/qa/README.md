@@ -13,6 +13,12 @@ player.
 **Escape hatch:** `--preview-only` (or `QA_USE_TIMELINE_PREVIEW=1`) renders a
 Chromium timeline preview instead of recording the Xibo player.
 
+**CI (no Docker):** `ci_timeline_preview.py` renders the Chromium timeline and
+captures a still via Playwright — used by the `Timeline preview` workflow.
+**CI (full player):** GitHub Actions workflow `QA player capture` runs this
+pipeline on `workflow_dispatch`, nightly, or PRs labeled `qa-player` (not a
+required merge check).
+
 ## Layout
 
 | Path | Purpose |

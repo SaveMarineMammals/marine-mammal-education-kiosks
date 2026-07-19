@@ -33,10 +33,24 @@ Only **large** files (≥ 2 MB, or any video) live in an external **media store*
 4. Register the exhibit in [`exhibits/_catalog.yaml`](exhibits/_catalog.yaml).
 5. Commit images/sound under 2 MB into `exhibits/<slug>/media/assets/`; stage larger masters under `media/<slug>/masters/` for the media store, then sync into Xibo.
 
+## Quality checks (CI)
+
+Pull requests to `main` must pass required GitHub checks:
+
+| Check | When | What it does |
+| --- | --- | --- |
+| **Exhibit contract** | Every PR | Schema, catalog, media policy, Glance & Match timeline lint |
+| **Timeline preview** | Layout/media/template changes (else skipped-as-pass) | Chromium still; non-black frame |
+
+Optional live Xibo player capture: label a PR `qa-player`, run **Actions → QA player capture**, or follow the [publish runbook](ops/runbooks/publish-exhibit.md).
+
+Same commands locally: [docs/local-testing.md](docs/local-testing.md).
+
 ## Docs
 
 - [Architecture](docs/architecture.md) — Xibo + media flow
 - [Exhibit authoring](docs/exhibit-authoring.md) — how to add content
-- [Local testing](docs/local-testing.md) — validate the repo and tools on your machine
+- [Local testing](docs/local-testing.md) — Tier 1–3 validation on your machine
 - [Layout preview](framework/preview/) — branding + template mockups in the browser
 - [Ops](ops/) — CMS, players, runbooks
+- [Publish exhibit](ops/runbooks/publish-exhibit.md) — pre-publish QA gates

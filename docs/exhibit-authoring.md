@@ -11,7 +11,18 @@
 7. List media in `media/manifest.yaml` (repo paths for ≤2 MB images/sound; store URIs for large/video files) with SHA-256 hashes.
 8. Record intended display groups / dayparts under `schedule/`.
 9. Add an entry to [`exhibits/_catalog.yaml`](../exhibits/_catalog.yaml).
-10. Validate with `tools/validate-exhibits` (when implemented).
+10. Validate locally (same as CI **Exhibit contract**):
+
+    ```powershell
+    python -m pip install -r tools/requirements.txt
+    python tools/validate_exhibits.py --exhibit <slug>
+    python tools/catalog.py --check
+    ```
+
+11. For layout/media changes, run Tier 2 timeline preview
+    (`python ops/qa/ci_timeline_preview.py --exhibit <slug>`). Before
+    `published`, follow [`ops/runbooks/publish-exhibit.md`](../ops/runbooks/publish-exhibit.md)
+    (includes optional live player capture).
 
 ## Directory contract
 
