@@ -1,5 +1,5 @@
 # Dependencies for ops/qa/run_qa_pipeline.py and ci_timeline_preview.py
-requests>=2.31
+requests>=2.34.2
 Pillow>=10.0
 PyYAML>=6.0
 playwright>=1.44
