@@ -1,0 +1,123 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: seagrass-for-manatees
+store: media-store-primary
+assets:
+  # --- Zone A: Hero identification ---
+  - id: graphic-manatee-id
+    role: hero-id
+    filename: graphic-manatee-id.png
+    sha256: "7733bc3833a7b40a3065b8682a181b1f49ea5fcacf319180a886e44ac5039154"
+    uri: exhibits/seagrass-for-manatees/media/assets/graphic-manatee-id.png
+    mime: image/png
+    bytes: 500983
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:hero-id
+      - zone:a
+    preview: graphic-manatee-id-thumb.jpg
+
+  - id: bg-hero-seagrass
+    role: hero-bg
+    filename: bg-hero-seagrass.jpg
+    sha256: "679e57fe2b3c4107e8b30640da10058afb79f0dd90a41006e8c5fc56909126d6"
+    uri: exhibits/seagrass-for-manatees/media/assets/bg-hero-seagrass.jpg
+    mime: image/jpeg
+    bytes: 161256
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:hero-bg
+      - zone:a
+    preview: bg-hero-seagrass-thumb.jpg
+
+  # --- Zone B: Right pane + cards ---
+  - id: bg-insights-panel
+    role: insights-bg
+    filename: bg-insights-panel.jpg
+    sha256: "21badf5df46669843c63d4eb15a74ab7332540cfbe006c5929c9c5f6e78f0f39"
+    uri: exhibits/seagrass-for-manatees/media/assets/bg-insights-panel.jpg
+    mime: image/jpeg
+    bytes: 66236
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insights-bg
+      - zone:b
+    preview: bg-insights-panel-thumb.jpg
+
+  - id: bg-insights-copy-scrim
+    role: insights-copy-scrim
+    filename: bg-insights-copy-scrim.png
+    sha256: "dc3a91b075a0088bb30030481e363433bcdbec56a634cf9f55046c7df8b6f3c1"
+    uri: exhibits/seagrass-for-manatees/media/assets/bg-insights-copy-scrim.png
+    mime: image/png
+    bytes: 1805
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insights-copy-scrim
+      - zone:b
+    preview: bg-insights-copy-scrim-thumb.jpg
+
+  - id: graphic-diet-seagrass
+    role: insight-card
+    filename: graphic-diet-seagrass.png
+    sha256: "e03f258997e977aa6d62265803863f96ae897689d562857d464834702f6b0265"
+    uri: exhibits/seagrass-for-manatees/media/assets/graphic-diet-seagrass.png
+    mime: image/png
+    bytes: 540403
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insight-card
+      - card:food
+    preview: graphic-diet-seagrass-thumb.jpg
+
+  - id: graphic-threat-meadow
+    role: insight-card
+    filename: graphic-threat-meadow.png
+    sha256: "64d715de9288b4b41a90f380b083a9fa935e281519b4ecbef2021acca112d52a"
+    uri: exhibits/seagrass-for-manatees/media/assets/graphic-threat-meadow.png
+    mime: image/png
+    bytes: 482447
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insight-card
+      - card:threat
+    preview: graphic-threat-meadow-thumb.jpg
+
+  - id: graphic-fact-nursery
+    role: insight-card
+    filename: graphic-fact-nursery.png
+    sha256: "ca35ddd7618805b37b7c7fce7892241a35a0c8b8fad9901ee50199a2593982c6"
+    uri: exhibits/seagrass-for-manatees/media/assets/graphic-fact-nursery.png
+    mime: image/png
+    bytes: 695244
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insight-card
+      - card:hidden-fact
+    preview: graphic-fact-nursery-thumb.jpg
+
+  - id: graphic-help-protect
+    role: insight-card
+    filename: graphic-help-protect.png
+    sha256: "4bfc6dd57744f624946472d2a8b364102dbaf09f86ea7260819e6e9adbb9e44e"
+    uri: exhibits/seagrass-for-manatees/media/assets/graphic-help-protect.png
+    mime: image/png
+    bytes: 297870
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:insight-card
+      - card:how-to-help
+    preview: graphic-help-protect-thumb.jpg
+
+  # --- Zone C: Ticker scrim ---
+  - id: bg-ticker-scrim
+    role: ticker
+    filename: bg-ticker-scrim.png
+    sha256: "e43a4f83814d0e30a71ba8f069fa44d155395d89eaeb9465ca030ec6e2ae6647"
+    uri: exhibits/seagrass-for-manatees/media/assets/bg-ticker-scrim.png
+    mime: image/png
+    bytes: 1015
+    xiboTags:
+      - exhibit:seagrass-for-manatees
+      - role:ticker
+      - zone:c
+    preview: bg-ticker-scrim-thumb.jpg

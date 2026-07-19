@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000003"
+slug: seagrass-for-manatees
+title: Seagrass for Manatees
+status: draft
+version: 0.1.0
+summary: >
+  A Glance & Match tank-side panel that helps visitors connect lush seagrass
+  meadows to West Indian manatees in under 3 seconds, then pages through Food,
+  Threat, Hidden Fact, and How to Help cards with a continuous seagrass
+  conservation CTA.
+species:
+  - Trichechus manatus
+topics:
+  - seagrass
+  - manatees
+  - coastal-habitat
+  - blue-carbon
+  - conservation
+tags:
+  - manatees
+  - seagrass
+  - glance-and-match
+  - kids
+displayGroups:
+  - lobby
+layoutTemplate: glance-and-match
