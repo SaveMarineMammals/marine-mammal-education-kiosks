@@ -44,3 +44,9 @@ Tiny JPEGs under `media/previews/` referenced by `preview:` in `manifest.yaml`.
 - Solid black mattes behind hero/card stills (use transparent PNGs)
 - Markdown `**bold**` or emoji in CMS text widgets
 - Text stacked over insight art (use `insights-art` + `insights-copy`)
+
+## QA still (player capture)
+
+| Asset | Filename | Status |
+| --- | --- | --- |
+| `qa-frame-first` | `qa-frame-first.jpg` (under `media/previews/`) | Present — Xibo player fast-mode still (`ops/qa`, verified 1920×1080) |
