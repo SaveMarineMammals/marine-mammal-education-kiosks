@@ -24,6 +24,10 @@ ops/qa/artifacts/**
 !ops/qa/artifacts/README.md
 ops/qa/fixtures/qa-sample.png
 ops/qa/shared/
+ops/qa/_probe*
+ops/qa/_debug*
+ops/qa/_check*
+ops/qa/_test*
 
 # OS / editor
 .DS_Store

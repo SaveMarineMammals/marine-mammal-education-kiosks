@@ -21,6 +21,11 @@ QA_DIR = Path(__file__).resolve().parents[1]  # ops/qa
 EXHIBITS = ROOT / "exhibits"
 STATIC_DIR = Path(__file__).resolve().parent
 
+# ops/qa on sys.path so pathutil resolves the same way as the pipeline.
+if str(QA_DIR) not in sys.path:
+    sys.path.insert(0, str(QA_DIR))
+from pathutil import resolve_manifest_path  # noqa: E402
+
 
 def load_yaml(path: Path) -> dict[str, Any]:
     try:
@@ -48,8 +53,7 @@ def resolve_asset_file(exhibit_dir: Path, asset: dict[str, Any]) -> Optional[Pat
     uri = str(asset.get("uri") or "").strip()
     candidates: list[Path] = []
     if uri:
-        uri_path = Path(uri)
-        candidates.append(uri_path if uri_path.is_absolute() else ROOT / uri_path)
+        candidates.append(resolve_manifest_path(uri, root=ROOT))
     filename = str(asset.get("filename") or "").strip()
     if filename:
         candidates.append(exhibit_dir / "media" / "assets" / filename)

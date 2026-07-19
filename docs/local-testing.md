@@ -122,14 +122,14 @@ python run_qa_pipeline.py -v
 # or: python run_qa_pipeline.py -v --exhibit humpback-migration --duration 30
 ```
 
-This boots an isolated Docker Compose stack (CMS web, MySQL, XMR, headless player
-on Xvfb 1920×1080), injects media via OAuth2, and captures the framebuffer.
+This boots an isolated Docker Compose stack (CMS web, MySQL, **XMR Message Relay**,
+headless player on Xvfb 1920×1080), seeds CMS XMR addresses for the compose
+network, publishes a multi-region layout from `layouts/timeline.yaml` via OAuth2,
+and records the **Xibo Linux Player** framebuffer.
 
-When the exhibit has `layouts/timeline.yaml`, the default capture is a **Chromium
-timeline preview** (scene fades/slides/text) — not the Xibo Linux Player binary.
-That hybrid path produces useful motion clips while true multi-region Xibo
-playback under Docker remains a follow-up. Artifacts land in `ops/qa/artifacts/`;
-the stack and volumes are removed on exit unless you pass `--keep-stack`.
+Use `--preview-only` (or `QA_USE_TIMELINE_PREVIEW=1`) for the Chromium timeline
+preview escape hatch. Artifacts land in `ops/qa/artifacts/`; the stack and
+volumes are removed on exit unless you pass `--keep-stack`.
 
 ## 8. Next: production CMS + Pi integration test
 
