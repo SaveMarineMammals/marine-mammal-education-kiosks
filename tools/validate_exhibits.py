@@ -172,6 +172,17 @@ def validate_catalog(catalog: dict[str, Any], exhibit_dirs: list[Path]) -> list[
     return errors
 
 
+def is_git_lfs_pointer(path: Path) -> bool:
+    """True when the working tree file is an unresolved Git LFS pointer stub."""
+    try:
+        if path.stat().st_size > 1024:
+            return False
+        head = path.read_bytes()[:120]
+    except OSError:
+        return False
+    return head.startswith(b"version https://git-lfs.github.com/spec/")
+
+
 def file_sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -208,6 +219,13 @@ def validate_manifest_assets(exhibit_dir: Path, manifest: dict[str, Any]) -> lis
         path = ROOT / uri
         if not path.is_file():
             errors.append(f"asset {asset_id}: missing file for uri {uri}")
+            continue
+
+        if is_git_lfs_pointer(path):
+            errors.append(
+                f"asset {asset_id}: {uri} is a Git LFS pointer (run "
+                "`git lfs pull`, or enable `lfs: true` on Actions checkout)"
+            )
             continue
 
         size = path.stat().st_size

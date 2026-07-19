@@ -5,7 +5,9 @@ How to verify this monorepo on a developer machine **without** needing Raspberry
 ## Prerequisites
 
 - **Python 3.10+** on your PATH (preview server and exhibit CLI tools)
-- Git (optional Git LFS only if you add binary previews under LFS rules)
+- Git with **Git LFS** (`git lfs install`, then `git lfs pull` after clone) so
+  exhibit media under `exhibits/*/media/assets/` is real binaries — CI checkouts
+  use `lfs: true` for the same reason
 
 From the repo root:
 
