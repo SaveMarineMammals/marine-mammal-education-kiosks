@@ -130,17 +130,27 @@ RUN set -eux; \
       "${LOADER_DIR}"/*.so > /etc/xibo-qa/gdk-pixbuf-loaders.cache; \
     test -s /etc/xibo-qa/gdk-pixbuf-loaders.cache
 
+# Non-root QA user. Runtime UID/GID are remapped in entrypoint to match the host
+# orchestrator (QA_PLAYER_UID/GID) so the player-runtime bind mount stays host-writable.
+ARG QA_PLAYER_UID=1000
+ARG QA_PLAYER_GID=1000
+RUN groupadd --gid "${QA_PLAYER_GID}" xiboqa \
+    && useradd --uid "${QA_PLAYER_UID}" --gid xiboqa --create-home \
+         --home-dir /home/xiboqa --shell /usr/sbin/nologin xiboqa \
+    && mkdir -p /artifacts /var/lib/xibo-player /data/xibo-library \
+    && chown -R xiboqa:xiboqa /artifacts /var/lib/xibo-player /data/xibo-library /home/xiboqa
+
 WORKDIR /opt/xibo-player
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
-    && chmod +x /usr/local/bin/entrypoint.sh \
-    && mkdir -p /artifacts /var/lib/xibo-player \
-    && chmod 777 /artifacts
+    && chmod +x /usr/local/bin/entrypoint.sh
 
 VOLUME ["/artifacts"]
 
 # Capture helpers available for `docker exec` from the orchestrator:
 #   scrot -d 1 /artifacts/frame.png
 #   ffmpeg -f x11grab -video_size 1920x1080 -i :99 -t 5 /artifacts/clip.mp4
+# Starts as root only long enough to chown bind mounts / volumes, then drops to
+# QA_PLAYER_UID via setpriv (see entrypoint.sh).
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

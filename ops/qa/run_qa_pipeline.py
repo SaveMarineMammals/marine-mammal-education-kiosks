@@ -44,6 +44,9 @@ PLAYER_CONTAINER = "xibo-qa-kiosk-player"
 CMS_CONTAINER = "xibo-qa-cms-web"
 EXPECTED_SIZE = (1920, 1080)
 _IMAGE_MIME_PREFIX = "image/"
+# Default matches Dockerfile.player xiboqa user; overridden to host uid on Linux.
+DEFAULT_QA_PLAYER_UID = 1000
+DEFAULT_QA_PLAYER_GID = 1000
 
 
 class PipelineError(RuntimeError):
@@ -214,6 +217,76 @@ def run_cmd(
         detail = stderr or stdout or f"exit {result.returncode}"
         raise PipelineError(f"Command failed ({result.returncode}): {' '.join(args)}\n{detail}")
     return result
+
+
+def host_player_ids() -> tuple[int, int]:
+    """UID/GID for the player bind mount (must match the host orchestrator on Linux)."""
+    uid_raw = os.environ.get("QA_PLAYER_UID", "").strip()
+    gid_raw = os.environ.get("QA_PLAYER_GID", "").strip()
+    if uid_raw and gid_raw:
+        return int(uid_raw), int(gid_raw)
+    # Prefer the real host identity so CI runners can rewrite cmsSettings.xml.
+    getuid = getattr(os, "getuid", None)
+    getgid = getattr(os, "getgid", None)
+    if callable(getuid) and callable(getgid):
+        return int(getuid()), int(getgid())
+    return DEFAULT_QA_PLAYER_UID, DEFAULT_QA_PLAYER_GID
+
+
+def apply_player_identity_env(env: Optional[dict[str, str]] = None) -> dict[str, str]:
+    """Ensure QA_PLAYER_UID/GID are set for compose interpolation and the container."""
+    target = env if env is not None else os.environ
+    uid, gid = host_player_ids()
+    target["QA_PLAYER_UID"] = str(uid)
+    target["QA_PLAYER_GID"] = str(gid)
+    return target
+
+
+def prepare_player_runtime() -> None:
+    """Create the host bind-mount dir before compose up (owned by the orchestrator)."""
+    apply_player_identity_env()
+    PLAYER_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    (PLAYER_RUNTIME_DIR / "snap-common").mkdir(parents=True, exist_ok=True)
+    uid, gid = host_player_ids()
+    LOG.info(
+        "Player runtime bind mount %s (QA_PLAYER_UID=%s QA_PLAYER_GID=%s)",
+        PLAYER_RUNTIME_DIR,
+        uid,
+        gid,
+    )
+    reclaim_player_runtime_ownership(uid, gid)
+
+
+def reclaim_player_runtime_ownership(uid: int, gid: int) -> None:
+    """Fix root-owned leftovers from older privileged player runs (Linux CI)."""
+    sample = PLAYER_RUNTIME_DIR / "cmsSettings.xml"
+    if not sample.exists() or os.access(sample, os.W_OK):
+        # Also reclaim if the directory itself is not writable.
+        if os.access(PLAYER_RUNTIME_DIR, os.W_OK):
+            return
+    LOG.warning(
+        "player-runtime not writable by host; reclaiming ownership as %s:%s via docker",
+        uid,
+        gid,
+    )
+    run_cmd(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--user",
+            "0:0",
+            "-v",
+            f"{to_docker_path(PLAYER_RUNTIME_DIR)}:/data",
+            "busybox:1.36",
+            "chown",
+            "-R",
+            f"{uid}:{gid}",
+            "/data",
+        ],
+        check=False,
+        capture=True,
+    )
 
 
 def compose_cmd(settings: Settings, *extra: str) -> list[str]:
@@ -1838,6 +1911,7 @@ def provision_player_cms_config(
     """
     runtime = PLAYER_RUNTIME_DIR
     snap_common = runtime / "snap-common"
+    prepare_player_runtime()
     snap_common.mkdir(parents=True, exist_ok=True)
 
     # Native volume inside the container (see docker-compose XIBO_LOCAL_LIBRARY).
@@ -1914,6 +1988,7 @@ def provision_player_cms_config(
 
     # Last compose --env-file wins over config.env's empty XIBO_CMS_KEY=, so the
     # entrypoint always receives the live SERVER_KEY (not a stale bind-mount key).
+    uid, gid = host_player_ids()
     runtime_env = runtime / "compose.runtime.env"
     _write_lf(
         runtime_env,
@@ -1924,6 +1999,8 @@ def provision_player_cms_config(
             f"XIBO_CMS_INTERNAL_URL={cms_url}\n"
             f"XIBO_XMR_ADDRESS={xmr_address}\n"
             f"QA_USE_TIMELINE_PREVIEW={'1' if settings.preview_only else '0'}\n"
+            f"QA_PLAYER_UID={uid}\n"
+            f"QA_PLAYER_GID={gid}\n"
         ),
     )
 
@@ -1935,6 +2012,7 @@ def provision_player_cms_config(
     env["XIBO_LOCAL_LIBRARY"] = local_library
     env["XIBO_XMR_ADDRESS"] = xmr_address
     env["QA_USE_TIMELINE_PREVIEW"] = "1" if settings.preview_only else "0"
+    apply_player_identity_env(env)
     if not recreate:
         LOG.info("Player config written; skipping container recreate (fast mode)")
         return
@@ -1976,10 +2054,11 @@ def restart_player_container(*, fast: bool = False) -> None:
 
 def stack_up(settings: Settings) -> None:
     LOG.info("Starting ephemeral compose stack")
+    prepare_player_runtime()
     up_args = ["up", "-d"]
     if settings.rebuild_player:
         up_args.append("--build")
-    run_cmd(compose_cmd(settings, *up_args), capture=False)
+    run_cmd(compose_cmd(settings, *up_args), capture=False, env=apply_player_identity_env(os.environ.copy()))
 
 
 def stack_down(settings: Settings) -> None:
