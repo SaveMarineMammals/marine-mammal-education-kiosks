@@ -139,12 +139,18 @@ services:
       # Native Linux volume path (not the Windows bind mount) — snap player FileSystem::exists
       # is unreliable on Docker Desktop bind-mounted empty dirs under /var/lib/xibo-player.
       XIBO_LOCAL_LIBRARY: /data/xibo-library
+      # Host orchestrator UID/GID (pipeline sets from os.getuid). Entrypoint chowns
+      # mounts then drops root so bind-mount files are not root-owned.
+      QA_PLAYER_UID: ${QA_PLAYER_UID:-1000}
+      QA_PLAYER_GID: ${QA_PLAYER_GID:-1000}
     volumes:
       - qa-player-artifacts:/artifacts
       # Host bind mount so the orchestrator can write cmsSettings.xml without docker exec.
+      # Owned by QA_PLAYER_UID after entrypoint init (not root).
       - ./player-runtime:/var/lib/xibo-player
       - qa-player-library:/data/xibo-library
     # Player + Xvfb need broad device access for extracted snap runtimes.
+    # Process still drops to QA_PLAYER_UID after mount chown (see entrypoint.sh).
     privileged: true
     shm_size: "1gb"
     networks:

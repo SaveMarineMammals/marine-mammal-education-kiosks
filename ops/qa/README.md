@@ -152,6 +152,7 @@ Do **not** hardcode secrets. Use `config.env` (gitignored) or the repo-root `.en
 | `QA_RECORD_DURATION` | Seconds of MP4 to capture (default `30`) |
 | `QA_MEDIA_PATH` | Optional media override (skips manifest resolution) |
 | `QA_USE_TIMELINE_PREVIEW` | `1` to force Chromium preview (same as `--preview-only`) |
+| `QA_PLAYER_UID` / `QA_PLAYER_GID` | Player process + bind-mount ownership (default: host uid/gid on Linux) |
 | `QA_SKIP_HTML_PACKAGES` | `1` (default in headless player mode) skips `html-package` widgets that crash WebKitGTK under Xvfb; set `0` or pass `--include-html-packages` to keep them |
 | `QA_IMAGE_ONLY_LAYOUT` | `1` or `--image-only-layout` publishes a single background image region (paint-crash bisect) |
 
@@ -190,7 +191,7 @@ ffmpeg -f x11grab -video_size 1920x1080 -i :99 -t 5 /artifacts/clip.mp4
 ## Notes
 
 - First player image build downloads the `xibo-player` snap and extracts it with `unsquashfs` (no snapd daemon at runtime).
-- The player container runs `privileged` because extracted snap runtimes expect broad device access under Xvfb.
+- The player container still uses `privileged` for extracted snap device access under Xvfb, but the entrypoint **drops to a non-root UID** (`QA_PLAYER_UID` / `QA_PLAYER_GID`, defaulting to the host orchestrator identity on Linux) after chowning bind mounts and volumes. That keeps `ops/qa/player-runtime/` host-writable and avoids root-owned `cmsSettings.xml` on CI.
 - Fresh CMS bootstrap can take several minutes; the orchestrator polls until `/api/authorize/access_token` responds.
 - The stack always includes `cms-xmr` (Xibo Message Relay). The pipeline seeds `XMR_ADDRESS` (`http://cms-xmr:8081`) / `XMR_PUB_ADDRESS` (`tcp://cms-xmr:9505`), authorises the display **before** the player's READY `RegisterDisplay` (CMS Soap5 only persists `xmrChannel` when licensed), then `collectNow` / `changeLayout` over XMR. Pipeline XMDS register is skipped once a display row exists so it cannot wipe `xmrChannel`.
 - The player image includes `libxibo_qa_shim.so` (`LD_PRELOAD`) so snap 1.8-R6 applies `<settings>` XML correctly and empty `localLibrary` paths fall back to `/data/xibo-library`.

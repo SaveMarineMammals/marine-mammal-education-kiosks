@@ -42,13 +42,37 @@ export SNAP_USER_COMMON="${SNAP_USER_COMMON:-${PLAYER_CONFIG_DIR}}"
 export SNAP_USER_DATA="${SNAP_USER_DATA:-${PLAYER_CONFIG_DIR}}"
 export SNAP_VERSION="${SNAP_VERSION:-1.8-R6}"
 export SNAP_REVISION="${SNAP_REVISION:-6}"
-export HOME="${HOME:-/root}"
 
 # WebKitGTK under Xvfb: disable compositing to avoid HTML-package paint crashes.
 export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
 export WEBKIT_FORCE_COMPOSITING_MODE="${WEBKIT_FORCE_COMPOSITING_MODE:-0}"
 export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
 
+log() {
+  printf '[entrypoint] %s\n' "$*"
+}
+
+# Match host orchestrator UID/GID so ./player-runtime bind-mount files stay
+# writable from CI/local Python without root-owned leftovers.
+TARGET_UID="${QA_PLAYER_UID:-1000}"
+TARGET_GID="${QA_PLAYER_GID:-1000}"
+PLAYER_HOME="${PLAYER_CONFIG_DIR}/home"
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  mkdir -p "${ARTIFACTS_DIR}" "${PLAYER_CONFIG_DIR}" "${PLAYER_LIBRARY_DIR}" \
+    "${PLAYER_HOME}/snap/xibo-player/common"
+  chown -R "${TARGET_UID}:${TARGET_GID}" \
+    "${ARTIFACTS_DIR}" "${PLAYER_CONFIG_DIR}" "${PLAYER_LIBRARY_DIR}" \
+    "${PLAYER_HOME}" 2>/dev/null || true
+  export HOME="${PLAYER_HOME}"
+  export QA_PLAYER_UID="${TARGET_UID}"
+  export QA_PLAYER_GID="${TARGET_GID}"
+  log "Dropping root → uid=${TARGET_UID} gid=${TARGET_GID} (bind-mount + volumes chowned)"
+  exec setpriv --reuid="${TARGET_UID}" --regid="${TARGET_GID}" --clear-groups \
+    --inh-caps=-all -- "$0" "$@"
+fi
+
+export HOME="${HOME:-${PLAYER_HOME}}"
 mkdir -p "${ARTIFACTS_DIR}" "${PLAYER_CONFIG_DIR}" "${PLAYER_LIBRARY_DIR}" \
   "${HOME}/snap/xibo-player/common"
 
@@ -57,9 +81,7 @@ if [[ -f "${PLAYER_CONFIG_DIR}/snap-common/cmsSettings.xml" ]]; then
     "${HOME}/snap/xibo-player/common/cmsSettings.xml"
 fi
 
-log() {
-  printf '[entrypoint] %s\n' "$*"
-}
+log "Running as uid=$(id -u) gid=$(id -g) home=${HOME}"
 
 normalize_xml_file() {
   # Strip CR from Windows bind-mounted configs (breaks path values / XML parsing).
