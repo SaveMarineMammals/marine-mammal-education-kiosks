@@ -1,0 +1,6 @@
+{
+  "name": "Marine Mammal Education Kiosks",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh"
+}
