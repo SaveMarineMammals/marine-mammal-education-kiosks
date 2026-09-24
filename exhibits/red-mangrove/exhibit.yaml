@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000004"
+slug: red-mangrove
+title: "Red Mangrove — The Walking Tree"
+status: draft
+version: 0.1.0
+summary: >
+  A Glance & Match coastal panel that helps visitors recognize red mangroves
+  (Rhizophora mangle) as "the walking tree," then pages through Stilt Roots,
+  Fish Nursery, Hidden Fact, and How to Help cards with a continuous mangrove
+  protection CTA tied to coasts, nurseries, carbon, and Greater Caribbean manatees.
+species:
+  - Rhizophora mangle
+  - Trichechus manatus
+topics:
+  - mangroves
+  - coastal-habitat
+  - nurseries
+  - blue-carbon
+  - manatees
+  - conservation
+tags:
+  - mangroves
+  - glance-and-match
+  - kids
+  - coastal
+displayGroups:
+  - lobby
+layoutTemplate: glance-and-match
