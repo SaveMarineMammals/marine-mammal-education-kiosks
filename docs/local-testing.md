@@ -142,7 +142,8 @@ Artifacts land under `ops/qa/artifacts/timeline-preview-ci/` (`still.png` +
 
 Automated integration test without a physical Pi — see **[ops/qa/](../ops/qa/)**.
 This is **not** a required PR check (cost + flake). Run locally, via
-**Actions → QA player capture**, or by adding the `qa-player` label to a PR:
+**Actions → QA player capture** (optional **record_video** for MP4; default is
+a PNG still under fast CI), or by adding the `qa-player` label to a PR:
 
 ```powershell
 cd ops\qa

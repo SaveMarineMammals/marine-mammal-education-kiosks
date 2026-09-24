@@ -17,7 +17,9 @@ Chromium timeline preview instead of recording the Xibo player.
 captures a still via Playwright — used by the `Timeline preview` workflow.
 **CI (full player):** GitHub Actions workflow `QA player capture` runs this
 pipeline on `workflow_dispatch`, nightly, or PRs labeled `qa-player` (not a
-required merge check).
+required merge check). CI sets `QA_FAST=1` (PNG still by default); on manual
+dispatch, enable **record_video** to pass `--record-video` and also upload an
+MP4 clip.
 
 ## Layout
 

@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      record_video:
+        description: Also capture an MP4 via ffmpeg (default is PNG still only in fast CI)
+        required: false
+        type: boolean
+        default: false
       duration:
         description: Record duration seconds
         required: false
@@ -73,6 +78,10 @@ jobs:
           fi
           if [ "${{ github.event.inputs.preview_only }}" = "true" ]; then
             ARGS+=(--preview-only)
+          fi
+          # Fast CI is PNG-only unless dispatch opts into --record-video.
+          if [ "${{ github.event.inputs.record_video }}" = "true" ]; then
+            ARGS+=(--record-video)
           fi
           # Nightly: prefer a published/review Glance & Match reference when present.
           if [ "${{ github.event_name }}" = "schedule" ]; then
