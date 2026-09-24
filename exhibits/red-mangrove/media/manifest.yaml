@@ -1,0 +1,123 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: red-mangrove
+store: media-store-primary
+assets:
+  # --- Zone A: Hero identification ---
+  - id: graphic-mangrove-id
+    role: hero-id
+    filename: graphic-mangrove-id.png
+    sha256: "3cd1436b967fc61c792b5f022bdd5c4fdac959374adeb4996612c5f829ddca99"
+    uri: exhibits/red-mangrove/media/assets/graphic-mangrove-id.png
+    mime: image/png
+    bytes: 665419
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:hero-id
+      - zone:a
+    preview: graphic-mangrove-id-thumb.jpg
+
+  - id: bg-hero-mangrove
+    role: hero-bg
+    filename: bg-hero-mangrove.jpg
+    sha256: "33e4ffa898e7949fb35a817e6da8e656ef8451c819bacc9c18e51befa3bf559e"
+    uri: exhibits/red-mangrove/media/assets/bg-hero-mangrove.jpg
+    mime: image/jpeg
+    bytes: 312497
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:hero-bg
+      - zone:a
+    preview: bg-hero-mangrove-thumb.jpg
+
+  # --- Zone B: Right pane + cards ---
+  - id: bg-insights-panel
+    role: insights-bg
+    filename: bg-insights-panel.jpg
+    sha256: "25ff3395ae68227a53179cd2d862b8b50d4ff39008171e0678540c564ae48cd2"
+    uri: exhibits/red-mangrove/media/assets/bg-insights-panel.jpg
+    mime: image/jpeg
+    bytes: 58216
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insights-bg
+      - zone:b
+    preview: bg-insights-panel-thumb.jpg
+
+  - id: bg-insights-copy-scrim
+    role: insights-copy-scrim
+    filename: bg-insights-copy-scrim.png
+    sha256: "af5c4ed3239d235c480655048c3b022f1668ea8c27f459f3d7ee2e5a02c3f9a3"
+    uri: exhibits/red-mangrove/media/assets/bg-insights-copy-scrim.png
+    mime: image/png
+    bytes: 1810
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insights-copy-scrim
+      - zone:b
+    preview: bg-insights-copy-scrim-thumb.jpg
+
+  - id: graphic-roots-stilts
+    role: insight-card
+    filename: graphic-roots-stilts.png
+    sha256: "11d7817406d9ea6b9cf93a26296445c27631499fcc7251706a8c9291945b1312"
+    uri: exhibits/red-mangrove/media/assets/graphic-roots-stilts.png
+    mime: image/png
+    bytes: 493355
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insight-card
+      - card:stilt-roots
+    preview: graphic-roots-stilts-thumb.jpg
+
+  - id: graphic-nursery-roots
+    role: insight-card
+    filename: graphic-nursery-roots.png
+    sha256: "80e5da1b2ea7974fd38b54be85d456638772ef6db9acf19d7a2e01e2582870bf"
+    uri: exhibits/red-mangrove/media/assets/graphic-nursery-roots.png
+    mime: image/png
+    bytes: 533287
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insight-card
+      - card:fish-nursery
+    preview: graphic-nursery-roots-thumb.jpg
+
+  - id: graphic-fact-propagules
+    role: insight-card
+    filename: graphic-fact-propagules.png
+    sha256: "2d46dc44c8924efcd5608519ca473280af4df01350c7f1b3e5a7162b68da0a74"
+    uri: exhibits/red-mangrove/media/assets/graphic-fact-propagules.png
+    mime: image/png
+    bytes: 343977
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insight-card
+      - card:hidden-fact
+    preview: graphic-fact-propagules-thumb.jpg
+
+  - id: graphic-help-protect
+    role: insight-card
+    filename: graphic-help-protect.png
+    sha256: "e5564b1646d5ecc59dc66f42e937c560d589cddc2d86d6c529cd21c47a51dba9"
+    uri: exhibits/red-mangrove/media/assets/graphic-help-protect.png
+    mime: image/png
+    bytes: 526969
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:insight-card
+      - card:how-to-help
+    preview: graphic-help-protect-thumb.jpg
+
+  # --- Zone C: Ticker scrim ---
+  - id: bg-ticker-scrim
+    role: ticker
+    filename: bg-ticker-scrim.png
+    sha256: "c853ba4a57885a06be278067850700eaaf28c8901dbc007363942e0b0db3bb74"
+    uri: exhibits/red-mangrove/media/assets/bg-ticker-scrim.png
+    mime: image/png
+    bytes: 1021
+    xiboTags:
+      - exhibit:red-mangrove
+      - role:ticker
+      - zone:c
+    preview: bg-ticker-scrim-thumb.jpg
