@@ -9,6 +9,7 @@ This folder contains a **repository ruleset** you can import to protect the defa
 | Changes land on `main` only via pull request | `update` + `pull_request` rules block direct pushes and require a PR to merge |
 | All review conversations resolved | `required_review_thread_resolution: true` |
 | At least one approval from someone other than the last pusher | `required_approving_review_count: 1` + `require_last_push_approval: true` |
+| No extra approval for bot/app PRs (Dependabot, unattributed Copilot) | `require_extra_approval_for_unattributed_changes: false` (set explicitly; GitHub defaults omitted values to `true`) |
 | CI must pass before merge | Required status checks for Exhibit contract and Timeline preview |
 | Branch up to date with `main` before merge | `strict_required_status_checks_policy: true` |
 | No force-push or branch deletion | `non_fast_forward` + `deletion` rules |
@@ -19,6 +20,10 @@ This folder contains a **repository ruleset** you can import to protect the defa
 ### Author self-approval
 
 GitHub rulesets do not block the PR author from approving their own PR if they never push new commits after opening it. To prevent that at the organization level, enable **Prevent pull request authors from approving their own pull requests** under organization settings (if available). With `require_last_push_approval`, any new push requires approval from someone who did not push that commit.
+
+### Unattributed / bot pull requests
+
+GitHub enables **Require an additional approval for unattributed Copilot pull requests** (`require_extra_approval_for_unattributed_changes`) by default when the field is omitted from a ruleset. That raises the approval bar by one for PRs opened under a bot or app identity (including Dependabot), so a ruleset that asks for one approval effectively needs two write-access approvals. This repository sets the flag to `false` explicitly so Dependabot and similar bot PRs merge after the normal single non-pusher approval and required checks.
 
 ## Import the ruleset
 

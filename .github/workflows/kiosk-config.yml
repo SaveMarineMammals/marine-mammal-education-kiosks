@@ -1,0 +1,104 @@
+name: Kiosk config
+
+# Generate per-kiosk first-boot configuration artifacts from typed inputs.
+# Artifacts contain CMS_KEY — do not attach to Releases or commit to Git.
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: Location slug (kebab-case), e.g. lobby
+        required: true
+        type: string
+      unit:
+        description: Unit number, e.g. 01
+        required: true
+        type: string
+      cms_url:
+        description: Xibo CMS base URL (https://…)
+        required: true
+        type: string
+      cms_key:
+        description: Xibo CMS key (masked; never logged)
+        required: true
+        type: string
+      display_group:
+        description: Display group (default = location)
+        required: false
+        type: string
+        default: ""
+      image_version:
+        description: Golden image recipe version for DEPLOY.md
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: kiosk-config-${{ github.workflow }}-${{ github.ref }}-${{ inputs.location }}-${{ inputs.unit }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate kiosk config zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Mask CMS key
+        env:
+          CMS_KEY: ${{ inputs.cms_key }}
+        run: |
+          echo "::add-mask::${CMS_KEY}"
+
+      - name: Resolve image version
+        id: ver
+        run: |
+          DEFAULT="$(tr -d '[:space:]' < ops/players/image/VERSION)"
+          INPUT="${{ inputs.image_version }}"
+          if [ -n "${INPUT}" ]; then
+            echo "version=${INPUT}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${DEFAULT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate config bundle
+        id: gen
+        env:
+          LOCATION: ${{ inputs.location }}
+          UNIT: ${{ inputs.unit }}
+          CMS_URL: ${{ inputs.cms_url }}
+          CMS_KEY: ${{ inputs.cms_key }}
+          DISPLAY_GROUP: ${{ inputs.display_group }}
+          IMAGE_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          OUT="${RUNNER_TEMP}/kiosk-configs"
+          mkdir -p "${OUT}"
+          ARGS=(
+            --location "${LOCATION}"
+            --unit "${UNIT}"
+            --cms-url "${CMS_URL}"
+            --cms-key "${CMS_KEY}"
+            --image-version "${IMAGE_VERSION}"
+            --out-dir "${OUT}"
+          )
+          if [ -n "${DISPLAY_GROUP}" ]; then
+            ARGS+=(--display-group "${DISPLAY_GROUP}")
+          fi
+          python3 ops/players/image/generate_kiosk_config.py "${ARGS[@]}"
+          ZIP="$(ls -1 "${OUT}"/*-config.zip)"
+          echo "zip=${ZIP}" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${ZIP}" .zip)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload config artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.gen.outputs.name }}
+          path: ${{ steps.gen.outputs.zip }}
+          retention-days: 30
+          if-no-files-found: error
