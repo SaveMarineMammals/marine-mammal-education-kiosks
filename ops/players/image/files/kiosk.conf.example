@@ -1,0 +1,10 @@
+# First-boot kiosk identity — copy to /boot/firmware/kiosk.conf before power-on.
+# Generate via: python ops/players/image/generate_kiosk_config.py ...
+# or GitHub Actions → "Kiosk config" workflow.
+#
+# Do not commit real CMS_KEY values to Git.
+
+HOSTNAME=kiosk-lobby-01
+CMS_URL=https://cms.example.local
+CMS_KEY=replace-me
+DISPLAY_GROUP=lobby

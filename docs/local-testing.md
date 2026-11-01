@@ -1,6 +1,6 @@
 # Local testing
 
-How to verify this monorepo on a developer machine **without** needing Raspberry Pis or a full production CMS. Full TV playback still requires Xibo CMS + Xibo Linux Player (see the end of this doc).
+How to verify this monorepo on a developer machine **without** needing Raspberry Pis or a full production CMS. Full TV playback still requires Xibo CMS + a physical player (see the end of this doc).
 
 ## Prerequisites
 
@@ -135,7 +135,7 @@ Artifacts land under `ops/qa/artifacts/timeline-preview-ci/` (`still.png` +
 | --- | --- |
 | Live media sync to CMS | Media store + Xibo API credentials (see [`.env.example`](../.env.example)) and a completed `sync_media.py` |
 | Live Xibo player capture | Docker + [ops/qa/](../ops/qa/) (`run_qa_pipeline.py`) or the `qa-player` GitHub label / workflow |
-| Actual kiosk playback | Xibo CMS + Xibo Linux Player on a Pi (or Linux VM) |
+| Actual kiosk playback | Xibo CMS + Arexibo on a Pi (or official Xibo Linux Player on an x86 Linux VM); see [facility-physical-setup.md](facility-physical-setup.md) |
 | Layout rendering in CMS | Layouts built in the CMS from recipes under `framework/layout-templates/` |
 
 ## 8. Ephemeral CMS + headless player visual QA (Tier 3)
@@ -176,6 +176,7 @@ When you are ready to test real kiosk playback:
 ## Related docs
 
 - [Architecture](architecture.md)
+- [Facility physical setup](facility-physical-setup.md)
 - [Exhibit authoring](exhibit-authoring.md)
 - [Layout preview](../framework/preview/README.md)
 - [Publish runbook](../ops/runbooks/publish-exhibit.md)
