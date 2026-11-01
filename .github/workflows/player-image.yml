@@ -1,0 +1,143 @@
+name: Player image
+
+# Build the golden Raspberry Pi OS arm64 kiosk image (pi-gen + stage-kiosk).
+# Not a required merge check — run on demand or via player-image-v* tags.
+
+on:
+  workflow_dispatch:
+    inputs:
+      arexibo_version:
+        description: Pin Arexibo apt version (empty = latest from xiboplayer repo)
+        required: false
+        type: string
+        default: ""
+  push:
+    tags:
+      - "player-image-v*"
+
+concurrency:
+  group: player-image-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Pi OS arm64 kiosk image
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read recipe version
+        id: ver
+        run: |
+          VERSION="$(tr -d '[:space:]' < ops/players/image/VERSION)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "image_name=mmek-kiosk-${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Require SSH deploy pubkey for release tags
+        if: startsWith(github.ref, 'refs/tags/player-image-v')
+        env:
+          KIOSK_SSH_PUBKEY: ${{ secrets.KIOSK_SSH_PUBKEY }}
+        run: |
+          if [ -z "${KIOSK_SSH_PUBKEY}" ]; then
+            echo "Repository secret KIOSK_SSH_PUBKEY is required for player-image-v* releases." >&2
+            exit 1
+          fi
+
+      - name: Write optional Arexibo apt pin
+        env:
+          AREXIBO_VERSION: ${{ inputs.arexibo_version || '' }}
+        run: |
+          printf '%s\n' "${AREXIBO_VERSION}" > ops/players/image/stage-kiosk/01-arexibo/AREXIBO_VERSION
+
+      - name: SSH hardening flags
+        id: ssh
+        env:
+          KIOSK_SSH_PUBKEY: ${{ secrets.KIOSK_SSH_PUBKEY }}
+        run: |
+          if [ -n "${KIOSK_SSH_PUBKEY}" ]; then
+            echo "pubkey_only=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "pubkey_only=0" >> "$GITHUB_OUTPUT"
+            echo "warning: KIOSK_SSH_PUBKEY unset; SSH password auth left enabled for soak builds." >&2
+          fi
+
+      - name: Build image (pi-gen)
+        id: build
+        uses: usimd/pi-gen-action@v1
+        with:
+          image-name: ${{ steps.ver.outputs.image_name }}
+          pi-gen-version: arm64
+          release: trixie
+          stage-list: >-
+            stage0
+            stage1
+            stage2
+            ${{ github.workspace }}/ops/players/image/stage-kiosk
+          export-last-stage-only: true
+          compression: xz
+          compression-level: "6"
+          enable-ssh: 1
+          pubkey-only-ssh: ${{ steps.ssh.outputs.pubkey_only }}
+          pubkey-ssh-first-user: ${{ secrets.KIOSK_SSH_PUBKEY }}
+          username: mmek
+          disable-first-boot-user-rename: 1
+          passwordless-sudo: 0
+          hostname: kiosk-unconfigured
+          locale: en_US.UTF-8
+          keyboard-keymap: us
+          keyboard-layout: English (US)
+          timezone: America/New_York
+          enable-cloud-init: 0
+          increase-runner-disk-size: true
+          verbose-output: true
+
+      - name: Collect build info and checksums
+        id: artifact
+        run: |
+          set -euo pipefail
+          IMG="${{ steps.build.outputs.image-path }}"
+          test -n "${IMG}" && test -e "${IMG}"
+          OUT=dist-player-image
+          mkdir -p "${OUT}"
+          cp -a "${IMG}" "${OUT}/"
+          BASE="$(basename "${IMG}")"
+          {
+            echo "recipe_version=${{ steps.ver.outputs.version }}"
+            echo "git_sha=${GITHUB_SHA}"
+            echo "git_ref=${GITHUB_REF}"
+            echo "image_file=${BASE}"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "runner=${RUNNER_OS}/${RUNNER_ARCH}"
+            echo "arexibo_version_input=${{ inputs.arexibo_version || '' }}"
+          } > "${OUT}/build-info.txt"
+          (
+            cd "${OUT}"
+            sha256sum "${BASE}" build-info.txt > sha256sums.txt
+          )
+          echo "dir=${OUT}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload soak artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.ver.outputs.image_name }}
+          path: ${{ steps.artifact.outputs.dir }}/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/player-image-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.artifact.outputs.dir }}/*
+          generate_release_notes: true
+          body: |
+            Approved MMEK kiosk golden image `${{ steps.ver.outputs.image_name }}`.
+
+            Flash the `.img.xz`, then place a generated `kiosk.conf` on `/boot/firmware/`
+            (see **Kiosk config** workflow / `ops/players/image/README.md`).

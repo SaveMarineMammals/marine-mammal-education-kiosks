@@ -9,7 +9,11 @@ This monorepo holds **exhibit source** (copy, layout recipes, media manifests) a
 | This repo | Source of truth for design, metadata, ops docs/scripts |
 | Media store (NAS / S3-compatible) | Large masters only (video, files ≥ 2 MB) |
 | Xibo CMS | Library, layouts, schedules, display management |
-| Xibo Linux Player (Raspberry Pi) | Playback on kiosk TVs |
+| Raspberry Pi + Arexibo (community aarch64) | Playback on facility kiosk panels (see [facility-physical-setup.md](facility-physical-setup.md)) |
+
+Official **Xibo for Linux** is x86-64 only; ephemeral QA still uses it in Docker
+([`ops/qa/`](../ops/qa/)). Physical fleet Pis use community **Arexibo**, not the
+official Linux snap.
 
 ## Content flow
 
