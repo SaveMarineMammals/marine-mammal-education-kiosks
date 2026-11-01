@@ -1,6 +1,7 @@
 # Marine Mammal Education Kiosks
 
-Monorepo for an educational kiosk ecosystem powered by **Xibo CMS** (central) and **Xibo Linux Player** on Raspberry Pi displays.
+Monorepo for an educational kiosk ecosystem powered by **Xibo CMS** (central) and
+Raspberry Pi players (community **Arexibo** on aarch64) on facility displays.
 
 This repository is the **source of truth for exhibit design and operations**. Xibo remains the deployed media library and schedule.
 
@@ -51,6 +52,8 @@ Same commands locally: [docs/local-testing.md](docs/local-testing.md).
 | Document | Description |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Xibo + media flow |
+| [Facility physical setup](docs/facility-physical-setup.md) | NovoTouch LK7530i + Pi VESA mount BOM |
+| [Player image](ops/players/image/) | Golden Pi image + kiosk config pipelines |
 | [Exhibit authoring](docs/exhibit-authoring.md) | How to add content |
 | [Local testing](docs/local-testing.md) | Tier 1–3 validation on your machine |
 | [Layout preview](framework/preview/) | Branding + template mockups in the browser |

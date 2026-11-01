@@ -111,6 +111,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | Timeline Chromium still | `ops/qa/ci_timeline_preview.py` |
 | Live player capture | `ops/qa/run_qa_pipeline.py` |
+| Golden Pi image / kiosk config | `ops/players/image/`, `.github/workflows/player-image.yml`, `kiosk-config.yml` |
 | CI workflows | `.github/workflows/` |
 | Branch protection | `.github/rulesets/` |
 
@@ -119,6 +120,8 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Document | Purpose |
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | Content flow, naming, media strategy |
+| [docs/facility-physical-setup.md](docs/facility-physical-setup.md) | NovoTouch LK7530i + Pi VESA physical install |
+| [ops/players/image/](ops/players/image/) | Reproducible Pi image + per-kiosk config generator |
 | [docs/media-policy.md](docs/media-policy.md) | In-repo vs media-store binaries |
 | [docs/exhibit-authoring.md](docs/exhibit-authoring.md) | New exhibit checklist |
 | [docs/local-testing.md](docs/local-testing.md) | Tier 1–3 quality checks |
