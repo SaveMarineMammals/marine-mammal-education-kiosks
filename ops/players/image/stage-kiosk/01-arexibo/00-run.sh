@@ -2,10 +2,12 @@
 # Install Arexibo inside the image rootfs.
 # Prefer a CI-prefetched local .deb (avoids Cloudflare 403 from chroot on
 # dl.xiboplayer.org). Fall back to the apt repo when the deb is absent.
+# All paths must stay under stage-kiosk/ (only that dir is Docker-mounted).
 set -euo pipefail
 
 STAGE_SUBDIR="$(cd "$(dirname "$0")" && pwd)"
-FILES_DIR="$(cd "${STAGE_SUBDIR}/../../files" && pwd)"
+STAGE_DIR="$(cd "${STAGE_SUBDIR}/.." && pwd)"
+FILES_DIR="${STAGE_DIR}/files"
 PIN_FILE="${STAGE_SUBDIR}/AREXIBO_VERSION"
 LOCAL_DEB="${STAGE_SUBDIR}/arexibo.deb"
 PIN=""

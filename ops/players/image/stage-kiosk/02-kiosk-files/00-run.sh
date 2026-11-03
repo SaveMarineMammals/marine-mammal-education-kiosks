@@ -1,11 +1,11 @@
 #!/bin/bash -e
 # Install MMEK kiosk scripts and units into the image rootfs.
-# FILES_DIR is the recipe files/ directory (sibling of stage-kiosk).
+# Files live under stage-kiosk/files (must be inside the Docker-mounted stage).
 set -euo pipefail
 
 STAGE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-FILES_DIR="$(cd "${STAGE_DIR}/../files" && pwd)"
-VERSION_FILE="$(cd "${STAGE_DIR}/.." && pwd)/VERSION"
+FILES_DIR="${STAGE_DIR}/files"
+VERSION_FILE="${STAGE_DIR}/VERSION"
 
 install -d "${ROOTFS_DIR}/etc/mmek"
 install -d "${ROOTFS_DIR}/usr/local/sbin"

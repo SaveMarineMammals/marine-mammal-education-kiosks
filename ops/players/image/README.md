@@ -18,7 +18,7 @@ Player ops checklist: [`ops/players/README.md`](../README.md).
 ## Authentication (CMS key — not client certificates)
 
 Xibo players use **XMDS** with a shared **CMS Key** plus a per-display hardware key.
-Arexibo is configured with `--host` / `--key` (see `files/mmek-arexibo-start`).
+Arexibo is configured with `--host` / `--key` (see `stage-kiosk/files/mmek-arexibo-start`).
 
 **Client certificates cannot replace the CMS key.** OAuth client credentials are for
 the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
