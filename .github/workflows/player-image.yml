@@ -66,6 +66,53 @@ jobs:
             echo "warning: KIOSK_SSH_PUBKEY unset; SSH password auth left enabled for soak builds." >&2
           fi
 
+      - name: Resolve first-user password
+        id: pass
+        env:
+          KIOSK_USER_PASSWORD: ${{ secrets.KIOSK_USER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # pi-gen requires FIRST_USER_PASS when disable-first-boot-user-rename=1
+          if [ -n "${KIOSK_USER_PASSWORD}" ]; then
+            PASS="${KIOSK_USER_PASSWORD}"
+            SOURCE=secret
+          else
+            PASS="$(openssl rand -base64 24)"
+            SOURCE=ephemeral
+            echo "warning: KIOSK_USER_PASSWORD unset; using ephemeral build password (prefer SSH pubkey)." >&2
+          fi
+          echo "::add-mask::${PASS}"
+          {
+            echo "password=${PASS}"
+            echo "source=${SOURCE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prefetch Arexibo arm64 deb
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          STAGE=ops/players/image/stage-kiosk/01-arexibo
+          MANIFEST=ops/players/image/vendor/arexibo.manifest.yaml
+          OUT="${STAGE}/arexibo.deb"
+          PIN="$(tr -d '[:space:]' < "${STAGE}/AREXIBO_VERSION" || true)"
+          VER="$(awk -F'"' '/^version:/{print $2; exit}' "${MANIFEST}")"
+          EXPECT_SHA="$(awk -F'"' '/^sha256:/{print $2; exit}' "${MANIFEST}")"
+          TAG="$(awk -F'"' '/^release_tag:/{print $2; exit}' "${MANIFEST}")"
+          ASSET="$(awk -F'"' '/^asset_name:/{print $2; exit}' "${MANIFEST}")"
+          if [[ -n "${PIN}" && "${PIN}" != "${VER}" ]]; then
+            echo "AREXIBO_VERSION pin '${PIN}' does not match mirrored package '${VER}' in ${MANIFEST}." >&2
+            echo "Publish a new deps-arexibo-* release asset and update the manifest." >&2
+            exit 1
+          fi
+          echo "Downloading mirrored arexibo ${VER} from release ${TAG} (${ASSET})"
+          # Upstream dl.xiboplayer.org returns Cloudflare 403 to GitHub-hosted runners.
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --pattern "${ASSET}" --dir "${STAGE}"
+          mv "${STAGE}/${ASSET}" "${OUT}"
+          GOT_SHA="$(sha256sum "${OUT}" | awk '{print $1}')"
+          echo "sha256 expect=${EXPECT_SHA} got=${GOT_SHA}"
+          [[ -n "${EXPECT_SHA}" && "${GOT_SHA}" == "${EXPECT_SHA}" ]]
+
       - name: Build image (pi-gen)
         id: build
         uses: usimd/pi-gen-action@v1
@@ -85,15 +132,16 @@ jobs:
           pubkey-only-ssh: ${{ steps.ssh.outputs.pubkey_only }}
           pubkey-ssh-first-user: ${{ secrets.KIOSK_SSH_PUBKEY }}
           username: mmek
+          password: ${{ steps.pass.outputs.password }}
           disable-first-boot-user-rename: 1
-          passwordless-sudo: 0
           hostname: kiosk-unconfigured
           locale: en_US.UTF-8
           keyboard-keymap: us
           keyboard-layout: English (US)
           timezone: America/New_York
           enable-cloud-init: 0
-          increase-runner-disk-size: true
+          # false: v1.11.0 disk cleanup apt-purges packages missing on ubuntu-24.04-arm
+          increase-runner-disk-size: false
           verbose-output: true
 
       - name: Collect build info and checksums

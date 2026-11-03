@@ -18,7 +18,7 @@ Player ops checklist: [`ops/players/README.md`](../README.md).
 ## Authentication (CMS key — not client certificates)
 
 Xibo players use **XMDS** with a shared **CMS Key** plus a per-display hardware key.
-Arexibo is configured with `--host` / `--key` (see `files/mmek-arexibo-start`).
+Arexibo is configured with `--host` / `--key` (see `stage-kiosk/files/mmek-arexibo-start`).
 
 **Client certificates cannot replace the CMS key.** OAuth client credentials are for
 the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
@@ -77,8 +77,12 @@ before first power-on.
 - Action: [`usimd/pi-gen-action`](https://github.com/usimd/pi-gen-action) with
   `pi-gen-version: arm64`, stages `stage0 stage1 stage2` + this `stage-kiosk`.
 - Optional repo secret `KIOSK_SSH_PUBKEY` injects `authorized_keys` for the first user.
-- Optional `AREXIBO_VERSION` workflow input pins the apt package; otherwise latest
-  from the xiboplayer repo is installed and recorded under `/etc/mmek/arexibo-package-version`.
+- Optional repo secret `KIOSK_USER_PASSWORD` sets the `mmek` account password (otherwise
+  an ephemeral random password is used; prefer SSH pubkey).
+- Arexibo is installed from a **mirrored** arm64 `.deb` (GitHub Release tag
+  `deps-arexibo-*`, see `vendor/arexibo.manifest.yaml`). Upstream
+  `dl.xiboplayer.org` returns Cloudflare **403** to GitHub-hosted runners.
+  Optional `AREXIBO_VERSION` input must match the mirrored version or the build fails.
 
 If the arm64 Arexibo package is unavailable for the Pi OS release, the stage **fails**
 (no silent unsigned binary fallback).
