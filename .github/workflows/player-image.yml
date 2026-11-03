@@ -66,6 +66,29 @@ jobs:
             echo "warning: KIOSK_SSH_PUBKEY unset; SSH password auth left enabled for soak builds." >&2
           fi
 
+      # region agent log
+      - name: Debug runner disk and apt purge targets
+        run: |
+          set -euo pipefail
+          {
+            echo "uname=$(uname -a)"
+            echo "arch=$(uname -m)"
+            df -BG / | awk 'NR==2 {print "df_root_size_g="$2" used_g="$3" avail_g="$4}'
+            for pkg in google-chrome-stable google-cloud-cli-anthoscli google-cloud-cli; do
+              if apt-cache show "$pkg" >/dev/null 2>&1; then
+                echo "apt_cache_${pkg}=present"
+              else
+                echo "apt_cache_${pkg}=missing"
+              fi
+            done
+          } | tee /tmp/mmek-player-image-debug.txt
+          ARCH="$(uname -m)"
+          DF_AVAIL="$(df -BG / | awk 'NR==2 {print $4}')"
+          CHROME=missing; apt-cache show google-chrome-stable >/dev/null 2>&1 && CHROME=present
+          ANTHOS=missing; apt-cache show google-cloud-cli-anthoscli >/dev/null 2>&1 && ANTHOS=present
+          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"A\",\"location\":\"player-image.yml:debug-step\",\"message\":\"runner apt/disk probe\",\"timestamp\":$(date +%s000),\"data\":{\"arch\":\"${ARCH}\",\"chrome\":\"${CHROME}\",\"anthoscli\":\"${ANTHOS}\",\"dfAvail\":\"${DF_AVAIL}\"}}"
+      # endregion
+
       - name: Build image (pi-gen)
         id: build
         uses: usimd/pi-gen-action@v1
@@ -86,14 +109,14 @@ jobs:
           pubkey-ssh-first-user: ${{ secrets.KIOSK_SSH_PUBKEY }}
           username: mmek
           disable-first-boot-user-rename: 1
-          passwordless-sudo: 0
           hostname: kiosk-unconfigured
           locale: en_US.UTF-8
           keyboard-keymap: us
           keyboard-layout: English (US)
           timezone: America/New_York
           enable-cloud-init: 0
-          increase-runner-disk-size: true
+          # false: v1.11.0 disk cleanup apt-purges packages missing on ubuntu-24.04-arm
+          increase-runner-disk-size: false
           verbose-output: true
 
       - name: Collect build info and checksums
