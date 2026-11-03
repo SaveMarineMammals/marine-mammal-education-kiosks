@@ -66,13 +66,37 @@ jobs:
             echo "warning: KIOSK_SSH_PUBKEY unset; SSH password auth left enabled for soak builds." >&2
           fi
 
+      - name: Resolve first-user password
+        id: pass
+        env:
+          KIOSK_USER_PASSWORD: ${{ secrets.KIOSK_USER_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # pi-gen requires FIRST_USER_PASS when disable-first-boot-user-rename=1
+          if [ -n "${KIOSK_USER_PASSWORD}" ]; then
+            PASS="${KIOSK_USER_PASSWORD}"
+            SOURCE=secret
+          else
+            PASS="$(openssl rand -base64 24)"
+            SOURCE=ephemeral
+            echo "warning: KIOSK_USER_PASSWORD unset; using ephemeral build password (prefer SSH pubkey)." >&2
+          fi
+          echo "::add-mask::${PASS}"
+          {
+            echo "password=${PASS}"
+            echo "source=${SOURCE}"
+          } >> "$GITHUB_OUTPUT"
+
       # region agent log
       - name: Debug runner disk and apt purge targets
+        env:
+          PASS_SOURCE: ${{ steps.pass.outputs.source }}
         run: |
           set -euo pipefail
           {
             echo "uname=$(uname -a)"
             echo "arch=$(uname -m)"
+            echo "pass_source=${PASS_SOURCE}"
             df -BG / | awk 'NR==2 {print "df_root_size_g="$2" used_g="$3" avail_g="$4}'
             for pkg in google-chrome-stable google-cloud-cli-anthoscli google-cloud-cli; do
               if apt-cache show "$pkg" >/dev/null 2>&1; then
@@ -86,7 +110,7 @@ jobs:
           DF_AVAIL="$(df -BG / | awk 'NR==2 {print $4}')"
           CHROME=missing; apt-cache show google-chrome-stable >/dev/null 2>&1 && CHROME=present
           ANTHOS=missing; apt-cache show google-cloud-cli-anthoscli >/dev/null 2>&1 && ANTHOS=present
-          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"A\",\"location\":\"player-image.yml:debug-step\",\"message\":\"runner apt/disk probe\",\"timestamp\":$(date +%s000),\"data\":{\"arch\":\"${ARCH}\",\"chrome\":\"${CHROME}\",\"anthoscli\":\"${ANTHOS}\",\"dfAvail\":\"${DF_AVAIL}\"}}"
+          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"A,F\",\"location\":\"player-image.yml:debug-step\",\"message\":\"runner apt/disk/pass probe\",\"timestamp\":$(date +%s000),\"data\":{\"arch\":\"${ARCH}\",\"chrome\":\"${CHROME}\",\"anthoscli\":\"${ANTHOS}\",\"dfAvail\":\"${DF_AVAIL}\",\"passSource\":\"${PASS_SOURCE}\"}}"
       # endregion
 
       - name: Build image (pi-gen)
@@ -108,6 +132,7 @@ jobs:
           pubkey-only-ssh: ${{ steps.ssh.outputs.pubkey_only }}
           pubkey-ssh-first-user: ${{ secrets.KIOSK_SSH_PUBKEY }}
           username: mmek
+          password: ${{ steps.pass.outputs.password }}
           disable-first-boot-user-rename: 1
           hostname: kiosk-unconfigured
           locale: en_US.UTF-8
