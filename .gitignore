@@ -49,6 +49,7 @@ venv/
 *.log
 tmp/
 temp/
+.tmp/
 *.tmp
 
 # CI-prefetched Arexibo package (not committed; >=2 MB)

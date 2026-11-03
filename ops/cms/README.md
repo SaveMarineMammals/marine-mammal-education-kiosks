@@ -7,6 +7,8 @@ Central **Xibo CMS Open Source Edition** hosts the media library, layouts, playl
 ## Install notes
 
 - Prefer the official Docker-based CMS deployment for easier upgrades.
+- Full host procedure (Ubuntu Server on a mini PC): [`../runbooks/install-cms-host.md`](../runbooks/install-cms-host.md).
+- Host bootstrap scripts: [`scripts/`](scripts/).
 - Configure PHP/CMS upload limits high enough for layout ZIPs and large library media (see Xibo post-install guidance).
 - Store CMS admin credentials and API keys in environment variables or a secrets manager — **never commit them**.
 
