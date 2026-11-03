@@ -54,3 +54,4 @@ temp/
 # CI-prefetched Arexibo package (not committed; >=2 MB)
 ops/players/image/stage-kiosk/01-arexibo/arexibo.deb
 ops/players/image/stage-kiosk/01-arexibo/arexibo.deb.sha256
+ops/players/image/vendor/*.deb

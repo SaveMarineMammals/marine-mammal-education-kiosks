@@ -1,0 +1,9 @@
+# Mirrored Arexibo arm64 package for CI (dl.xiboplayer.org is Cloudflare-blocked
+# from GitHub-hosted runners). Bump version + release asset when upgrading.
+version: "0.4.1-1"
+arch: arm64
+sha256: "7bc8e45fe5865516aeedf507ebb5cbea5ec02136ef30e23f38aed8bcfafa901e"
+# GitHub Release asset on this repo (tag deps-arexibo-<version>)
+release_tag: "deps-arexibo-0.4.1-1"
+asset_name: "arexibo_0.4.1-1_arm64.deb"
+upstream_url: "https://dl.xiboplayer.org/deb/debian/trixie/arm64/arexibo_0.4.1-1_arm64.deb"

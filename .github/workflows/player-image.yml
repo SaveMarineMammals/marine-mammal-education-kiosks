@@ -121,47 +121,31 @@ jobs:
       # endregion
 
       - name: Prefetch Arexibo arm64 deb
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           STAGE=ops/players/image/stage-kiosk/01-arexibo
+          MANIFEST=ops/players/image/vendor/arexibo.manifest.yaml
           OUT="${STAGE}/arexibo.deb"
           PIN="$(tr -d '[:space:]' < "${STAGE}/AREXIBO_VERSION" || true)"
-          UA='MMEK-player-image/1.0'
-          INDEX_URL='https://dl.xiboplayer.org/deb/debian/trixie/Packages'
-          INDEX="$(mktemp)"
-          META="$(mktemp)"
-          curl -fsSL -A "${UA}" --retry 3 --retry-delay 2 -o "${INDEX}" "${INDEX_URL}"
-          # Packages stanzas are blank-line separated; pick arexibo/arm64 (+ optional pin).
-          awk -v pin="${PIN}" '
-            BEGIN { RS=""; FS="\n" }
-            {
-              pkg=""; ver=""; arch=""; file=""; sha="";
-              for (i=1; i<=NF; i++) {
-                split($i, a, " ")
-                if (a[1]=="Package:") pkg=a[2]
-                if (a[1]=="Version:") ver=a[2]
-                if (a[1]=="Architecture:") arch=a[2]
-                if (a[1]=="Filename:") file=a[2]
-                if (a[1]=="SHA256:") sha=a[2]
-              }
-              if (pkg=="arexibo" && arch=="arm64" && (pin=="" || ver==pin)) {
-                print ver "\t" file "\t" sha
-                exit
-              }
-            }
-          ' "${INDEX}" > "${META}"
-          [[ -s "${META}" ]] || { echo "No matching arexibo arm64 in Packages (pin='${PIN}')" >&2; exit 1; }
-          VER="$(cut -f1 "${META}")"
-          FILE="$(cut -f2 "${META}")"
-          EXPECT_SHA="$(cut -f3 "${META}")"
-          FILE="${FILE#./}"
-          URL="https://dl.xiboplayer.org/deb/debian/trixie/${FILE}"
-          echo "Downloading arexibo ${VER} from ${URL}"
-          curl -fsSL -A "${UA}" --retry 3 --retry-delay 2 -o "${OUT}" "${URL}"
+          VER="$(awk -F'"' '/^version:/{print $2; exit}' "${MANIFEST}")"
+          EXPECT_SHA="$(awk -F'"' '/^sha256:/{print $2; exit}' "${MANIFEST}")"
+          TAG="$(awk -F'"' '/^release_tag:/{print $2; exit}' "${MANIFEST}")"
+          ASSET="$(awk -F'"' '/^asset_name:/{print $2; exit}' "${MANIFEST}")"
+          if [[ -n "${PIN}" && "${PIN}" != "${VER}" ]]; then
+            echo "AREXIBO_VERSION pin '${PIN}' does not match mirrored package '${VER}' in ${MANIFEST}." >&2
+            echo "Publish a new deps-arexibo-* release asset and update the manifest." >&2
+            exit 1
+          fi
+          echo "Downloading mirrored arexibo ${VER} from release ${TAG} (${ASSET})"
+          # Upstream dl.xiboplayer.org returns Cloudflare 403 to GitHub-hosted runners.
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --pattern "${ASSET}" --dir "${STAGE}"
+          mv "${STAGE}/${ASSET}" "${OUT}"
           GOT_SHA="$(sha256sum "${OUT}" | awk '{print $1}')"
           echo "sha256 expect=${EXPECT_SHA} got=${GOT_SHA}"
           [[ -n "${EXPECT_SHA}" && "${GOT_SHA}" == "${EXPECT_SHA}" ]]
-          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"G\",\"location\":\"player-image.yml:prefetch-arexibo\",\"message\":\"prefetched arexibo deb\",\"timestamp\":$(date +%s000),\"data\":{\"version\":\"${VER}\",\"file\":\"${FILE}\",\"bytes\":$(wc -c < "${OUT}"),\"sha256\":\"${GOT_SHA}\"}}"
+          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"G\",\"location\":\"player-image.yml:prefetch-arexibo\",\"message\":\"prefetched arexibo deb from github release mirror\",\"timestamp\":$(date +%s000),\"data\":{\"version\":\"${VER}\",\"tag\":\"${TAG}\",\"bytes\":$(wc -c < "${OUT}"),\"sha256\":\"${GOT_SHA}\"}}"
 
       - name: Build image (pi-gen)
         id: build
