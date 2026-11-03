@@ -87,39 +87,6 @@ jobs:
             echo "source=${SOURCE}"
           } >> "$GITHUB_OUTPUT"
 
-      # region agent log
-      - name: Debug runner disk and apt purge targets
-        env:
-          PASS_SOURCE: ${{ steps.pass.outputs.source }}
-        run: |
-          set -euo pipefail
-          {
-            echo "uname=$(uname -a)"
-            echo "arch=$(uname -m)"
-            echo "pass_source=${PASS_SOURCE}"
-            df -BG / | awk 'NR==2 {print "df_root_size_g="$2" used_g="$3" avail_g="$4}'
-            for pkg in google-chrome-stable google-cloud-cli-anthoscli google-cloud-cli; do
-              if apt-cache show "$pkg" >/dev/null 2>&1; then
-                echo "apt_cache_${pkg}=present"
-              else
-                echo "apt_cache_${pkg}=missing"
-              fi
-            done
-            for url in \
-              https://dl.xiboplayer.org/deb/GPG-KEY.asc \
-              https://dl.xiboplayer.org/deb/debian/trixie/Packages; do
-              code="$(curl -sS -o /dev/null -w '%{http_code}' -A 'MMEK-player-image/1.0' --max-time 30 "${url}" || echo err)"
-              echo "xibo_probe_${url}=${code}"
-            done
-          } | tee /tmp/mmek-player-image-debug.txt
-          ARCH="$(uname -m)"
-          DF_AVAIL="$(df -BG / | awk 'NR==2 {print $4}')"
-          CHROME=missing; apt-cache show google-chrome-stable >/dev/null 2>&1 && CHROME=present
-          ANTHOS=missing; apt-cache show google-cloud-cli-anthoscli >/dev/null 2>&1 && ANTHOS=present
-          GPG_CODE="$(curl -sS -o /dev/null -w '%{http_code}' -A 'MMEK-player-image/1.0' --max-time 30 https://dl.xiboplayer.org/deb/GPG-KEY.asc || echo err)"
-          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"A,F,G\",\"location\":\"player-image.yml:debug-step\",\"message\":\"runner apt/disk/pass/xibo probe\",\"timestamp\":$(date +%s000),\"data\":{\"arch\":\"${ARCH}\",\"chrome\":\"${CHROME}\",\"anthoscli\":\"${ANTHOS}\",\"dfAvail\":\"${DF_AVAIL}\",\"passSource\":\"${PASS_SOURCE}\",\"gpgHttp\":\"${GPG_CODE}\"}}"
-      # endregion
-
       - name: Prefetch Arexibo arm64 deb
         env:
           GH_TOKEN: ${{ github.token }}
@@ -145,7 +112,6 @@ jobs:
           GOT_SHA="$(sha256sum "${OUT}" | awk '{print $1}')"
           echo "sha256 expect=${EXPECT_SHA} got=${GOT_SHA}"
           [[ -n "${EXPECT_SHA}" && "${GOT_SHA}" == "${EXPECT_SHA}" ]]
-          printf '%s\n' "{\"sessionId\":\"28006a\",\"runId\":\"post-fix\",\"hypothesisId\":\"G\",\"location\":\"player-image.yml:prefetch-arexibo\",\"message\":\"prefetched arexibo deb from github release mirror\",\"timestamp\":$(date +%s000),\"data\":{\"version\":\"${VER}\",\"tag\":\"${TAG}\",\"bytes\":$(wc -c < "${OUT}"),\"sha256\":\"${GOT_SHA}\"}}"
 
       - name: Build image (pi-gen)
         id: build
