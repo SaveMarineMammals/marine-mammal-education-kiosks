@@ -4,26 +4,42 @@ Stand up a dedicated **Ubuntu Server + Docker** host for **Xibo CMS Open Source
 Edition**. This is the facility CMS; kiosk Pis are separate (see
 [`../players/`](../players/)).
 
-Companion scripts live in [`../cms/scripts/`](../cms/scripts/). A prepared Ventoy
-USB usually copies this runbook and those scripts under `marine-mammal-cms/`.
+Companion scripts live in [`../cms/scripts/`](../cms/scripts/). Copy them from
+this repo (clone/USB share) onto the CMS host after Ubuntu is installed.
 
 ## Hardware assumptions
 
 - x86-64 mini PC (e.g. Beelink Mini S), **≥ 8 GB RAM** (12 GB fine), **≥ 128 GB**
   SSD, wired Ethernet preferred.
-- USB installer prepared with **Ventoy** + Ubuntu Server 24.04 LTS live ISO + this
-  runbook folder.
+- Bootable USB written from the official Ubuntu Server 24.04 LTS live ISO with
+  **Rufus**, **balenaEtcher**, or an equivalent raw ISO writer (not Ventoy).
+
+## 0. Prepare the installer USB (Windows workstation)
+
+1. Download **Ubuntu Server 24.04 LTS** (`ubuntu-24.04*-live-server-amd64.iso`) from
+   <https://ubuntu.com/download/server> and verify the published SHA256.
+2. Flash the ISO **directly** to the USB stick:
+
+   | Tool | Notes |
+   | --- | --- |
+   | [balenaEtcher](https://etcher.balena.io/) | Select ISO → select USB → Flash |
+   | [Rufus](https://rufus.ie/) | Partition scheme **GPT**, target **UEFI**. If the stick is a USB SSD/HDD enclosure (e.g. ADATA), enable **List USB Hard Drives** (`rufus.exe -x`) so the drive appears. Prefer **DD Image** mode when Rufus offers ISO vs DD for this hybrid ISO. |
+
+3. Confirm the Beelink boot menu lists the USB as a UEFI removable/USB device.
+
+Post-install helpers are **not** stored on the flashed ISO volume (raw write
+replaces the whole stick). Use this Git repo’s `ops/cms/scripts/` after first boot.
 
 ## 1. Firmware
 
 1. Plug Ethernet into the facility LAN.
-2. Plug in the Ventoy USB.
+2. Plug in the Ubuntu installer USB.
 3. Power on → open Boot Menu (Beelink often **F7** / **F12** / **Esc**).
 4. Boot the USB in **UEFI** mode (not legacy CSM).
-5. In Ventoy, select `ubuntu-24.04*-live-server-amd64.iso` → Boot in normal mode.
+5. Proceed with the Ubuntu Server live installer.
 
-Optional BIOS checks: disable Secure Boot only if Ventoy/Ubuntu fails to boot;
-prefer leaving it on when possible. Disable Fast Boot if USB is skipped.
+Optional BIOS checks: disable Secure Boot only if Ubuntu fails to boot; prefer
+leaving it on when possible. Disable Fast Boot if USB is skipped.
 
 ## 2. Ubuntu Server install (Subiquity)
 
@@ -55,29 +71,21 @@ sudo reboot
 Reserve the CMS MAC in DHCP; optional DNS name `cms.<site>.local` (see
 [`../networking/README.md`](../networking/README.md)).
 
-## 4. Copy setup scripts from the USB
+## 4. Copy setup scripts from this repo
 
-On the CMS host, after re-inserting the Ventoy USB (or from a second machine):
+On the CMS host (git clone, `scp`, or any other copy of the monorepo):
 
 ```bash
-# List block devices; Ventoy data partition is usually exFAT/NTFS labeled Ventoy
-lsblk -f
-sudo mkdir -p /mnt/ventoy
-sudo mount /dev/sdX1 /mnt/ventoy   # replace sdX1 with the Ventoy data partition
-cp -a /mnt/ventoy/marine-mammal-cms /home/$USER/
-sudo umount /mnt/ventoy
-cd ~/marine-mammal-cms
+cd /path/to/marine-mammal-education-kiosks/ops/cms
 chmod +x scripts/*.sh
 ```
-
-If the USB is not handy, clone this repo and use `ops/cms/scripts/` instead.
 
 ## 5. Bootstrap host + install Xibo
 
 ```bash
 sudo ./scripts/bootstrap-cms-host.sh
 # log out/in (or newgrp docker) so docker works without sudo
-./scripts/install-xibo-cms.sh
+sudo ./scripts/install-xibo-cms.sh
 ```
 
 `bootstrap-cms-host.sh` installs Docker Compose v2, UFW (SSH/80/9505), and
