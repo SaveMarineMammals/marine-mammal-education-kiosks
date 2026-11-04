@@ -9,7 +9,8 @@ Runbooks and conventions for Xibo CMS, Raspberry Pi players, networking, and med
 | [`players/image/`](players/image/) | Golden Pi image recipe + kiosk config generator |
 | [`qa/`](qa/) | Ephemeral Docker visual QA (CMS + headless player + captures); CI stills via `ci_timeline_preview.py` |
 | [`networking/`](networking/) | Hostnames, DHCP, firewall assumptions |
-| [`runbooks/`](runbooks/) | Publish, retire, replace a Pi, offline behavior |
+| [`runbooks/`](runbooks/) | Publish, retire, replace a Pi, install CMS host, offline behavior |
+| [`cms/scripts/`](cms/scripts/) | Ubuntu/Docker bootstrap + Xibo CMS install helpers |
 | [`scripts/`](scripts/) | Shell helpers (`bootstrap-check.sh`, …) |
 
 Facility panel mount and Pi BOM:
