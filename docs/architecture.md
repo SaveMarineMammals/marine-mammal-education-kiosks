@@ -18,24 +18,26 @@ official Linux snap.
 ## Content flow
 
 ```text
-Author edits exhibit in Git
+Author edits exhibit in Git (merge to main, status: published)
         |
         +-- images/sound under 2 MB committed under exhibits/<slug>/media/
         |
         +-- large/video masters → media store (sha256 keys)
         |
         v
-tools/sync-media uploads changed files into Xibo Library
+CMS host sync agent (Actions runner + systemd timer)
+  tools/sync_cms.py → media Library + layout mmek-<slug>
         |
         v
-Layouts / playlists in CMS reference Library media
-        |
-        v
-Schedule binds campaigns to display groups
+Facility operator schedules mmek-<slug> onto display groups
+  (schedules are never auto-mutated)
         |
         v
 Players pull layouts + media via XMDS
 ```
+
+Host install: [`ops/cms/scripts/deploy-cms-sync.sh`](../ops/cms/scripts/deploy-cms-sync.sh)
+and [`ops/runbooks/cms-content-sync.md`](../ops/runbooks/cms-content-sync.md).
 
 ## Media strategy
 
@@ -56,6 +58,7 @@ Manifest `uri` values are either **repo-relative paths** (in-repo assets) or **c
 | Exhibit slug | kebab-case; stable after publish | `humpback-migration` |
 | Git folder | `exhibits/<slug>/` | `exhibits/humpback-migration/` |
 | Xibo Library folder | mirrors slug | `exhibits/humpback-migration` |
+| Xibo layout name | stable sync target | `mmek-humpback-migration` |
 | Xibo tag | `exhibit:<slug>` | `exhibit:humpback-migration` |
 | Display groups | location/role, not exhibit | `lobby`, `classroom-a` |
 | Player hostname | `kiosk-<location>-<nn>` | `kiosk-lobby-01` |

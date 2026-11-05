@@ -9,16 +9,20 @@ Central **Xibo CMS Open Source Edition** hosts the media library, layouts, playl
 - Prefer the official Docker-based CMS deployment for easier upgrades.
 - Full host procedure (Ubuntu Server on a mini PC): [`../runbooks/install-cms-host.md`](../runbooks/install-cms-host.md).
 - Host bootstrap scripts: [`scripts/`](scripts/).
+- **Content sync** (Git `main` → Library + layouts): [`../runbooks/cms-content-sync.md`](../runbooks/cms-content-sync.md) and [`scripts/deploy-cms-sync.sh`](scripts/deploy-cms-sync.sh).
 - Configure PHP/CMS upload limits high enough for layout ZIPs and large library media (see Xibo post-install guidance).
 - Store CMS admin credentials and API keys in environment variables or a secrets manager — **never commit them**.
 
-Suggested env file (local only, gitignored):
+Suggested env files (local only, gitignored):
 
 ```text
+# Developer machine (.env from repo root .env.example)
 XIBO_CMS_URL=https://cms.example.local
 XIBO_CLIENT_ID=
 XIBO_CLIENT_SECRET=
-MEDIA_STORE_URI=s3://exhibits/  # or file:// path to NAS mount
+MEDIA_STORE_URI=file:///mnt/media-store
+
+# CMS host production (/etc/mmek/cms-sync.env from cms-sync.env.example)
 ```
 
 For an **ephemeral local CMS + headless player** used in CI-style visual QA, see [../qa/](../qa/) (`docker-compose.test.yml` + `run_qa_pipeline.py`).
@@ -45,13 +49,14 @@ Library/
 | `exhibit:<slug>` | Belongs to an exhibit package |
 | `role:<role>` | hero-video, hero-still, audio-bed, etc. |
 | `playlist:<name>` | Shared playlist media |
-| `status:published` | Optional; CMS may also track via folders |
+| `mmek:managed` | Created/updated by `tools/sync_cms.py` |
+| `sha256:<hex>` | Content hash for media reuse |
 
-## Sync flow (repo / media store → Library)
+## Sync flow (repo / media store → Library + layouts)
 
-1. Author updates `exhibits/<slug>/media/manifest.yaml` with `sha256` + `uri` (repo-relative for images/sound under 2 MB; store key for video / files ≥ 2 MB).
-2. `tools/sync-media` (or manual upload) copies objects whose hashes are not yet in the Library.
-3. Files land in `exhibits/<slug>/` with tags from the manifest.
-4. Layout authors attach Library items; schedules bind campaigns to **display groups** (location/role names).
+1. Author sets `status: published` and merges to `main`.
+2. CMS host agent runs `tools/sync_cms.py --all-published` (Actions on label `mmek-cms` and/or daily systemd timer).
+3. Media lands under `exhibits/<slug>` with manifest tags; layout **`mmek-<slug>`** is created once then updated in place.
+4. **Operators** bind that layout’s campaign to **display groups** in the CMS UI. Sync never edits schedules.
 
-See [media-sync.md](media-sync.md) for the detailed procedure.
+See [media-sync.md](media-sync.md) and [cms-content-sync.md](../runbooks/cms-content-sync.md).

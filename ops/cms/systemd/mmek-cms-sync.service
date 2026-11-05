@@ -1,0 +1,21 @@
+[Unit]
+Description=MMEK reconcile published exhibits with Xibo CMS (media + layouts)
+Documentation=file:///opt/mmek/repo/ops/runbooks/cms-content-sync.md
+ConditionPathExists=/etc/mmek/cms-sync.env
+ConditionPathExists=/opt/mmek/repo/ops/cms/scripts/run-cms-sync.sh
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mmek/cms-sync.env
+WorkingDirectory=/opt/mmek/repo
+ExecStart=/opt/mmek/repo/ops/cms/scripts/run-cms-sync.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+# Do not mutate schedules; sync CLI also refuses schedule APIs.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

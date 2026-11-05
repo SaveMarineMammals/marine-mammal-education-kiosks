@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily MMEK CMS content sync safety net
+Documentation=file:///opt/mmek/repo/ops/runbooks/cms-content-sync.md
+
+[Timer]
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+RandomizedDelaySec=10m
+Unit=mmek-cms-sync.service
+
+[Install]
+WantedBy=timers.target

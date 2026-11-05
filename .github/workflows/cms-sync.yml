@@ -1,0 +1,59 @@
+name: CMS content sync
+
+# Runs on a self-hosted runner on the facility CMS host (label mmek-cms).
+# Syncs published exhibit media + layouts only — never mutates schedules.
+# Secrets come from /etc/mmek/cms-sync.env on the host (not GitHub Secrets).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "exhibits/**"
+      - "framework/**"
+      - "tools/**"
+      - "ops/cms/**"
+      - ".github/workflows/cms-sync.yml"
+  schedule:
+    # Daily UTC safety net (systemd timer is the local backup).
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cms-sync-production
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync published exhibits
+    runs-on: [self-hosted, mmek-cms]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+          ref: main
+
+      - name: Prefer host venv when present
+        id: venv
+        run: |
+          if [[ -x /opt/mmek/venv/bin/python ]]; then
+            echo "python=/opt/mmek/venv/bin/python" >> "${GITHUB_OUTPUT}"
+          else
+            echo "python=python3" >> "${GITHUB_OUTPUT}"
+            python3 -m pip install --user -r tools/requirements.txt
+          fi
+
+      - name: Reconcile published exhibits
+        run: |
+          set -euo pipefail
+          ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+          if [[ ! -f "${ENV_FILE}" ]]; then
+            echo "Missing ${ENV_FILE} on the CMS host" >&2
+            exit 1
+          fi
+          set -a
+          # shellcheck disable=SC1090
+          source "${ENV_FILE}"
+          set +a
+          "${{ steps.venv.outputs.python }}" tools/sync_cms.py --all-published

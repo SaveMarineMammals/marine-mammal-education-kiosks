@@ -103,7 +103,10 @@ Default CMS UI: `http://<cms-ip>/` — login `xibo_admin` / `password`, then
 3. Record **CMS Key** for Pi `kiosk.conf`.
 4. Create an API application; put URL + secrets in a **local** `.env` from the
    repo `.env.example` — never commit secrets.
-5. Schedule a smoke-test layout to one display group; enroll a Pi per
+5. Install content sync (repo pull, systemd timer, self-hosted runner):
+   [`cms-content-sync.md`](cms-content-sync.md) /
+   [`../cms/scripts/deploy-cms-sync.sh`](../cms/scripts/deploy-cms-sync.sh).
+6. Schedule a smoke-test layout to one display group; enroll a Pi per
    [`../players/README.md`](../players/README.md).
 
 ## 7. Backup
@@ -120,6 +123,7 @@ SSL). See [Xibo for Docker](https://account.xibosignage.com/docs/setup/xibo-for-
 ## References
 
 - [`../cms/README.md`](../cms/README.md) — folders, tags, credentials
+- [`cms-content-sync.md`](cms-content-sync.md) — Git main → Library + layouts
 - [`../../docs/local-testing.md`](../../docs/local-testing.md) — production CMS smoke steps
 - [`../../docs/architecture.md`](../../docs/architecture.md) — content flow
 - Official install: <https://account.xibosignage.com/docs/setup/xibo-for-docker>
