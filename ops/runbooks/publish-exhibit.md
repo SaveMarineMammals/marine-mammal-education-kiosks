@@ -29,9 +29,14 @@
    Review `ops/qa/artifacts/` stills/video. Treat a black frame or empty `regions`
    as a publish blocker even though this job is not a required merge check yet.
 5. Set `exhibit.yaml` `status` to `review`, then `published` after sign-off.
-6. Sync media to Xibo Library ([media-sync.md](../cms/media-sync.md)).
-7. Confirm layouts/playlists in CMS use the Library items for this slug.
-8. Schedule campaigns onto the intended **display groups** from `schedule/intent.yaml`.
+6. Merge to `main`. CMS content sync (self-hosted runner + daily timer) uploads
+   Library media and upserts layout **`mmek-<slug>`** automatically — see
+   [cms-content-sync.md](cms-content-sync.md). Manual fallback:
+   [media-sync.md](../cms/media-sync.md).
+7. Confirm layout `mmek-<slug>` exists in CMS and regions look correct.
+8. **Locally in CMS**, schedule the `mmek-<slug>` campaign onto the intended
+   **display groups** (use `schedule/intent.yaml` as human intent only — sync
+   never mutates schedules).
 9. Spot-check on at least one physical Pi.
 10. Update `exhibits/_catalog.yaml` status/version to match (`python tools/catalog.py --write`
     after editing `exhibit.yaml`, or edit the catalog by hand).

@@ -59,6 +59,7 @@ Same commands locally: [docs/local-testing.md](docs/local-testing.md).
 | [Layout preview](framework/preview/) | Branding + template mockups in the browser |
 | [Ops](ops/) | CMS, players, runbooks |
 | [Publish exhibit](ops/runbooks/publish-exhibit.md) | Pre-publish QA gates |
+| [CMS content sync](ops/runbooks/cms-content-sync.md) | Keep facility Xibo media/layouts on `main` |
 | [AGENTS.md](AGENTS.md) | Guide for AI coding agents |
 | [Contributing](CONTRIBUTING.md) | How to contribute |
 | [Code of Conduct](CODE_OF_CONDUCT.md) | Community standards |
