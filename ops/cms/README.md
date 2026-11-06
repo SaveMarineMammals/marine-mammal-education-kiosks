@@ -50,7 +50,7 @@ Library/
 | `role:<role>` | hero-video, hero-still, audio-bed, etc. |
 | `playlist:<name>` | Shared playlist media |
 | `mmek:managed` | Created/updated by `tools/sync_cms.py` |
-| `sha256:<hex>` | Content hash for media reuse |
+| `sha256:<43 hex digits>` | Content-hash prefix for media reuse. Xibo tags are limited to 50 characters, so this is `sha256:` plus the first 43 digits of the manifest digest. Sync still checks file bytes against the full sha256 before upload. |
 
 ## Sync flow (repo / media store → Library + layouts)
 

@@ -3,7 +3,7 @@
 
 Resolves repo-relative URIs and optional MEDIA_STORE_URI objects, verifies
 sha256, uploads when missing/outdated, places under exhibits/<slug>, and
-applies xiboTags plus sha256:<hex> / mmek:managed.
+applies xiboTags plus a CMS-safe sha256 prefix / mmek:managed.
 
 Usage:
   python tools/sync_media.py --exhibit humpback-migration --dry-run
@@ -36,6 +36,45 @@ try:
     import yaml
 except ImportError:  # pragma: no cover
     yaml = None
+
+# Xibo CMS rejects a tag outside 1..50 characters (HTTP 422 on library edit).
+XIBO_TAG_MAX_LEN = 50
+_HASH_TAG_PREFIX = "sha256:"
+_HASH_TAG_HEX_LEN = XIBO_TAG_MAX_LEN - len(_HASH_TAG_PREFIX)
+
+
+def content_hash_tag(digest: str) -> str:
+    """CMS tag for a sha256 digest.
+
+    The manifest keeps the full 64-hex digest. Xibo tags cannot hold
+    ``sha256:`` plus that digest (71 characters), so the library tag stores
+    the first 43 hex digits. Sync still verifies file bytes against the full
+    digest before upload.
+    """
+    hex_digest = digest.strip().lower()
+    if not hex_digest:
+        raise ValueError("sha256 digest is empty")
+    return f"{_HASH_TAG_PREFIX}{hex_digest[:_HASH_TAG_HEX_LEN]}"
+
+
+def library_tags(slug: str, asset_tags: list[Any], digest: str) -> list[str]:
+    """Tags applied to one Library item, all within Xibo's length limit."""
+    tags = [str(t).strip() for t in asset_tags if str(t).strip()]
+    tags = [t for t in tags if not t.lower().startswith(_HASH_TAG_PREFIX)]
+    exhibit_tag = f"exhibit:{slug}"
+    if exhibit_tag not in tags:
+        tags.insert(0, exhibit_tag)
+    if "mmek:managed" not in tags:
+        tags.append("mmek:managed")
+    if digest.strip():
+        tags.append(content_hash_tag(digest))
+    for tag in tags:
+        if not 1 <= len(tag) <= XIBO_TAG_MAX_LEN:
+            raise ValueError(
+                f"Xibo tag must be 1-{XIBO_TAG_MAX_LEN} characters "
+                f"(got {len(tag)}): {tag}"
+            )
+    return tags
 
 
 def load_manifest(slug: str) -> dict:
@@ -190,13 +229,8 @@ def sync_exhibit_media(
                 continue
             expected = str(asset.get("sha256") or "").strip().lower()
             name = library_name_for(slug, asset)
-            tags = [str(t) for t in (asset.get("xiboTags") or []) if t]
-            if f"exhibit:{slug}" not in tags:
-                tags.insert(0, f"exhibit:{slug}")
-            if "mmek:managed" not in tags:
-                tags.append("mmek:managed")
-            if expected and f"sha256:{expected}" not in tags:
-                tags.append(f"sha256:{expected}")
+            tags = library_tags(slug, asset.get("xiboTags") or [], expected)
+            hash_tag = content_hash_tag(expected) if expected else ""
 
             if dry_run or client is None:
                 print(
@@ -206,8 +240,8 @@ def sync_exhibit_media(
                 continue
 
             existing = client.find_media_by_name(name)
-            if existing is not None and expected and client.media_has_tag(
-                existing, f"sha256:{expected}"
+            if existing is not None and hash_tag and client.media_has_tag(
+                existing, hash_tag
             ):
                 mid = int(existing.get("mediaId") or existing.get("id"))
                 media_ids[asset_id] = mid
