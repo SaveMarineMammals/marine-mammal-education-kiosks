@@ -2,8 +2,6 @@ name: Timeline preview
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: timeline-preview-${{ github.workflow }}-${{ github.ref }}
