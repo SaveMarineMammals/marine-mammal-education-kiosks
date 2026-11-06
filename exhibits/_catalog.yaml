@@ -25,7 +25,7 @@ exhibits:
   - id: "00000000-0000-4000-8000-000000000004"
     slug: red-mangrove
     title: "Red Mangrove — The Walking Tree"
-    status: draft
+    status: published
     version: 0.1.0
     path: exhibits/red-mangrove
     tags:
