@@ -10,6 +10,8 @@ MMEK_ROOT="${MMEK_ROOT:-/opt/mmek}"
 MMEK_REPO="${MMEK_REPO:-${MMEK_ROOT}/repo}"
 MMEK_VENV="${MMEK_VENV:-${MMEK_ROOT}/venv}"
 MMEK_RUNNER_DIR="${MMEK_RUNNER_DIR:-${MMEK_ROOT}/actions-runner}"
+# config.sh refuses uid 0. The service runs as this account; it can read the env file.
+RUNNER_USER="${MMEK_RUNNER_USER:-mmek-runner}"
 ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
 BRANCH="${MMEK_BRANCH:-main}"
 RUNNER_LABELS="${MMEK_RUNNER_LABELS:-self-hosted,mmek-cms,Linux,X64}"
@@ -106,6 +108,15 @@ run git lfs install --system || run git lfs install || true
 # 2. Repo checkout
 # ---------------------------------------------------------------------------
 run mkdir -p "${MMEK_ROOT}" /etc/mmek /var/lock
+# /run/lock is wiped on reboot. Mode 666 lets root (systemd) and the runner
+# account flock the same file; sync_cms.py widens it again after a reboot.
+if [[ "${DRY_RUN_DEPLOY}" -eq 0 ]]; then
+  LOCK_PATH="${MMEK_SYNC_LOCK:-/var/lock/mmek-cms-sync.lock}"
+  if [[ ! -e "${LOCK_PATH}" ]]; then
+    : > "${LOCK_PATH}"
+  fi
+  chmod 666 "${LOCK_PATH}" || warn "could not relax permissions on ${LOCK_PATH}"
+fi
 
 if [[ -d "${MMEK_REPO}/.git" ]]; then
   log "Updating existing repo at ${MMEK_REPO}"
@@ -162,6 +173,7 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   log "Installing ${ENV_FILE} from example (fill OAuth secrets before live sync)"
   run cp "${ENV_EXAMPLE}" "${ENV_FILE}"
   run chmod 600 "${ENV_FILE}"
+  run chown root:root "${ENV_FILE}"
   if [[ -n "${CMS_URL}" && "${DRY_RUN_DEPLOY}" -eq 0 ]]; then
     if grep -q '^XIBO_CMS_URL=' "${ENV_FILE}"; then
       sed -i "s|^XIBO_CMS_URL=.*|XIBO_CMS_URL=${CMS_URL}|" "${ENV_FILE}"
@@ -171,6 +183,7 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   fi
 else
   log "Keeping existing ${ENV_FILE}"
+  run chown root:root "${ENV_FILE}"
   run chmod 600 "${ENV_FILE}"
 fi
 
@@ -210,9 +223,52 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Self-hosted GitHub Actions runner
 # ---------------------------------------------------------------------------
+# config.sh exits immediately when uid is 0 ("Must not run with sudo") unless
+# RUNNER_ALLOW_RUNASROOT is set. Configure and run the service as RUNNER_USER.
+ensure_runner_user() {
+  if id "${RUNNER_USER}" >/dev/null 2>&1; then
+    return 0
+  fi
+  log "Creating system user ${RUNNER_USER}"
+  run useradd \
+    --system \
+    --user-group \
+    --create-home \
+    --home-dir "${MMEK_ROOT}/${RUNNER_USER}" \
+    --shell /usr/sbin/nologin \
+    "${RUNNER_USER}"
+}
+
+# systemd stays root. Group-read uses the runner account's primary group so
+# that user can source the file (mode 640).
+grant_runner_env_access() {
+  [[ -f "${ENV_FILE}" ]] || return 0
+  if [[ "${DRY_RUN_DEPLOY}" -eq 1 ]]; then
+    echo "dry-run: chown root:${RUNNER_USER} && chmod 640 ${ENV_FILE}"
+    return 0
+  fi
+  local runner_group
+  runner_group="$(id -gn "${RUNNER_USER}")"
+  chown "root:${runner_group}" "${ENV_FILE}"
+  chmod 640 "${ENV_FILE}"
+}
+
+# svc.sh resolves templates relative to the process working directory.
+run_in_runner_dir() {
+  if [[ "${DRY_RUN_DEPLOY}" -eq 1 ]]; then
+    echo "dry-run: (cd ${MMEK_RUNNER_DIR} && $*)"
+    return 0
+  fi
+  ( cd "${MMEK_RUNNER_DIR}" && "$@" )
+}
+
 if [[ "${SKIP_RUNNER}" -eq 1 ]]; then
   log "Skipping Actions runner (--skip-runner)"
 else
+  command -v runuser >/dev/null 2>&1 || die "runuser is required to configure the Actions runner"
+  ensure_runner_user
+  grant_runner_env_access
+
   RUNNER_CONFIGURED=0
   if [[ -f "${MMEK_RUNNER_DIR}/.runner" ]]; then
     RUNNER_CONFIGURED=1
@@ -220,6 +276,16 @@ else
 
   if [[ "${RUNNER_CONFIGURED}" -eq 1 && "${RECONFIGURE_RUNNER}" -eq 0 ]]; then
     log "Actions runner already configured at ${MMEK_RUNNER_DIR}"
+    if [[ "${DRY_RUN_DEPLOY}" -eq 0 ]]; then
+      # Leave an in-use work directory alone when ownership is already correct.
+      if [[ "$(stat -c %U "${MMEK_RUNNER_DIR}" 2>/dev/null || true)" != "${RUNNER_USER}" ]]; then
+        chown -R "${RUNNER_USER}:${RUNNER_USER}" "${MMEK_RUNNER_DIR}"
+      fi
+      if [[ ! -f "${MMEK_RUNNER_DIR}/.service" ]]; then
+        run_in_runner_dir ./svc.sh install "${RUNNER_USER}"
+      fi
+      run_in_runner_dir ./svc.sh start
+    fi
   else
     [[ -n "${RUNNER_TOKEN}" ]] || die \
       "--runner-token is required to configure the self-hosted runner (or pass --skip-runner)"
@@ -238,7 +304,7 @@ else
       RUNNER_URL="https://github.com/${BASH_REMATCH[1]%.git}"
     fi
 
-    log "Installing GitHub Actions runner into ${MMEK_RUNNER_DIR}"
+    log "Installing GitHub Actions runner into ${MMEK_RUNNER_DIR} as ${RUNNER_USER}"
     run mkdir -p "${MMEK_RUNNER_DIR}"
     if [[ "${DRY_RUN_DEPLOY}" -eq 0 ]]; then
       if [[ ! -f "${MMEK_RUNNER_DIR}/config.sh" ]]; then
@@ -253,25 +319,33 @@ else
         tar -xzf "/tmp/${ARCHIVE}" -C "${MMEK_RUNNER_DIR}"
         rm -f "/tmp/${ARCHIVE}"
       fi
-      if [[ "${RECONFIGURE_RUNNER}" -eq 1 && -f "${MMEK_RUNNER_DIR}/.runner" ]]; then
-        "${MMEK_RUNNER_DIR}/config.sh" remove --token "${RUNNER_TOKEN}" || true
+      if [[ -x "${MMEK_RUNNER_DIR}/bin/installdependencies.sh" ]]; then
+        "${MMEK_RUNNER_DIR}/bin/installdependencies.sh"
       fi
-      "${MMEK_RUNNER_DIR}/config.sh" \
+      chown -R "${RUNNER_USER}:${RUNNER_USER}" "${MMEK_RUNNER_DIR}"
+      if [[ -f "${MMEK_RUNNER_DIR}/.service" ]]; then
+        run_in_runner_dir ./svc.sh stop || true
+        run_in_runner_dir ./svc.sh uninstall || true
+      fi
+      if [[ "${RECONFIGURE_RUNNER}" -eq 1 && -f "${MMEK_RUNNER_DIR}/.runner" ]]; then
+        runuser -u "${RUNNER_USER}" -- "${MMEK_RUNNER_DIR}/config.sh" remove --token "${RUNNER_TOKEN}" || true
+      fi
+      runuser -u "${RUNNER_USER}" -- "${MMEK_RUNNER_DIR}/config.sh" \
         --unattended \
         --url "${RUNNER_URL}" \
         --token "${RUNNER_TOKEN}" \
         --name "$(hostname)-mmek-cms" \
         --labels "${RUNNER_LABELS}" \
         --work "_work"
-      "${MMEK_RUNNER_DIR}/svc.sh" install
-      "${MMEK_RUNNER_DIR}/svc.sh" start
+      run_in_runner_dir ./svc.sh install "${RUNNER_USER}"
+      run_in_runner_dir ./svc.sh start
     else
-      echo "dry-run: download/configure Actions runner for ${RUNNER_URL}"
+      echo "dry-run: download/configure Actions runner for ${RUNNER_URL} as ${RUNNER_USER}"
     fi
   fi
 
   if [[ "${DRY_RUN_DEPLOY}" -eq 0 && -f "${MMEK_RUNNER_DIR}/svc.sh" ]]; then
-    "${MMEK_RUNNER_DIR}/svc.sh" status || warn "runner service status check failed"
+    run_in_runner_dir ./svc.sh status || warn "runner service status check failed"
   fi
 fi
 

@@ -83,6 +83,13 @@ def file_lock(lock_path: Path, *, timeout_seconds: int = 3600) -> Iterator[None]
     """Exclusive flock (POSIX) / msvcrt lock (Windows) around the sync run."""
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     handle = lock_path.open("a+", encoding="utf-8")
+    # /run/lock is wiped on reboot. Whoever creates the file makes it writable
+    # by the root systemd unit and the unprivileged Actions runner.
+    if os.name != "nt":
+        try:
+            os.chmod(handle.fileno(), 0o666)
+        except OSError:
+            pass
     deadline = time.time() + timeout_seconds
     locked = False
     try:

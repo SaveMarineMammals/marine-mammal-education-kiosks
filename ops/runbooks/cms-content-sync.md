@@ -31,8 +31,10 @@ Prerequisites: Xibo CMS already running ([install-cms-host.md](install-cms-host.
      --cms-url http://127.0.0.1
    ```
 
-4. Edit `/etc/mmek/cms-sync.env` with `XIBO_CLIENT_ID` / `XIBO_CLIENT_SECRET`
-   (and `MEDIA_STORE_URI` if large masters live on a NAS/S3 mount).
+4. Edit `/etc/mmek/cms-sync.env` (not a copy under `/opt/mmek/`) with
+   `XIBO_CLIENT_ID` / `XIBO_CLIENT_SECRET` (and `MEDIA_STORE_URI` if large
+   masters live on a NAS/S3 mount). The deploy script keeps this file
+   `root:mmek-runner` mode `640`.
 5. Re-run deploy to enable the timer and smoke OAuth:
 
    ```bash
@@ -51,7 +53,8 @@ The deploy script installs:
 - Python venv at `/opt/mmek/venv`
 - Env file `/etc/mmek/cms-sync.env`
 - systemd `mmek-cms-sync.timer` (daily ~05:30 local safety net)
-- Self-hosted Actions runner labeled `mmek-cms`
+- Self-hosted Actions runner labeled `mmek-cms`, running as system user `mmek-runner`
+  (`config.sh` refuses to register when the installer is root)
 
 ## Ongoing triggers
 
