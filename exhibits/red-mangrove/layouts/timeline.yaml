@@ -1,0 +1,189 @@
+# Widget timeline script — Red Mangrove — The Walking Tree
+# Glance & Match: full-bleed hero wash | ID still | insight art + opaque copy | ticker.
+# Bind widgets in Xibo to these start/duration marks within each region playlist.
+# Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
+
+layoutId: red-mangrove-glance-and-match
+template: glance-and-match
+durationSeconds: 24
+loop: true
+resolution: { width: 1920, height: 1080 }
+
+regions:
+  insights-bg:
+    # Full right-pane wash — separates Zone B/C from the hero.
+    widgets:
+      - id: panel-insights
+        type: image
+        asset: bg-insights-panel
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-bg:
+    # Zone A wash — portrait asset sized to the pane (no letterbox bars).
+    widgets:
+      - id: hero-mangrove
+        type: image
+        asset: bg-hero-mangrove
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-still:
+    # Zone A ID still — lower frame only; mangrove habitat shows full-bleed behind.
+    widgets:
+      - id: hero-mangrove-id
+        type: image
+        asset: graphic-mangrove-id
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        notes: Transparent PNG in the lower hero frame for 3-second tank match.
+
+  hero-labels:
+    widgets:
+      - id: hero-labels
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          Red Mangrove
+          Rhizophora mangle
+
+          The Walking Tree
+          Stilt roots
+          Coastal nursery
+
+  insights-art:
+    # Zone B upper — card graphics only; clear gap before the copy band.
+    widgets:
+      - id: icon-roots
+        type: image
+        asset: graphic-roots-stilts
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-nursery
+        type: image
+        asset: graphic-nursery-roots
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-hidden-fact
+        type: image
+        asset: graphic-fact-propagules
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-how-to-help
+        type: image
+        asset: graphic-help-protect
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+  insights-copy:
+    # Zone B lower — card bullets with band painted IN the text widget
+    # (do not use a separate scrim image; Xibo aspect-fits it and misaligns).
+    widgets:
+      - id: card-roots
+        type: text
+        card: 1
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Stilt Roots
+
+          - Roots look like legs in the water
+          - Natural stilts help the tree stand
+          - They hold the tree up where waves hit
+
+      - id: card-nursery
+        type: text
+        card: 2
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Fish Nursery
+
+          - Baby fish, crabs, and shrimp hide here
+          - Roots keep little animals safe from hunters
+          - Can you spot animals hiding in the roots?
+
+      - id: card-hidden-fact
+        type: text
+        card: 3
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Hidden Fact
+
+          - Seeds sprout while still on the tree
+          - Baby trees float away like little darts
+          - Roots soften waves in big storms
+
+      - id: card-how-to-help
+        type: text
+        card: 4
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          How to Help
+
+          - Keep trash and plastic out of water
+          - Support mangrove restoration nearby
+          - Share why the walking tree matters
+
+  ticker:
+    # Zone C — slim footer; one CTA via native Xibo marqueeLeft (not CSS).
+    widgets:
+      - id: ticker-cta
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: tickerScroll
+        copy: |
+          Protect mangroves — coasts, nurseries, and manatees need them
+
+cueSheet:
+  - { t: 0, action: "hero full-bleed; Stilt Roots art + copy; ticker on" }
+  - { t: 6, action: "insights: Fish Nursery art + copy" }
+  - { t: 12, action: "insights: Hidden Fact art + copy" }
+  - { t: 18, action: "insights: How to Help art + copy" }
+  - { t: 24, action: "layout loops to t=0 (hero never changes)" }
