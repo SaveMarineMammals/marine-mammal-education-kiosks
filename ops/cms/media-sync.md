@@ -27,8 +27,8 @@ Host install and triggers: [cms-content-sync.md](../runbooks/cms-content-sync.md
 1. **Validate** manifests: `python tools/validate_exhibits.py` (also run by `sync_cms.py` per slug).
 2. **Resolve** each asset: repo-relative `uri` → read from Git tree; store `uri` → fetch from media store.
 3. **Verify** bytes match `sha256`.
-4. **Upload** to Xibo Library folder `exhibits/<slug>` if that hash/name is missing or outdated (reuse when tag `sha256:<hex>` matches).
-5. **Apply tags** from `xiboTags` plus `exhibit:<slug>`, `mmek:managed`, and `sha256:<hex>`.
+4. **Upload** to Xibo Library folder `exhibits/<slug>` if that hash/name is missing or outdated (reuse when tag `sha256:<first 43 hex digits>` matches).
+5. **Apply tags** from `xiboTags` plus `exhibit:<slug>`, `mmek:managed`, and `sha256:<first 43 hex digits>`. Xibo rejects any tag longer than 50 characters, so the library tag cannot hold the full digest. The manifest still stores the full sha256, and sync verifies file bytes against that digest before upload.
 6. Layout upsert (`mmek-<slug>`) is handled by `tools/sync_cms.py` / `tools/xibo_layout.py` — not by media-only CLI.
 
 ## Content-addressed keys
