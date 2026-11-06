@@ -2,8 +2,6 @@ name: Exhibit contract
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: exhibit-contract-${{ github.workflow }}-${{ github.ref }}
