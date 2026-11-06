@@ -238,6 +238,30 @@ class XiboClient:
         LOG.info("Uploaded mediaId=%s name=%s", media_id, display_name)
         return media_id
 
+    def get_media(self, media_id: int) -> dict[str, Any]:
+        """Return one Library record by id."""
+        payload = self.request(
+            "GET",
+            "/api/library",
+            params={"mediaId": int(media_id)},
+        )
+        items = (
+            payload
+            if isinstance(payload, list)
+            else payload.get("data")
+            if isinstance(payload, dict)
+            else None
+        )
+        want = int(media_id)
+        if isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                found = item.get("mediaId", item.get("id"))
+                if found is not None and int(found) == want:
+                    return item
+        raise XiboError(f"Media {media_id} not found")
+
     def edit_media(
         self,
         media_id: int,
@@ -245,6 +269,7 @@ class XiboClient:
         name: Optional[str] = None,
         tags: Optional[list[str]] = None,
         folder_id: Optional[int] = None,
+        duration: Optional[int] = None,
     ) -> Any:
         data: dict[str, Any] = {}
         if name is not None:
@@ -255,9 +280,20 @@ class XiboClient:
             data["tags"] = ",".join(tags)
         if folder_id is not None:
             data["folderId"] = int(folder_id)
+        if duration is not None:
+            data["duration"] = int(duration)
         if not data:
             return None
-        LOG.info("Editing mediaId=%s tags=%s folderId=%s", media_id, tags, folder_id)
+        # PUT /api/library/{id} requires name, duration, and retired. A missing
+        # duration is stored as NULL and Xibo answers HTTP 500.
+        self._fill_library_edit_fields(media_id, data)
+        LOG.info(
+            "Editing mediaId=%s tags=%s folderId=%s duration=%s",
+            media_id,
+            tags,
+            folder_id,
+            data.get("duration"),
+        )
         try:
             return self.request("PUT", f"/api/library/{media_id}", data=data)
         except XiboError as exc:
@@ -267,6 +303,29 @@ class XiboClient:
                 if data:
                     return self.request("PUT", f"/api/library/{media_id}", data=data)
             raise
+
+    def _fill_library_edit_fields(self, media_id: int, data: dict[str, Any]) -> None:
+        """Preserve duration, retired, and enableStat across a library edit."""
+        current: dict[str, Any] = {}
+        try:
+            current = self.get_media(media_id)
+        except XiboError as exc:
+            LOG.warning(
+                "Could not read mediaId=%s before edit (%s); sending duration=10",
+                media_id,
+                exc,
+            )
+        if "name" not in data and current.get("name"):
+            data["name"] = current["name"]
+        if "duration" not in data:
+            raw_duration = current.get("duration")
+            data["duration"] = (
+                int(raw_duration) if raw_duration not in (None, "") else 10
+            )
+        if "retired" not in data:
+            data["retired"] = 1 if int(current.get("retired") or 0) else 0
+        if "enableStat" not in data and current.get("enableStat") not in (None, ""):
+            data["enableStat"] = current["enableStat"]
 
     def list_folders(self) -> list[dict[str, Any]]:
         payload = self.request("GET", "/api/folder")
