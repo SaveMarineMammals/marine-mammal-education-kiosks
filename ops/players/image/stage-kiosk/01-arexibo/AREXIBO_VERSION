@@ -1,0 +1,2 @@
+# Optional apt pin; CI may overwrite this file before pi-gen runs.
+

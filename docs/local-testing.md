@@ -1,6 +1,6 @@
 # Local testing
 
-How to verify this monorepo on a developer machine **without** needing Raspberry Pis or a full production CMS. Full TV playback still requires Xibo CMS + Xibo Linux Player (see the end of this doc).
+How to verify this monorepo on a developer machine **without** needing Raspberry Pis or a full production CMS. Full TV playback still requires Xibo CMS + a physical player (see the end of this doc).
 
 ## Prerequisites
 
@@ -51,8 +51,12 @@ Optional packaging / sync dry-runs:
 
 ```powershell
 python tools/sync_media.py --exhibit humpback-migration --dry-run
+python tools/sync_cms.py --all-published --dry-run --skip-lock
 python tools/package_exhibit.py --exhibit humpback-migration
 ```
+
+Live CMS sync needs `XIBO_*` env vars and a reachable CMS (facility host or lab).
+See [ops/runbooks/cms-content-sync.md](../ops/runbooks/cms-content-sync.md).
 
 ### Expected results
 
@@ -61,6 +65,7 @@ python tools/package_exhibit.py --exhibit humpback-migration
 | `validate_exhibits.py` | `OK: N exhibit(s) passed contract validation` |
 | `catalog.py --check` | `OK: catalog matches N exhibit(s)` |
 | `sync_media.py --dry-run` | Lists planned Library uploads; ends with `Dry run only; no uploads performed.` |
+| `sync_cms.py --all-published --dry-run` | `OK: no published exhibits to sync` or per-slug dry-run lines |
 | `package_exhibit.py` | Writes `dist/humpback-migration-checklist.txt` (under gitignored `dist/`) |
 
 `validate_exhibits.py` enforces JSON Schema, media policy (no ≥2 MB / video in Git,
@@ -113,7 +118,11 @@ Large-file example:
 2. Compute a SHA-256 and record it in `exhibits/humpback-migration/media/manifest.yaml` with a store `uri` (use a placeholder until a real media store exists).
 3. Confirm `validate_exhibits.py` still passes for store URIs (it verifies on-disk hashes for repo-relative assets only).
 
-Live upload to Xibo is **not** implemented in `sync_media.py` yet — without `--dry-run` it exits with a “not implemented” message. Manual CMS upload steps are in [ops/cms/media-sync.md](../ops/cms/media-sync.md).
+Live upload needs `XIBO_CMS_URL` / `XIBO_CLIENT_ID` / `XIBO_CLIENT_SECRET` and a
+reachable CMS. Prefer `python tools/sync_cms.py --all-published` on the CMS host
+([cms-content-sync.md](../ops/runbooks/cms-content-sync.md)); media-only path is
+`sync_media.py` without `--dry-run`. Manual fallback:
+[ops/cms/media-sync.md](../ops/cms/media-sync.md).
 
 ## 6. Timeline preview smoke (Tier 2)
 
@@ -133,10 +142,10 @@ Artifacts land under `ops/qa/artifacts/timeline-preview-ci/` (`still.png` +
 
 | Piece | Needs |
 | --- | --- |
-| Live media sync to CMS | Media store + Xibo API credentials (see [`.env.example`](../.env.example)) and a completed `sync_media.py` |
+| Live media/layout sync to facility CMS | Host deploy + OAuth app ([cms-content-sync.md](../ops/runbooks/cms-content-sync.md)); exhibits must be `status: published` |
 | Live Xibo player capture | Docker + [ops/qa/](../ops/qa/) (`run_qa_pipeline.py`) or the `qa-player` GitHub label / workflow |
-| Actual kiosk playback | Xibo CMS + Xibo Linux Player on a Pi (or Linux VM) |
-| Layout rendering in CMS | Layouts built in the CMS from recipes under `framework/layout-templates/` |
+| Actual kiosk playback | Xibo CMS + Arexibo on a Pi (or official Xibo Linux Player on an x86 Linux VM); see [facility-physical-setup.md](facility-physical-setup.md) |
+| Schedule binding | Operator-owned in CMS UI (`mmek-<slug>` campaigns); not automated |
 
 ## 8. Ephemeral CMS + headless player visual QA (Tier 3)
 
@@ -176,6 +185,7 @@ When you are ready to test real kiosk playback:
 ## Related docs
 
 - [Architecture](architecture.md)
+- [Facility physical setup](facility-physical-setup.md)
 - [Exhibit authoring](exhibit-authoring.md)
 - [Layout preview](../framework/preview/README.md)
 - [Publish runbook](../ops/runbooks/publish-exhibit.md)

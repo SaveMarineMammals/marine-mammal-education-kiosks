@@ -1,0 +1,18 @@
+#!/bin/bash
+# Launch Arexibo using CMS_URL / CMS_KEY from the environment (arexibo.env).
+set -euo pipefail
+
+: "${CMS_URL:?CMS_URL not set — run first-boot or populate /etc/mmek/arexibo.env}"
+: "${CMS_KEY:?CMS_KEY not set — run first-boot or populate /etc/mmek/arexibo.env}"
+
+DATA_DIR="${AREXIBO_DATA_DIR:-/var/lib/arexibo}"
+mkdir -p "${DATA_DIR}"
+
+# Prefer --host (upstream arexibo); fall back to --cms (xiboplayer packaging).
+if arexibo --help 2>&1 | grep -q -- '--host'; then
+  exec arexibo --host "${CMS_URL}" --key "${CMS_KEY}" --allow-offline "${DATA_DIR}"
+elif arexibo --help 2>&1 | grep -q -- '--cms'; then
+  exec arexibo --cms "${CMS_URL}" --key "${CMS_KEY}" --allow-offline "${DATA_DIR}"
+else
+  exec arexibo --host "${CMS_URL}" --key "${CMS_KEY}" "${DATA_DIR}"
+fi

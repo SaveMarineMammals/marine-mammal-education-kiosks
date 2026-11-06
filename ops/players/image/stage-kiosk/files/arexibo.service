@@ -1,0 +1,23 @@
+[Unit]
+Description=Arexibo Xibo player (MMEK kiosk)
+After=network-online.target graphical.target
+Wants=network-online.target
+Requires=mmek-kiosk-display.service
+
+[Service]
+Type=simple
+User=kiosk
+Group=kiosk
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/kiosk/.Xauthority
+EnvironmentFile=-/etc/mmek/arexibo.env
+WorkingDirectory=/var/lib/arexibo
+ExecStart=/usr/local/sbin/mmek-arexibo-start
+Restart=on-failure
+RestartSec=5
+# Watchdog-style: restart if the process exits
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Install]
+WantedBy=graphical.target

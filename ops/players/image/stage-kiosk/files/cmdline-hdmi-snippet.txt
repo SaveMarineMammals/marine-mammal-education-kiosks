@@ -1,0 +1,2 @@
+# Appended guidance for HDMI mode (applied in stage via config.txt / cmdline).
+# Force 1080p for Glance & Match layouts — see framework/standards/resolution.md

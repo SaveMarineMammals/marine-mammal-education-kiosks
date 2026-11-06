@@ -9,29 +9,35 @@ This monorepo holds **exhibit source** (copy, layout recipes, media manifests) a
 | This repo | Source of truth for design, metadata, ops docs/scripts |
 | Media store (NAS / S3-compatible) | Large masters only (video, files ≥ 2 MB) |
 | Xibo CMS | Library, layouts, schedules, display management |
-| Xibo Linux Player (Raspberry Pi) | Playback on kiosk TVs |
+| Raspberry Pi + Arexibo (community aarch64) | Playback on facility kiosk panels (see [facility-physical-setup.md](facility-physical-setup.md)) |
+
+Official **Xibo for Linux** is x86-64 only; ephemeral QA still uses it in Docker
+([`ops/qa/`](../ops/qa/)). Physical fleet Pis use community **Arexibo**, not the
+official Linux snap.
 
 ## Content flow
 
 ```text
-Author edits exhibit in Git
+Author edits exhibit in Git (merge to main, status: published)
         |
         +-- images/sound under 2 MB committed under exhibits/<slug>/media/
         |
         +-- large/video masters → media store (sha256 keys)
         |
         v
-tools/sync-media uploads changed files into Xibo Library
+CMS host sync agent (Actions runner + systemd timer)
+  tools/sync_cms.py → media Library + layout mmek-<slug>
         |
         v
-Layouts / playlists in CMS reference Library media
-        |
-        v
-Schedule binds campaigns to display groups
+Facility operator schedules mmek-<slug> onto display groups
+  (schedules are never auto-mutated)
         |
         v
 Players pull layouts + media via XMDS
 ```
+
+Host install: [`ops/cms/scripts/deploy-cms-sync.sh`](../ops/cms/scripts/deploy-cms-sync.sh)
+and [`ops/runbooks/cms-content-sync.md`](../ops/runbooks/cms-content-sync.md).
 
 ## Media strategy
 
@@ -52,6 +58,7 @@ Manifest `uri` values are either **repo-relative paths** (in-repo assets) or **c
 | Exhibit slug | kebab-case; stable after publish | `humpback-migration` |
 | Git folder | `exhibits/<slug>/` | `exhibits/humpback-migration/` |
 | Xibo Library folder | mirrors slug | `exhibits/humpback-migration` |
+| Xibo layout name | stable sync target | `mmek-humpback-migration` |
 | Xibo tag | `exhibit:<slug>` | `exhibit:humpback-migration` |
 | Display groups | location/role, not exhibit | `lobby`, `classroom-a` |
 | Player hostname | `kiosk-<location>-<nn>` | `kiosk-lobby-01` |

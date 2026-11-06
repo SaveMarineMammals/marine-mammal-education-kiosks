@@ -1,0 +1,15 @@
+[Unit]
+Description=MMEK first-boot kiosk configuration
+DefaultDependencies=no
+After=local-fs.target
+Before=network-online.target mmek-kiosk-display.service arexibo.service
+ConditionPathExists=!/var/lib/mmek/first-boot-complete
+ConditionPathExists=/boot/firmware/kiosk.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/first-boot-kiosk.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

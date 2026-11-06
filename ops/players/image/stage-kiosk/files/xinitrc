@@ -1,0 +1,6 @@
+#!/bin/sh
+# Minimal X session for Arexibo (openbox + no screen blanking).
+xset s off || true
+xset -dpms || true
+xset s noblank || true
+exec openbox-session

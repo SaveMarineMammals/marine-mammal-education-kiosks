@@ -4,20 +4,32 @@
 
 Keep **large** masters (video, files ≥ 2 MB) out of Git while ensuring Xibo Library content matches each exhibit’s `media/manifest.yaml`. Images and sound under 2 MB may be committed under `exhibits/<slug>/media/` and synced from the repo.
 
+Prefer the orchestrator on the CMS host:
+
+```bash
+python tools/sync_cms.py --all-published --dry-run
+python tools/sync_cms.py --all-published
+# or single slug (must be published unless --force):
+python tools/sync_media.py --exhibit <slug> --dry-run
+python tools/sync_media.py --exhibit <slug>
+```
+
+Host install and triggers: [cms-content-sync.md](../runbooks/cms-content-sync.md).
+
 ## Prerequisites
 
-- Media store reachable (NAS mount or S3-compatible API).
-- CMS credentials available via env (see `ops/cms/README.md`).
+- Media store reachable (`MEDIA_STORE_URI` as `file://` NAS mount or `s3://`).
+- CMS credentials via env (`XIBO_CMS_URL`, `XIBO_CLIENT_ID`, `XIBO_CLIENT_SECRET`) — see `cms-sync.env.example`.
 - Manifest assets have real `sha256` values (not the stub zeros).
 
 ## Procedure
 
-1. **Validate** manifests: `python tools/validate_exhibits.py` (or future CLI entrypoint).
+1. **Validate** manifests: `python tools/validate_exhibits.py` (also run by `sync_cms.py` per slug).
 2. **Resolve** each asset: repo-relative `uri` → read from Git tree; store `uri` → fetch from media store.
 3. **Verify** bytes match `sha256`.
-4. **Upload** to Xibo Library folder `exhibits/<slug>` if that hash/filename is missing or outdated.
-5. **Apply tags** from `xiboTags` (always include `exhibit:<slug>`).
-6. **Record** sync result in ops logs (optional); do not commit large binaries (≥ 2 MB) or video.
+4. **Upload** to Xibo Library folder `exhibits/<slug>` if that hash/name is missing or outdated (reuse when tag `sha256:<hex>` matches).
+5. **Apply tags** from `xiboTags` plus `exhibit:<slug>`, `mmek:managed`, and `sha256:<hex>`.
+6. Layout upsert (`mmek-<slug>`) is handled by `tools/sync_cms.py` / `tools/xibo_layout.py` — not by media-only CLI.
 
 ## Content-addressed keys
 
@@ -31,9 +43,9 @@ Replacing media means a **new hash** and an updated manifest entry — never ove
 
 ## Manual fallback
 
-Until automation is complete:
+If automation is unavailable:
 
 1. Download the object from the store.
 2. In CMS → Library → Add Media → save to `exhibits/<slug>`.
 3. Add tags matching the manifest.
-4. Replace media in layouts if the CMS “update in all layouts” option is appropriate.
+4. Rebuild or edit layout `mmek-<slug>` so playlists reference the new media.

@@ -18,12 +18,13 @@ replacement for Xibo CMS or players.
 | --- | --- |
 | `exhibits/<slug>/` | One kebab-case exhibit package (YAML, copy, timeline, media manifest) |
 | `framework/` | Shared branding, Glance & Match and other layout templates |
-| `tools/` | Python CLI: validate, catalog, sync (stub), package, preview server |
+| `tools/` | Python CLI: validate, catalog, CMS sync, package, preview server |
 | `ops/qa/` | Ephemeral Docker Xibo player capture + Chromium timeline preview |
 | `schemas/` | JSON Schema for exhibit, catalog, and media manifests |
 
 **Content flow:** Author in Git → images/sound under 2 MB in-repo → large/video in
-media store → `tools/sync-media` / CMS Library → layouts & schedules → players via XMDS.
+media store → `tools/sync_cms.py` (Library + `mmek-<slug>` layouts) → operator
+schedules in CMS → players via XMDS.
 
 **Default tank-side template:** Glance & Match (`framework/layout-templates/glance-and-match/`).
 
@@ -109,8 +110,10 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | New Glance & Match exhibit | `.agents/skills/exhibit-generator/SKILL.md`, `exhibits/<slug>/` |
 | Media policy / hashes | `docs/media-policy.md`, `exhibits/<slug>/media/manifest.yaml` |
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
+| CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
 | Timeline Chromium still | `ops/qa/ci_timeline_preview.py` |
 | Live player capture | `ops/qa/run_qa_pipeline.py` |
+| Golden Pi image / kiosk config | `ops/players/image/`, `.github/workflows/player-image.yml`, `kiosk-config.yml` |
 | CI workflows | `.github/workflows/` |
 | Branch protection | `.github/rulesets/` |
 
@@ -119,9 +122,12 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Document | Purpose |
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | Content flow, naming, media strategy |
+| [docs/facility-physical-setup.md](docs/facility-physical-setup.md) | NovoTouch LK7530i + Pi VESA physical install |
+| [ops/players/image/](ops/players/image/) | Reproducible Pi image + per-kiosk config generator |
 | [docs/media-policy.md](docs/media-policy.md) | In-repo vs media-store binaries |
 | [docs/exhibit-authoring.md](docs/exhibit-authoring.md) | New exhibit checklist |
 | [docs/local-testing.md](docs/local-testing.md) | Tier 1–3 quality checks |
+| [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts (no schedules) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Human contributor workflow |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [README.md](README.md) | Overview and docs index |
