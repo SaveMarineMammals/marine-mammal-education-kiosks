@@ -19,7 +19,15 @@ when content refreshes.
 Prerequisites: Xibo CMS already running ([install-cms-host.md](install-cms-host.md)).
 
 1. In CMS → **Applications**, create a **Client Credentials** application.
-   Record client id/secret (least privilege; Library + Layout scopes as available).
+   Record client id/secret. On **Sharing**, grant **Full access** (scope `all`).
+
+   Xibo 4.4’s `design` scope covers `/library`, `/layout`, `/playlist`, and
+   `/resolution` only. Layout sync also calls `POST /api/region/{id}` and
+   `DELETE /api/region/{id}`, and those routes are only allowed by `all`.
+   A `design`-only client returns
+   `403 Access to this route is denied for this scope`. The sharing form can
+   look unchanged after save — confirm `all` is stored (Applications → the
+   client → Sharing, or `oauth_client_scopes`) before the next sync.
 2. Create a GitHub Actions **runner registration token** for this repo
    (Settings → Actions → Runners → New self-hosted runner).
 3. On the CMS host, from a checkout of this repo (or after cloning once):
