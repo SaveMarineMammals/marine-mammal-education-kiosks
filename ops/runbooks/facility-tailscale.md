@@ -18,7 +18,38 @@ Player first-boot join: [`../players/image/`](../players/image/).
 1. Tailscale organization (admin access).
 2. Facility LAN CIDR (e.g. `192.168.1.0/24`) for CMS UFW break-glass rules.
 3. CMS reachable on the LAN (or physical console) for the first join.
-4. ACL tags and group (create in the admin console before minting auth keys):
+4. ACL tags and group (**required before** minting auth keys or running
+   `install-tailscale.sh`). In the Tailscale admin console → **Access controls**,
+   define the tags under `tagOwners`. Owners, Admins, and Network admins can
+   apply any defined tag; the tags must still appear here or you get
+   `requested tags […] are invalid or not permitted`.
+
+```json
+{
+  "tagOwners": {
+    "tag:mmek-cms": ["autogroup:admin"],
+    "tag:mmek-player": ["autogroup:admin"]
+  },
+  "groups": {
+    "group:mmek-admins": ["you@example.com"]
+  },
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["group:mmek-admins"],
+      "dst": ["tag:mmek-cms:22", "tag:mmek-cms:443"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:mmek-player"],
+      "dst": ["tag:mmek-cms:443", "tag:mmek-cms:9505"]
+    }
+  ]
+}
+```
+
+Merge into your existing policy (do not wipe unrelated rules). Save/apply the
+policy **before** creating keys.
 
 | Identity | Role |
 | --- | --- |
@@ -26,21 +57,34 @@ Player first-boot join: [`../players/image/`](../players/image/).
 | `tag:mmek-player` | All kiosk Pis |
 | `group:mmek-admins` | Operator users |
 
-Suggested ACL grants (edit to match your tailnet policy syntax):
-
-- `group:mmek-admins` → `tag:mmek-cms`:22,443 (optional: SSH to `tag:mmek-player`)
-- `tag:mmek-player` → `tag:mmek-cms`:443,9505
-- Deny player↔player unless you add an explicit need later
+Optional later: allow `group:mmek-admins` → `tag:mmek-player:22` for Pi SSH.
+Deny player↔player unless you add an explicit need.
 
 5. Auth keys (never commit; treat like `CMS_KEY`):
 
-| Key | Tags | Use |
+| Key | Tags on the key | Use |
 | --- | --- | --- |
-| CMS join | `tag:mmek-cms` only | `TS_AUTHKEY` for `install-tailscale.sh` |
-| Player join | `tag:mmek-player` only | `TS_AUTHKEY` in each `kiosk.conf` |
+| CMS join | **exactly** `tag:mmek-cms` | `TS_AUTHKEY` for `install-tailscale.sh` |
+| Player join | **exactly** `tag:mmek-player` | `TS_AUTHKEY` in each `kiosk.conf` |
+
+Create keys at **Settings → Keys → Generate auth key**:
+
+1. Enable **Reusable** (or one-off for a single CMS join).
+2. Enable **Pre-approved** if your tailnet requires device approval.
+3. Under **Tags**, select **only** the matching tag (`tag:mmek-cms` or
+   `tag:mmek-player`). Do not leave the key untagged and expect
+   `--advertise-tags` to invent a tag — the key must carry that tag, and the
+   tag must exist in `tagOwners`.
+4. Copy the `tskey-auth-…` value once.
+
+If join fails with `requested tags [tag:mmek-cms] are invalid or not permitted`:
+the tag is missing from `tagOwners`, or the auth key was not created with that
+tag. Fix the ACL, mint a **new** key, then re-run
+`sudo … ./install-tailscale.sh` (add `--reset` via a one-off
+`tailscale up --reset …` if a previous partial join left bad state).
 
 Prefer **reusable, tag-only** keys with an expiry you rotate on a documented
-schedule. Ephemeral one-off keys also work for a single CMS join.
+schedule.
 
 ## 2. Split DNS (CMS hostname → Tailscale IP)
 
