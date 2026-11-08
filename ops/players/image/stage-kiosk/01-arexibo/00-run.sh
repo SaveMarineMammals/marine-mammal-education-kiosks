@@ -23,13 +23,23 @@ if [[ -f "${LOCAL_DEB}" ]]; then
 	on_chroot << EOF
 set -euo pipefail
 apt-get update
-# Real runtime deps declared by romoloman .debs that apt can satisfy on Trixie.
-apt-get install -y xinput
-# romoloman 0.6.5 Depends on libqt6gui6t64 / libqt6widgets6t64, but Debian
-# Trixie arm64 ships those ABIs as libqt6gui6 / libqt6widgets6 (no t64 package
-# names). Optional pulseaudio* deps are also skipped — kiosk audio uses the
-# image stack as-is. Install with --force-depends, then hold the package so
-# apt --fix-broken does not remove it.
+# Install real Trixie runtime deps first. romoloman 0.6.5 Declares:
+#   libqt6core6t64 / libqt6gui6t64 / libqt6widgets6t64  (Ubuntu-style names)
+# plus same-name WebEngine / pulseaudio packages. Trixie arm64 ships the Qt
+# Core/Gui/Widgets ABIs as libqt6core6 / libqt6gui6 / libqt6widgets6 (no t64
+# package names), so we install those equivalents here and only use
+# --force-depends for the name mismatch — not to skip WebEngine or pulseaudio.
+apt-get install -y \
+  xinput \
+  libqt6core6 \
+  libqt6gui6 \
+  libqt6widgets6 \
+  libqt6webchannel6 \
+  libqt6webenginecore6 \
+  libqt6webenginecore6-bin \
+  libqt6webenginewidgets6 \
+  pulseaudio \
+  pulseaudio-utils
 dpkg -i --force-depends /tmp/arexibo.deb
 rm -f /tmp/arexibo.deb
 apt-mark hold arexibo

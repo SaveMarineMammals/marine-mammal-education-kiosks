@@ -60,9 +60,10 @@ CMS credentials are **never** baked into the golden image.
 
 Revisit newer Arexibo only when Debian/RPi OS ships Qt ≥ 6.10, upstream ships a
 Qt-6.8-linked arm64 `.deb`, or we deliberately vendor a Qt 6.10 SDK (high cost).
-The image install uses `dpkg --force-depends` + `apt-mark hold` because the 0.6.5
-`.deb` names `libqt6gui6t64` / `libqt6widgets6t64` while Trixie arm64 provides
-`libqt6gui6` / `libqt6widgets6`.
+The image install pulls Trixie Qt 6.8 WebEngine + pulseaudio packages first,
+then uses `dpkg --force-depends` + `apt-mark hold` only because the 0.6.5
+`.deb` names `libqt6core6t64` / `libqt6gui6t64` / `libqt6widgets6t64` while
+Trixie arm64 provides `libqt6core6` / `libqt6gui6` / `libqt6widgets6`.
 
 ## Download and flash
 
