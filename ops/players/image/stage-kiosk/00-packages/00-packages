@@ -3,6 +3,7 @@ xserver-xorg-legacy
 xinit
 openbox
 x11-xserver-utils
+xinput
 libxcb-cursor0
 dbus-x11
 unattended-upgrades

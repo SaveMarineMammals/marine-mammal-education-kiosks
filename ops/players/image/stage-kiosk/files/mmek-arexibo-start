@@ -8,11 +8,12 @@ set -euo pipefail
 DATA_DIR="${AREXIBO_DATA_DIR:-/var/lib/arexibo}"
 mkdir -p "${DATA_DIR}"
 
-# Prefer --host (upstream arexibo); fall back to --cms (xiboplayer packaging).
+# Prefer --host (romoloman / birkenfeld CLI); fall back to --cms (xiboplayer packaging).
+# Offline cache is the default in Arexibo >= 0.6.5; do not pass --allow-offline.
 if arexibo --help 2>&1 | grep -q -- '--host'; then
-  exec arexibo --host "${CMS_URL}" --key "${CMS_KEY}" --allow-offline "${DATA_DIR}"
+  exec arexibo --host "${CMS_URL}" --key "${CMS_KEY}" "${DATA_DIR}"
 elif arexibo --help 2>&1 | grep -q -- '--cms'; then
-  exec arexibo --cms "${CMS_URL}" --key "${CMS_KEY}" --allow-offline "${DATA_DIR}"
+  exec arexibo --cms "${CMS_URL}" --key "${CMS_KEY}" "${DATA_DIR}"
 else
   exec arexibo --host "${CMS_URL}" --key "${CMS_KEY}" "${DATA_DIR}"
 fi

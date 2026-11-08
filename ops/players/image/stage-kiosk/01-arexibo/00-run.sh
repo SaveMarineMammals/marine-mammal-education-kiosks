@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Install Arexibo inside the image rootfs.
-# Prefer a CI-prefetched local .deb (avoids Cloudflare 403 from chroot on
-# dl.xiboplayer.org). Fall back to the apt repo when the deb is absent.
+# Prefer a CI-prefetched local .deb (mirrored GitHub Release; see
+# vendor/arexibo.manifest.yaml). Fall back to apt only when the deb is absent.
 # All paths must stay under stage-kiosk/ (only that dir is Docker-mounted).
 set -euo pipefail
 
@@ -23,8 +23,16 @@ if [[ -f "${LOCAL_DEB}" ]]; then
 	on_chroot << EOF
 set -euo pipefail
 apt-get update
-apt-get install -y /tmp/arexibo.deb
+# Real runtime deps declared by romoloman .debs that apt can satisfy on Trixie.
+apt-get install -y xinput
+# romoloman 0.6.5 Depends on libqt6gui6t64 / libqt6widgets6t64, but Debian
+# Trixie arm64 ships those ABIs as libqt6gui6 / libqt6widgets6 (no t64 package
+# names). Optional pulseaudio* deps are also skipped — kiosk audio uses the
+# image stack as-is. Install with --force-depends, then hold the package so
+# apt --fix-broken does not remove it.
+dpkg -i --force-depends /tmp/arexibo.deb
 rm -f /tmp/arexibo.deb
+apt-mark hold arexibo
 INSTALLED="\$(dpkg-query -W -f='\${Version}' arexibo)"
 printf '%s\n' "\${INSTALLED}" > /etc/mmek/arexibo-package-version
 PIN="${PIN}"
@@ -33,10 +41,12 @@ if [[ -n "\${PIN}" && "\${INSTALLED}" != "\${PIN}" ]]; then
   exit 1
 fi
 command -v arexibo >/dev/null
+arexibo --version >/dev/null
 EOF
 else
 	on_chroot << EOF
 set -euo pipefail
+# Fallback only: xiboplayer.org apt (may lag the mirrored romoloman pin).
 curl -fsSL -A 'MMEK-player-image/1.0' https://dl.xiboplayer.org/deb/GPG-KEY.asc \
   | tee /usr/share/keyrings/xiboplayer.asc >/dev/null
 echo 'deb [signed-by=/usr/share/keyrings/xiboplayer.asc] https://dl.xiboplayer.org/deb/debian/trixie ./' \
