@@ -1,0 +1,13 @@
+# Reference fragment: cms-web bound to loopback so host Caddy can own :80/:443.
+# enable-cms-tls.sh applies this binding by rewriting /opt/xibo/docker-compose.yml
+# (Compose merges ports by appending, so a plain override would leave public :80).
+#
+# Equivalent published port for cms-web:
+#   "127.0.0.1:8080:80"
+#
+# XMR remains on host 9505 (unchanged in the official bundle).
+
+services:
+  cms-web:
+    ports:
+      - "127.0.0.1:8080:80"

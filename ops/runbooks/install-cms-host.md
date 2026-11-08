@@ -68,8 +68,12 @@ sudo apt update && sudo apt upgrade -y
 sudo reboot
 ```
 
-Reserve the CMS MAC in DHCP; optional DNS name `cms.<site>.local` (see
-[`../networking/README.md`](../networking/README.md)).
+Reserve the CMS MAC in DHCP. Publish DNS **A** (and optional **AAAA**) for
+`server.kiosks.local.belize.savemarinemammals.com` → this host (LAN IP is fine).
+Players need inbound **TCP 443** and **9505** on the facility LAN. Let's Encrypt
+uses **DNS-01** via Route 53 (no public port 80 required). See
+[`../networking/README.md`](../networking/README.md) and
+[`../cms/caddy/README.md`](../cms/caddy/README.md).
 
 ## 4. Copy setup scripts from this repo
 
@@ -86,14 +90,20 @@ chmod +x scripts/*.sh
 sudo ./scripts/bootstrap-cms-host.sh
 # log out/in (or newgrp docker) so docker works without sudo
 sudo ./scripts/install-xibo-cms.sh
+# after Route 53 IAM keys are in /etc/mmek/caddy-acme.env (see §8):
+sudo ./scripts/enable-cms-tls.sh
 ```
 
-`bootstrap-cms-host.sh` installs Docker Compose v2, UFW (SSH/80/9505), and
+`bootstrap-cms-host.sh` installs Docker Compose v2, UFW (SSH/80/443/9505), and
 unattended security updates. `install-xibo-cms.sh` deploys official Xibo Docker
-files under `/opt/xibo` (requires sudo).
+files under `/opt/xibo` (requires sudo). `enable-cms-tls.sh` binds `cms-web` to
+loopback `:8080`, installs **Caddy** (with Route 53 DNS plugin) for Let's Encrypt
+DNS-01 on `server.kiosks.local.belize.savemarinemammals.com`, and serves HTTPS on
+**443**.
 
-Default CMS UI: `http://<cms-ip>/` — login `xibo_admin` / `password`, then
-**change the password immediately**.
+Default CMS UI after TLS: `https://server.kiosks.local.belize.savemarinemammals.com/`
+— login `xibo_admin` / `password`, then **change the password immediately**.
+(Temporary HTTP on the LAN IP is available only until TLS is enabled.)
 
 ## 6. CMS project conventions
 
@@ -114,11 +124,53 @@ Default CMS UI: `http://<cms-ip>/` — login `xibo_admin` / `password`, then
 - Nightly copy of `/opt/xibo/shared/` (database + library) to NAS or external disk.
 - Keep `config.env` MySQL password with other facility secrets (not in Git).
 
-## 8. HTTPS (optional)
+## 8. HTTPS (Caddy + Let's Encrypt DNS-01)
 
-On a private locked LAN, HTTP is acceptable for day one. For broader exposure,
-terminate TLS with nginx/Caddy in front of `cms-web` (Xibo Docker does not ship
-SSL). See [Xibo for Docker](https://account.xibosignage.com/docs/setup/xibo-for-docker).
+Xibo Docker does not terminate TLS. Facility CMS uses host **Caddy** in front of
+`cms-web`. Certificates come from Let's Encrypt via **DNS-01** against the Route 53
+zone `savemarinemammals.com` (TXT `_acme-challenge…`). The CMS can stay on a
+private LAN address; inbound port 80 from the internet is **not** required for ACME.
+
+**Before `enable-cms-tls.sh`:**
+
+1. Apply facility DNS ([`../../infra/`](../../infra/) — zones
+   `belize.savemarinemammals.com` and
+   `kiosks.local.belize.savemarinemammals.com`; A record for the CMS hostname)
+2. Write `/etc/mmek/caddy-acme.env` from Terraform outputs (`kiosks_zone_id`,
+   ACME access key) using
+   [`../cms/caddy/caddy-acme.env.example`](../cms/caddy/caddy-acme.env.example).
+   ACME TXT records are created only in the **kiosks.local** zone.
+3. Inbound **TCP 443** and **9505** from players on the LAN
+
+```bash
+sudo mkdir -p /etc/mmek
+sudo cp ops/cms/caddy/caddy-acme.env.example /etc/mmek/caddy-acme.env
+sudo chmod 600 /etc/mmek/caddy-acme.env
+sudo nano /etc/mmek/caddy-acme.env
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_HOSTED_ZONE_ID from terraform output
+
+sudo ./scripts/enable-cms-tls.sh
+curl -fsSI https://server.kiosks.local.belize.savemarinemammals.com/login
+```
+
+Details: [`../cms/caddy/README.md`](../cms/caddy/README.md),
+[`../../docs/infra-pipelines.md`](../../docs/infra-pipelines.md).
+
+**After first login**, in the CMS UI:
+
+1. Settings → Network: enable **Force HTTPS**
+2. Settings → Displays: set **XMR public address** to
+   `tcp://server.kiosks.local.belize.savemarinemammals.com:9505`
+3. Leave **XMR WebSocket** empty so players use
+   `https://server.kiosks.local.belize.savemarinemammals.com/xmr`
+
+On-host content sync should keep using loopback
+`http://127.0.0.1:8080` (see [`cms-sync.env.example`](../cms/cms-sync.env.example)),
+not the public HTTPS URL.
+
+Re-run `enable-cms-tls.sh` after a Xibo bundle upgrade if compose again publishes
+host `:80`. Official reverse-proxy notes:
+[Xibo self-hosted CMS](https://docs.xibosignage.com/setup-docs/cms-installation/self-hosted-cms).
 
 ## References
 

@@ -36,9 +36,10 @@ fi
 echo "==> Configuring unattended security updates"
 dpkg-reconfigure -f noninteractive unattended-upgrades || true
 
-echo "==> Configuring UFW (SSH, HTTP CMS, XMR 9505)"
+echo "==> Configuring UFW (SSH, HTTP redirect, HTTPS, XMR 9505)"
 ufw allow OpenSSH
-ufw allow 80/tcp comment 'Xibo CMS HTTP'
+ufw allow 80/tcp comment 'Xibo CMS HTTP redirect'
+ufw allow 443/tcp comment 'Xibo CMS HTTPS'
 ufw allow 9505/tcp comment 'Xibo XMR'
 # --force enables without interactive prompt
 ufw --force enable
@@ -49,4 +50,5 @@ echo "Bootstrap complete."
 echo "Next:"
 echo "  1. Log out and back in (or: newgrp docker)"
 echo "  2. Run: sudo ./install-xibo-cms.sh"
-echo "  3. Open http://<this-host>/ and change the xibo_admin password"
+echo "  3. Run: sudo ./enable-cms-tls.sh  (after DNS for the CMS hostname)"
+echo "  4. Open https://server.kiosks.local.belize.savemarinemammals.com/ and change the xibo_admin password"

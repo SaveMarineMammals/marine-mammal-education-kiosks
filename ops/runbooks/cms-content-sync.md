@@ -36,7 +36,7 @@ Prerequisites: Xibo CMS already running ([install-cms-host.md](install-cms-host.
    sudo ./ops/cms/scripts/deploy-cms-sync.sh \
      --repo-url git@github.com:ORG/marine-mammal-education-kiosks.git \
      --runner-token <REGISTRATION_TOKEN> \
-     --cms-url http://127.0.0.1
+     --cms-url http://127.0.0.1:8080
    ```
 
 4. Edit `/etc/mmek/cms-sync.env` (not a copy under `/opt/mmek/`) with

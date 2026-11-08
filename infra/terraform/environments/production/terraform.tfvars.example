@@ -1,0 +1,14 @@
+aws_region   = "us-east-1"
+environment  = "production"
+project_name = "mmek"
+parent_domain = "savemarinemammals.com"
+
+# CMS host (facility LAN). Players resolve server.kiosks.local.belize.savemarinemammals.com here.
+cms_server_ipv4 = "10.1.10.140"
+# cms_server_ipv6 = ""
+
+create_acme_access_key = true
+
+tags = {
+  Facility = "belize"
+}

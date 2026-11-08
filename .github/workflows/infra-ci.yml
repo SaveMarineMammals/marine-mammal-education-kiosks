@@ -1,0 +1,57 @@
+name: Infra plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+      - ".github/actions/terraform/**"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: infra-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform-plan:
+    name: Plan production DNS
+    runs-on: ubuntu-latest
+    if: vars.TF_INFRA_ENABLED == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Terraform plan
+        id: tf
+        uses: ./.github/actions/terraform
+        with:
+          working-directory: infra/terraform/environments/production
+          command: plan
+          aws-role-arn: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          state-bucket: ${{ secrets.TF_STATE_BUCKET }}
+          state-key: production/terraform.tfstate
+          lock-table: ${{ secrets.TF_LOCK_TABLE }}
+
+      - name: Comment if destroys detected
+        if: steps.tf.outputs.destroy_detected == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ Terraform plan for **production** DNS includes resource **destroys**. Review carefully before merge.'
+            })
+
+  terraform-plan-skipped:
+    name: Plan skipped (TF_INFRA_ENABLED)
+    runs-on: ubuntu-latest
+    if: vars.TF_INFRA_ENABLED != 'true'
+    steps:
+      - run: echo "TF_INFRA_ENABLED is not true — infra plan skipped (pass)."

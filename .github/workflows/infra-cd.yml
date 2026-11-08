@@ -1,0 +1,45 @@
+name: Infra apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-cd.yml"
+      - ".github/actions/terraform/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mmek-terraform
+  cancel-in-progress: false
+
+jobs:
+  terraform-apply:
+    name: Apply production DNS
+    runs-on: ubuntu-latest
+    if: vars.TF_INFRA_ENABLED == 'true'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Terraform apply
+        uses: ./.github/actions/terraform
+        with:
+          working-directory: infra/terraform/environments/production
+          command: apply
+          aws-role-arn: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          state-bucket: ${{ secrets.TF_STATE_BUCKET }}
+          state-key: production/terraform.tfstate
+          lock-table: ${{ secrets.TF_LOCK_TABLE }}
+
+  terraform-apply-skipped:
+    name: Apply skipped (TF_INFRA_ENABLED)
+    runs-on: ubuntu-latest
+    if: vars.TF_INFRA_ENABLED != 'true'
+    steps:
+      - run: echo "TF_INFRA_ENABLED is not true — infra apply skipped."

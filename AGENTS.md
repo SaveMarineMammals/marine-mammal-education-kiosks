@@ -111,6 +111,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Media policy / hashes | `docs/media-policy.md`, `exhibits/<slug>/media/manifest.yaml` |
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
+| Facility DNS / ACME IAM (Terraform) | `infra/`, `docs/infra-pipelines.md`, `ops/cms/caddy/` |
 | Timeline Chromium still | `ops/qa/ci_timeline_preview.py` |
 | Live player capture | `ops/qa/run_qa_pipeline.py` |
 | Golden Pi image / kiosk config | `ops/players/image/`, `.github/workflows/player-image.yml`, `kiosk-config.yml` |
@@ -128,6 +129,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | [docs/exhibit-authoring.md](docs/exhibit-authoring.md) | New exhibit checklist |
 | [docs/local-testing.md](docs/local-testing.md) | Tier 1–3 quality checks |
 | [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts (no schedules) |
+| [docs/infra-pipelines.md](docs/infra-pipelines.md) | AWS Terraform CI + Route 53 / LE DNS-01 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Human contributor workflow |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [README.md](README.md) | Overview and docs index |

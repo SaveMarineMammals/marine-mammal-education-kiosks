@@ -1,0 +1,18 @@
+aws_region        = "us-east-1"
+project_name      = "mmek"
+github_repository = "SaveMarineMammals/marine-mammal-education-kiosks"
+
+# Required for GitHub immutable OIDC subjects (Actions → AWS trust policy).
+#   gh api orgs/SaveMarineMammals --jq .id
+#   gh api repos/SaveMarineMammals/marine-mammal-education-kiosks --jq .id
+github_org_id         = "293631734"
+github_repository_id  = "1305123252"
+
+# If mmap (or another stack) already created the GitHub OIDC provider in this
+# account, paste its ARN here to avoid "EntityAlreadyExists":
+# github_oidc_provider_arn = "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+github_oidc_provider_arn = ""
+
+tags = {
+  CostCenter = "mmek"
+}
