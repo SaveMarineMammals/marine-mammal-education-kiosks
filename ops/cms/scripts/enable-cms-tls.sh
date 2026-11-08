@@ -301,6 +301,17 @@ echo "  Public UI:  https://${CMS_HOSTNAME}/"
 echo "  Upstream:   http://127.0.0.1:${CMS_LOOPBACK_PORT}/ (cms-web loopback)"
 echo "  Sync URL:   http://127.0.0.1:${CMS_LOOPBACK_PORT}  (prefer loopback in cms-sync.env)"
 echo "  ACME env:   ${ACME_ENV_FILE}"
+
+CMS_SYNC_ENV="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+if [[ -f "${CMS_SYNC_ENV}" ]]; then
+  if grep -q '^XIBO_CMS_TLS_HOST=' "${CMS_SYNC_ENV}"; then
+    sed -i "s|^XIBO_CMS_TLS_HOST=.*|XIBO_CMS_TLS_HOST=${CMS_HOSTNAME}|" "${CMS_SYNC_ENV}"
+  else
+    printf '\n# Public hostname for sync when Force HTTPS is enabled (see xibo_client.py)\nXIBO_CMS_TLS_HOST=%s\n' \
+      "${CMS_HOSTNAME}" >> "${CMS_SYNC_ENV}"
+  fi
+  echo "  Set XIBO_CMS_TLS_HOST=${CMS_HOSTNAME} in ${CMS_SYNC_ENV}"
+fi
 echo
 echo "Verify (LAN DNS must resolve ${CMS_HOSTNAME} to this host):"
 echo "  curl -fsSI https://${CMS_HOSTNAME}/login"

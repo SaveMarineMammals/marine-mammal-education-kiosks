@@ -2,10 +2,64 @@
 
 from __future__ import annotations
 
+import os
 import unittest
-from unittest.mock import patch
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import xibo_client
+
+
+class ResolveBaseUrlTests(unittest.TestCase):
+    def test_loopback_http_uses_tls_host_when_set(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"XIBO_CMS_TLS_HOST": "cms.example.test"},
+            clear=False,
+        ):
+            resolved = xibo_client.resolve_cms_base_url("http://127.0.0.1:8080")
+        self.assertEqual(resolved, "https://cms.example.test")
+
+    def test_loopback_http_unchanged_without_tls_host(self) -> None:
+        with mock.patch.dict(os.environ, {}, clear=True):
+            resolved = xibo_client.resolve_cms_base_url("http://127.0.0.1:8080")
+        self.assertEqual(resolved, "http://127.0.0.1:8080")
+
+    def test_rewrite_loopback_https_redirect(self) -> None:
+        out = xibo_client._rewrite_loopback_https(
+            "https://127.0.0.1/api/authorize/access_token"
+        )
+        self.assertTrue(out.startswith("https://server.kiosks.local"))
+        self.assertIn("/api/authorize/access_token", out)
+
+
+class RedirectRequestTests(unittest.TestCase):
+    def test_follows_redirect_with_rewritten_loopback_target(self) -> None:
+        client = xibo_client.XiboClient("http://127.0.0.1:8080")
+        redirect = MagicMock()
+        redirect.status_code = 302
+        redirect.headers = {
+            "Location": "https://127.0.0.1/api/authorize/access_token",
+        }
+        redirect.content = b'{"access_token":"tok"}'
+        redirect.headers_get = redirect.headers.get
+
+        ok = MagicMock()
+        ok.status_code = 200
+        ok.content = redirect.content
+        ok.headers = {"Content-Type": "application/json"}
+        ok.text = '{"access_token":"tok"}'
+        ok.json.return_value = {"access_token": "tok"}
+
+        with patch.object(
+            client.session, "request", side_effect=[redirect, ok]
+        ) as mock_request:
+            payload = client.request("POST", "/api/authorize/access_token")
+
+        self.assertEqual(payload, {"access_token": "tok"})
+        self.assertEqual(mock_request.call_count, 2)
+        second_url = mock_request.call_args_list[1][0][1]
+        self.assertIn("server.kiosks.local", second_url)
 
 
 class EditMediaTests(unittest.TestCase):
