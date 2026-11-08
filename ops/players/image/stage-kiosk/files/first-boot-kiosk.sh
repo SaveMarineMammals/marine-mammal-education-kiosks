@@ -21,10 +21,14 @@ if [[ ! -f "${CONF}" ]]; then
   exit 0
 fi
 
+# Windows/WSL copies often leave CRLF; strip before parse.
+sed -i 's/\r$//' "${CONF}" || true
+
 # shellcheck disable=SC1090
 set -a
 # Parse KEY=VALUE lines (ignore comments/blank)
 while IFS= read -r line || [[ -n "${line}" ]]; do
+  line="${line%$'\r'}"
   [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
   if [[ "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
     export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
@@ -36,7 +40,12 @@ set +a
 : "${CMS_URL:?CMS_URL required in kiosk.conf}"
 : "${CMS_KEY:?CMS_KEY required in kiosk.conf}"
 
-hostnamectl set-hostname "${HOSTNAME}"
+if command -v hostnamectl >/dev/null 2>&1; then
+  hostnamectl set-hostname "${HOSTNAME}"
+else
+  echo "${HOSTNAME}" >/etc/hostname
+  hostname "${HOSTNAME}" || true
+fi
 if grep -qE '^10\.0\.0\.1|^127\.0\.1\.1' /etc/hosts; then
   sed -i -E "s/^(10\.0\.0\.1|127\.0\.1\.1)[[:space:]].*/\\1\\t${HOSTNAME}/" /etc/hosts
 else
@@ -54,8 +63,14 @@ chown root:root "${ENV_FILE}"
 
 install -d -m 0755 /var/lib/arexibo
 chown -R kiosk:kiosk /var/lib/arexibo
+# Keep kiosk home writable for Mesa/Qt caches (X may start as root).
+install -d -m 0755 /home/kiosk/.cache
+chown -R kiosk:kiosk /home/kiosk
 
 systemctl enable mmek-kiosk-display.service arexibo.service || true
+# First boot already has a running multi-user target — start now, do not wait for reboot.
+systemctl start mmek-kiosk-display.service || true
+systemctl start arexibo.service || true
 
 install -d -m 0755 "${MARKER_DIR}"
 {

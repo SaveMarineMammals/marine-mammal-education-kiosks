@@ -1,16 +1,18 @@
 [Unit]
 Description=MMEK kiosk X11 session (openbox)
-After=systemd-user-sessions.service network-online.target
+After=systemd-user-sessions.service network-online.target first-boot-kiosk.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=kiosk
-Group=kiosk
-PAMName=login
+# Xorg must open a VT; non-root kiosk cannot open /dev/tty7 on Pi OS.
+# xinitrc drops privileges for openbox; Arexibo runs as kiosk via its own unit.
+User=root
 Environment=HOME=/home/kiosk
+Environment=XAUTHORITY=/home/kiosk/.Xauthority
 WorkingDirectory=/home/kiosk
-ExecStart=/usr/bin/xinit /home/kiosk/.xinitrc -- /usr/bin/X :0 vt7 -nolisten tcp
+ExecStartPre=/usr/local/sbin/mmek-select-kms-card.sh
+ExecStart=/usr/bin/xinit /home/kiosk/.xinitrc -- /usr/lib/xorg/Xorg :0 vt7 -nolisten tcp
 Restart=on-failure
 RestartSec=3
 

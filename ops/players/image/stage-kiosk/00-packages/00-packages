@@ -1,6 +1,10 @@
 xserver-xorg
+xserver-xorg-legacy
 xinit
 openbox
+x11-xserver-utils
+libxcb-cursor0
+dbus-x11
 unattended-upgrades
 curl
 ca-certificates

@@ -1,6 +1,8 @@
-# First-boot kiosk identity — copy to /boot/firmware/kiosk.conf before power-on.
-# Generate via: python ops/players/image/generate_kiosk_config.py ...
-# or GitHub Actions → "Kiosk config" workflow.
+# First-boot kiosk identity — copy to the FAT boot volume root (next to
+# config.txt) before power-on. On the Pi that path is /boot/firmware/kiosk.conf.
+# Generate locally only:
+#   python3 ops/players/image/generate_kiosk_config.py ...
+# Never pass CMS_KEY through GitHub Actions.
 #
 # Do not commit real CMS_KEY values to Git.
 

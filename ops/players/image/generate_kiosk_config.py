@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate per-kiosk first-boot configuration artifacts.
 
-Used by GitHub Actions (kiosk-config.yml) and local operators.
+For local operators only — do not run in CI or pass CMS_KEY through Actions.
 Does not print CMS_KEY to stdout.
 """
 
@@ -105,18 +105,29 @@ def generate(
             [
                 f"# Deploy {host}",
                 "",
+                "Full download / flash / config steps: `ops/players/README.md`.",
+                "",
                 "## 1. Flash golden image",
                 "",
-                f"- Use approved Release **player-image-v{image_version}** "
-                f"(or matching soak artifact) from the `player-image` workflow.",
-                "- Flash the `.img.xz` to the SD card (Raspberry Pi Imager / `xzcat | dd`).",
+                f"- Download approved Release **player-image-v{image_version}** "
+                "(or a matching soak artifact) via `gh release download` / `gh run download`.",
+                "- Verify: `sha256sum -c sha256sums.txt`",
+                "- Flash (confirm device with `lsblk` first):",
+                "",
+                "```bash",
+                f"xzcat mmek-kiosk-{image_version}.img.xz | sudo dd of=/dev/sdX bs=4M status=progress conv=fsync",
+                "```",
                 "",
                 "## 2. Copy first-boot config",
                 "",
-                "Mount the boot partition and copy this folder's `kiosk.conf` to:",
+                "There is no nested `bootfs` folder. Copy this folder's `kiosk.conf` to the",
+                "**root of the SD card's FAT boot volume** (same folder as `config.txt`).",
+                "On the running Pi that path is `/boot/firmware/kiosk.conf`.",
                 "",
-                "```text",
-                "/boot/firmware/kiosk.conf",
+                "```bash",
+                "# Linux: BOOT=/media/$USER/bootfs  (confirm config.txt is there)",
+                "# WSL:   sudo mount -t drvfs D: /mnt/d   # drive letter with config.txt",
+                "cp kiosk.conf \"$BOOT/kiosk.conf\"",
                 "```",
                 "",
                 "## 3. Network",
@@ -133,12 +144,13 @@ def generate(
                 "## Authentication note",
                 "",
                 "Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf`) "
-                "plus a per-display hardware key. Client certificates cannot replace the CMS key.",
+                "plus a per-display hardware key. Client certificates cannot replace the CMS key. "
+                "Never upload CMS_KEY or this bundle to GitHub Actions.",
                 "",
                 "## 5. Verify",
                 "",
                 "```bash",
-                f"ops/scripts/bootstrap-check.sh {host}",
+                f"bash ops/scripts/bootstrap-check.sh {host}",
                 "```",
                 "",
             ]

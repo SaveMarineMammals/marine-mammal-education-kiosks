@@ -1,25 +1,28 @@
 #!/bin/bash -e
-# Create kiosk user, autologin X session, HDMI preference, enable first-boot unit.
+# Create kiosk user, X session, HDMI preference, enable first-boot unit.
 set -euo pipefail
 
 if ! id -u kiosk >/dev/null 2>&1; then
-  useradd --create-home --shell /bin/bash --groups video,render,input,audio kiosk
+  useradd --create-home --shell /bin/bash --groups video,render,input,audio,tty kiosk
+else
+  usermod -aG video,render,input,audio,tty kiosk || true
 fi
 
-install -d -m 0755 /home/kiosk
-install -m 0755 /dev/stdin /home/kiosk/.xinitrc <<'EOF'
+install -d -m 0755 /home/kiosk /home/kiosk/.cache
+if [[ -f /etc/mmek/xinitrc ]]; then
+  install -m 0755 /etc/mmek/xinitrc /home/kiosk/.xinitrc
+else
+  install -m 0755 /dev/stdin /home/kiosk/.xinitrc <<'EOF'
 #!/bin/sh
-xset s off || true
-xset -dpms || true
-xset s noblank || true
 exec openbox-session
 EOF
+fi
 chown -R kiosk:kiosk /home/kiosk
 
 install -d -m 0755 /var/lib/arexibo /var/lib/mmek
 chown -R kiosk:kiosk /var/lib/arexibo
 
-# Prefer 1920x1080 for Glance & Match (panel is native 4K).
+# Prefer 1920x1080 for Glance & Match (panel may be native 4K / ultrawide).
 BOOT_CFG=""
 for candidate in /boot/firmware/config.txt /boot/config.txt; do
   if [[ -f "${candidate}" ]]; then
