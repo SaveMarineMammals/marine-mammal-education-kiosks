@@ -63,7 +63,7 @@ def generate(
     if not cms_key.strip():
         raise ValueError("cms_key must be non-empty")
     if not ts_authkey.strip():
-        raise ValueError("ts_authkey must be non-empty (tag:mmek-player Tailscale auth key)")
+        raise ValueError("ts_authkey must be non-empty (tag:mmek-players Tailscale auth key)")
 
     host = _hostname(location.strip().lower(), unit.strip())
     url = _validate_cms_url(cms_url)
@@ -137,7 +137,7 @@ def generate(
                 "## 3. Network",
                 "",
                 f"- Create a DHCP reservation for this Pi's MAC → hostname `{host}`.",
-                "- First-boot joins Tailscale as `tag:mmek-player` (see "
+                "- First-boot joins Tailscale as `tag:mmek-players` (see "
                 "`ops/runbooks/facility-tailscale.md`). XMDS uses the CMS hostname via "
                 "Tailscale split DNS.",
                 "",
@@ -152,7 +152,7 @@ def generate(
                 "",
                 "Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf`) "
                 "plus a per-display hardware key. Client certificates cannot replace the CMS key. "
-                "Tailscale uses a separate **TS_AUTHKEY** (`tag:mmek-player`). "
+                "Tailscale uses a separate **TS_AUTHKEY** (`tag:mmek-players`). "
                 "Never upload CMS_KEY, TS_AUTHKEY, or this bundle to GitHub Actions.",
                 "",
                 "## 5. Verify",
@@ -192,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--ts-authkey",
         required=True,
-        help="Tailscale auth key tagged tag:mmek-player (not printed)",
+        help="Tailscale auth key tagged tag:mmek-players (not printed)",
     )
     parser.add_argument(
         "--display-group",

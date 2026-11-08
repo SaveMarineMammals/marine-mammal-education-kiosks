@@ -87,7 +87,7 @@ tighten_ufw() {
     exit 2
   fi
 
-  echo "==> Tightening UFW: 22/443/9505 (+80 redirect) on tailscale0 and ${FACILITY_LAN_CIDR}"
+  echo "==> Tightening UFW: 22/53/443/9505 (+80 redirect) on tailscale0 and ${FACILITY_LAN_CIDR}"
   delete_open_anywhere_rules
 
   ufw allow in on tailscale0 to any port 22 proto tcp comment 'SSH via Tailscale' || true
@@ -101,6 +101,10 @@ tighten_ufw() {
 
   ufw allow in on tailscale0 to any port 9505 proto tcp comment 'XMR via Tailscale' || true
   ufw allow from "${FACILITY_LAN_CIDR}" to any port 9505 proto tcp comment 'XMR via facility LAN' || true
+
+  # Split DNS (dnsmasq on this host) — see install-cms-split-dns.sh
+  ufw allow in on tailscale0 to any port 53 proto udp comment 'CMS split-DNS via Tailscale' || true
+  ufw allow in on tailscale0 to any port 53 proto tcp comment 'CMS split-DNS via Tailscale' || true
 
   ufw --force enable
   install -d -m 0755 /etc/mmek
@@ -127,5 +131,7 @@ if [[ -f "${LOCK_FILE}" ]]; then
   ufw status verbose || true
 fi
 echo
-echo "Next: configure Tailscale split DNS for server.kiosks.local.belize.savemarinemammals.com"
-echo "      → this host's Tailscale IPv4 (see ops/runbooks/facility-tailscale.md)."
+echo "Next: sudo ./scripts/install-cms-split-dns.sh"
+echo "      then Tailscale admin split DNS → this host's 100.x for"
+echo "      kiosks.local.belize.savemarinemammals.com"
+echo "      (see ops/runbooks/facility-tailscale.md)."

@@ -102,7 +102,7 @@ sha256sum -c sha256sums.txt
 ```bash
 cd /path/to/marine-mammal-education-kiosks
 export CMS_KEY='…'      # from CMS; do not commit or paste into Actions
-export TS_AUTHKEY='…'   # tag:mmek-player; do not commit or paste into Actions
+export TS_AUTHKEY='…'   # tag:mmek-players; do not commit or paste into Actions
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
@@ -183,7 +183,7 @@ udisksctl power-off -b /dev/sdX
 
 1. Create a DHCP reservation for the Pi MAC → hostname `kiosk-<location>-<nn>`.
 2. Insert the SD card, power on the kiosk; first-boot applies hostname, joins
-   Tailscale (`tag:mmek-player`), and writes Arexibo env.
+   Tailscale (`tag:mmek-players`), and writes Arexibo env.
 3. In CMS: authorize the display; assign a location/role **display group** (`lobby`,
    not exhibit names).
 4. Set display profile to **1920×1080** landscape.

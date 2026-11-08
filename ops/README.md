@@ -26,7 +26,7 @@ python3 ops/qa/ci_timeline_preview.py --exhibit <slug>
 
 # Per-kiosk first-boot config (local only — never via Actions)
 # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
-# TS_AUTHKEY = tag:mmek-player Tailscale auth key (see runbooks/facility-tailscale.md)
+# TS_AUTHKEY = tag:mmek-players Tailscale auth key (see runbooks/facility-tailscale.md)
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \

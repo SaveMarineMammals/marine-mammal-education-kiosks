@@ -9,6 +9,6 @@
 HOSTNAME=kiosk-lobby-01
 CMS_URL=https://server.kiosks.local.belize.savemarinemammals.com
 CMS_KEY=replace-me
-# Tagged Tailscale auth key (tag:mmek-player only). See ops/runbooks/facility-tailscale.md
+# Tagged Tailscale auth key (tag:mmek-players only). See ops/runbooks/facility-tailscale.md
 TS_AUTHKEY=tskey-auth-replace-me
 DISPLAY_GROUP=lobby

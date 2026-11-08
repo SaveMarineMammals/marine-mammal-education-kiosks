@@ -39,7 +39,7 @@ set +a
 : "${HOSTNAME:?HOSTNAME required in kiosk.conf}"
 : "${CMS_URL:?CMS_URL required in kiosk.conf}"
 : "${CMS_KEY:?CMS_KEY required in kiosk.conf}"
-: "${TS_AUTHKEY:?TS_AUTHKEY required in kiosk.conf (tag:mmek-player Tailscale auth key)}"
+: "${TS_AUTHKEY:?TS_AUTHKEY required in kiosk.conf (tag:mmek-players Tailscale auth key)}"
 
 if command -v hostnamectl >/dev/null 2>&1; then
   hostnamectl set-hostname "${HOSTNAME}"
@@ -61,7 +61,7 @@ fi
 systemctl enable --now tailscaled
 tailscale up \
   --hostname="${HOSTNAME}" \
-  --advertise-tags=tag:mmek-player \
+  --advertise-tags=tag:mmek-players \
   --auth-key="${TS_AUTHKEY}" \
   --accept-dns=true
 

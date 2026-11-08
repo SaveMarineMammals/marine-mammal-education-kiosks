@@ -8,7 +8,7 @@
 
    ```bash
    export CMS_KEY='…'        # do not commit
-   export TS_AUTHKEY='…'     # tag:mmek-player; do not commit
+   export TS_AUTHKEY='…'     # tag:mmek-players; do not commit
    # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
    python3 ops/players/image/generate_kiosk_config.py \
      --location lobby --unit 01 \
