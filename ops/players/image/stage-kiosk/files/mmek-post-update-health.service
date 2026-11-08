@@ -1,0 +1,16 @@
+[Unit]
+Description=MMEK kiosk post-update health check
+Documentation=https://github.com/SaveMarineMammals/marine-mammal-education-kiosks/blob/main/ops/runbooks/security-patching.md
+After=network-online.target arexibo.service mmek-kiosk-display.service
+Wants=network-online.target
+OnFailure=mmek-admin-alert@player_health_failed.service
+
+[Service]
+Type=oneshot
+Environment=ALERT_ROLE=player
+EnvironmentFile=-/etc/mmek/alert.env
+ExecStart=/usr/local/sbin/mmek-post-update-health
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

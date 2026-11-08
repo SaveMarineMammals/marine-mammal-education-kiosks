@@ -181,11 +181,26 @@ Re-run `enable-cms-tls.sh` after a Xibo bundle upgrade if compose again publishe
 host `:80`. Official reverse-proxy notes:
 [Xibo self-hosted CMS](https://docs.xibosignage.com/setup-docs/cms-installation/self-hosted-cms).
 
+## 9. Security updates + admin alerts
+
+After TLS and Tailscale:
+
+```bash
+sudo ./scripts/install-security-updates.sh
+# Fill ALERT_LAMBDA_URL / ALERT_INGEST_TOKEN from Terraform
+# (ops/runbooks/sent-dm-alerts.md + terraform output -raw alert_lambda_url)
+sudo nano /etc/mmek/alert.env
+```
+
+Details: [`security-patching.md`](security-patching.md).
+
 ## References
 
 - [`../cms/README.md`](../cms/README.md) — folders, tags, credentials
 - [`facility-tailscale.md`](facility-tailscale.md) — Tailscale for CMS + players
 - [`cms-content-sync.md`](cms-content-sync.md) — Git main → Library + layouts
+- [`security-patching.md`](security-patching.md) — off-hours OS/stack updates + alerts
+- [`sent-dm-alerts.md`](sent-dm-alerts.md) — Sent.dm SMS for the alert Lambda
 - [`../../docs/local-testing.md`](../../docs/local-testing.md) — production CMS smoke steps
 - [`../../docs/architecture.md`](../../docs/architecture.md) — content flow
 - Official install: <https://account.xibosignage.com/docs/setup/xibo-for-docker>

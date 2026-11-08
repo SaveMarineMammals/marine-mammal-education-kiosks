@@ -45,3 +45,59 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_admin_alert" {
+  description = "Provision the admin-alert Lambda (requires Sent/SES/recipient tfvars)"
+  type        = bool
+  default     = false
+}
+
+variable "alert_ingest_token" {
+  description = "Bearer token for alert Function URL (hosts)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "sent_api_key" {
+  description = "Sent.dm API key for SMS alerts"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "sent_template_id" {
+  description = "Sent.dm permanent-failure template UUID"
+  type        = string
+  default     = ""
+}
+
+variable "sent_template_name" {
+  description = "Sent.dm permanent-failure template name"
+  type        = string
+  default     = "mmek_permanent_failure"
+}
+
+variable "alert_sms_to" {
+  description = "Comma-separated E.164 admin phones for SMS alerts"
+  type        = string
+  default     = ""
+}
+
+variable "alert_email_to" {
+  description = "Comma-separated admin emails for SES alerts"
+  type        = string
+  default     = ""
+}
+
+variable "ses_from_email" {
+  description = "Verified SES From address for alerts"
+  type        = string
+  default     = ""
+}
+
+variable "create_ses_alert_identity" {
+  description = "Create SES email identity for ses_from_email"
+  type        = bool
+  default     = true
+}

@@ -1,16 +1,18 @@
 # Infrastructure (AWS / Terraform)
 
-AWS resources for Marine Mammal Education Kiosks DNS and Let's Encrypt DNS-01
-(Route 53). Pattern mirrors
+AWS resources for Marine Mammal Education Kiosks: facility DNS, Let's Encrypt
+DNS-01 (Route 53), and the optional **admin-alert** Lambda (SES + Sent.dm).
+Pattern mirrors
 [`marine-mammal-assessment/infra`](https://github.com/SaveMarineMammals/marine-mammal-assessment/tree/main/infra)
-with a narrower scope (no VPC/Lambda/CDN).
+with a narrower scope (no VPC/CDN).
 
 | Path | Role |
 | --- | --- |
 | [`bootstrap/`](bootstrap/) | One-time: S3 state, DynamoDB lock, GitHub OIDC role (local state) |
 | [`terraform/modules/dns-facility/`](terraform/modules/dns-facility/) | Nested hosted zones under `savemarinemammals.com` |
 | [`terraform/modules/acme-route53-iam/`](terraform/modules/acme-route53-iam/) | IAM user for Caddy ACME on the kiosks zone |
-| [`terraform/environments/production/`](terraform/environments/production/) | Composed facility DNS stack (remote state) |
+| [`terraform/modules/admin-alert/`](terraform/modules/admin-alert/) | Lambda Function URL: SES email + Sent.dm SMS |
+| [`terraform/environments/production/`](terraform/environments/production/) | Composed facility DNS (+ optional admin-alert) stack |
 | [`scripts/`](scripts/) | `terraform-init` / `plan` / `apply` helpers for CI |
 
 ## DNS layout

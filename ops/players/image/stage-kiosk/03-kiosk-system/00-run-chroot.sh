@@ -52,7 +52,15 @@ mkdir -p /etc/systemd/system/getty@tty1.service.d
 systemctl enable first-boot-kiosk.service
 # Display + arexibo are enabled by first-boot after kiosk.conf is present.
 systemctl disable arexibo.service mmek-kiosk-display.service 2>/dev/null || true
+# Health runs after first-boot enables the player stack; enable unit now.
+systemctl enable mmek-post-update-health.service 2>/dev/null || true
 
-# Unattended security updates (no automatic reboot by default)
-echo 'Unattended-Upgrade::Automatic-Reboot "false";' \
-  > /etc/apt/apt.conf.d/52unattended-reboot-mmek
+# Facility local time for off-hours reboot window (01:00-05:00).
+timedatectl set-timezone America/Belize || ln -sf /usr/share/zoneinfo/America/Belize /etc/localtime
+
+# Unattended security updates; reboot at 02:00 local when a reboot is required.
+cat >/etc/apt/apt.conf.d/52unattended-reboot-mmek <<'EOF'
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "02:00";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+EOF

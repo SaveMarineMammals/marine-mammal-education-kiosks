@@ -59,11 +59,18 @@ def generate(
     display_group: str | None,
     image_version: str,
     out_dir: Path,
+    alert_lambda_url: str = "",
+    alert_ingest_token: str = "",
 ) -> Path:
     if not cms_key.strip():
         raise ValueError("cms_key must be non-empty")
     if not ts_authkey.strip():
         raise ValueError("ts_authkey must be non-empty (tag:mmek-players Tailscale auth key)")
+
+    alert_url = alert_lambda_url.strip()
+    alert_token = alert_ingest_token.strip()
+    if bool(alert_url) != bool(alert_token):
+        raise ValueError("alert_lambda_url and alert_ingest_token must be set together")
 
     host = _hostname(location.strip().lower(), unit.strip())
     url = _validate_cms_url(cms_url)
@@ -74,20 +81,24 @@ def generate(
     bundle = out_dir / host
     bundle.mkdir(parents=True, exist_ok=True)
 
-    kiosk_conf = bundle / "kiosk.conf"
-    kiosk_conf.write_text(
-        "\n".join(
+    conf_lines = [
+        f"HOSTNAME={host}",
+        f"CMS_URL={url}",
+        f"CMS_KEY={cms_key.strip()}",
+        f"TS_AUTHKEY={ts_authkey.strip()}",
+        f"DISPLAY_GROUP={group}",
+    ]
+    if alert_url and alert_token:
+        conf_lines.extend(
             [
-                f"HOSTNAME={host}",
-                f"CMS_URL={url}",
-                f"CMS_KEY={cms_key.strip()}",
-                f"TS_AUTHKEY={ts_authkey.strip()}",
-                f"DISPLAY_GROUP={group}",
-                "",
+                f"ALERT_LAMBDA_URL={alert_url}",
+                f"ALERT_INGEST_TOKEN={alert_token}",
             ]
-        ),
-        encoding="utf-8",
-    )
+        )
+    conf_lines.append("")
+
+    kiosk_conf = bundle / "kiosk.conf"
+    kiosk_conf.write_text("\n".join(conf_lines), encoding="utf-8")
 
     inventory = bundle / "inventory.env"
     inventory.write_text(
@@ -153,7 +164,10 @@ def generate(
                 "Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf`) "
                 "plus a per-display hardware key. Client certificates cannot replace the CMS key. "
                 "Tailscale uses a separate **TS_AUTHKEY** (`tag:mmek-players`). "
-                "Never upload CMS_KEY, TS_AUTHKEY, or this bundle to GitHub Actions.",
+                "Optional **ALERT_*** keys configure permanent-failure SMS/email via the "
+                "admin-alert Lambda (see `ops/runbooks/security-patching.md`). "
+                "Never upload CMS_KEY, TS_AUTHKEY, ALERT_INGEST_TOKEN, or this bundle to "
+                "GitHub Actions.",
                 "",
                 "## 5. Verify",
                 "",
@@ -210,6 +224,16 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("kiosk-configs"),
         help="Output directory for bundle + zip",
     )
+    parser.add_argument(
+        "--alert-lambda-url",
+        default="",
+        help="Optional admin-alert Function URL (with --alert-ingest-token)",
+    )
+    parser.add_argument(
+        "--alert-ingest-token",
+        default="",
+        help="Optional bearer token for admin-alert Lambda (not printed)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -222,6 +246,8 @@ def main(argv: list[str] | None = None) -> int:
             display_group=args.display_group or None,
             image_version=args.image_version.strip() or "1.0.0",
             out_dir=args.out_dir,
+            alert_lambda_url=args.alert_lambda_url,
+            alert_ingest_token=args.alert_ingest_token,
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)

@@ -49,12 +49,16 @@ chains are trusted via Pi `ca-certificates`.
 - **Tailscale** via `stage-kiosk/04-tailscale` (pkgs.tailscale.com Debian suite; joins on
   first-boot as `tag:mmek-players` via `TS_AUTHKEY`)
 - `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
-  sets hostname, joins Tailscale, writes `/etc/mmek/arexibo.env`, enables **and starts**
-  display + player units, strips `CMS_KEY` / `TS_AUTHKEY` from bootfs
+  sets hostname, joins Tailscale, writes `/etc/mmek/arexibo.env`, optional
+  `/etc/mmek/alert.env` from `ALERT_*`, enables **and starts** display + player +
+  post-update health units, strips secrets from bootfs
+- Unattended security upgrades with automatic reboot at **02:00** local
+  (`America/Belize`); Arexibo remains apt-held
 - HDMI / `xrandr` forced toward **1920×1080** (Glance & Match canvas)
 - SSH enabled at build time with **pubkey-only** when a deploy key is provided to CI
 
-CMS and Tailscale credentials are **never** baked into the golden image.
+CMS, Tailscale, and alert ingest credentials are **never** baked into the golden image.
+See [`ops/runbooks/security-patching.md`](../../runbooks/security-patching.md).
 
 ### Arexibo pin and upgrade debt
 

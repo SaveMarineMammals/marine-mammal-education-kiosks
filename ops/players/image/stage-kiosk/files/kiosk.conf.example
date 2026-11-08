@@ -2,9 +2,9 @@
 # config.txt) before power-on. On the Pi that path is /boot/firmware/kiosk.conf.
 # Generate locally only:
 #   python3 ops/players/image/generate_kiosk_config.py ...
-# Never pass CMS_KEY or TS_AUTHKEY through GitHub Actions.
+# Never pass CMS_KEY, TS_AUTHKEY, or ALERT_INGEST_TOKEN through GitHub Actions.
 #
-# Do not commit real CMS_KEY or TS_AUTHKEY values to Git.
+# Do not commit real secret values to Git.
 
 HOSTNAME=kiosk-lobby-01
 CMS_URL=https://server.kiosks.local.belize.savemarinemammals.com
@@ -12,3 +12,6 @@ CMS_KEY=replace-me
 # Tagged Tailscale auth key (tag:mmek-players only). See ops/runbooks/facility-tailscale.md
 TS_AUTHKEY=tskey-auth-replace-me
 DISPLAY_GROUP=lobby
+# Optional permanent-failure alerts (ops/runbooks/security-patching.md)
+# ALERT_LAMBDA_URL=https://xxxxxxxx.lambda-url.us-east-1.on.aws/
+# ALERT_INGEST_TOKEN=replace-me

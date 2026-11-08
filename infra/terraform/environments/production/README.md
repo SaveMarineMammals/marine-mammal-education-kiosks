@@ -1,6 +1,8 @@
 # Production DNS (facility)
 
-Composes `dns-facility` + `acme-route53-iam` for Belize kiosks.
+Composes `dns-facility` + `acme-route53-iam` for Belize kiosks, and optionally
+`admin-alert` (set `enable_admin_alert = true` with Sent/SES tfvars — see
+[`ops/runbooks/sent-dm-alerts.md`](../../../../ops/runbooks/sent-dm-alerts.md)).
 
 ## Prerequisites
 
@@ -39,3 +41,13 @@ terraform output -raw acme_secret_access_key
 Write `/etc/mmek/caddy-acme.env` on the CMS host (see
 [`../../../../ops/cms/caddy/`](../../../../ops/cms/caddy/)), then
 `sudo ./enable-cms-tls.sh`.
+
+## After apply — admin alerts (optional)
+
+```powershell
+terraform output -raw alert_lambda_url
+```
+
+Put the URL and ingest token in CMS `/etc/mmek/alert.env` and optional player
+`kiosk.conf` `ALERT_*` keys
+([`security-patching.md`](../../../../ops/runbooks/security-patching.md)).

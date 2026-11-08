@@ -1,0 +1,12 @@
+[Unit]
+Description=Nightly MMEK CMS stack update (off hours)
+Documentation=file:///opt/mmek/repo/ops/runbooks/security-patching.md
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+Persistent=true
+RandomizedDelaySec=10m
+Unit=mmek-cms-stack-update.service
+
+[Install]
+WantedBy=timers.target
