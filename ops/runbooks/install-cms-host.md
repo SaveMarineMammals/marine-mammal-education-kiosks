@@ -172,7 +172,10 @@ Details: [`../cms/caddy/README.md`](../cms/caddy/README.md),
 
 On-host content sync should keep using loopback
 `http://127.0.0.1:8080` (see [`cms-sync.env.example`](../cms/cms-sync.env.example)),
-not the public HTTPS URL.
+not the public HTTPS URL. With **Force HTTPS** enabled, also set
+`XIBO_CMS_TLS_HOST` to the CMS hostname (`enable-cms-tls.sh` and
+`deploy-cms-sync.sh` write this automatically) so OAuth hits Caddy’s
+certificate instead of redirecting to `https://127.0.0.1/`.
 
 Re-run `enable-cms-tls.sh` after a Xibo bundle upgrade if compose again publishes
 host `:80`. Official reverse-proxy notes:

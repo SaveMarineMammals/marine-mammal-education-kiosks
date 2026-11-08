@@ -187,6 +187,27 @@ else
   run chmod 600 "${ENV_FILE}"
 fi
 
+sync_tls_host_from_caddy() {
+  [[ -f "${ENV_FILE}" ]] || return 0
+  local caddyfile="/etc/caddy/Caddyfile"
+  [[ -f "${caddyfile}" ]] || return 0
+  local host=""
+  host="$(awk '/^[^#[:space:]]/ {print $1; exit}' "${caddyfile}" | tr -d '{')"
+  [[ -n "${host}" ]] || return 0
+  if [[ "${DRY_RUN_DEPLOY}" -eq 1 ]]; then
+    echo "dry-run: set XIBO_CMS_TLS_HOST=${host} in ${ENV_FILE}"
+    return 0
+  fi
+  if grep -q '^XIBO_CMS_TLS_HOST=' "${ENV_FILE}"; then
+    sed -i "s|^XIBO_CMS_TLS_HOST=.*|XIBO_CMS_TLS_HOST=${host}|" "${ENV_FILE}"
+  else
+    printf '\nXIBO_CMS_TLS_HOST=%s\n' "${host}" >> "${ENV_FILE}"
+  fi
+  log "Set XIBO_CMS_TLS_HOST=${host} (from ${caddyfile})"
+}
+
+sync_tls_host_from_caddy
+
 env_ready=0
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090

@@ -11,6 +11,7 @@ import mimetypes
 import os
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urljoin, urlparse, urlunparse
 
 try:
     import requests
@@ -18,6 +19,63 @@ except ImportError:  # pragma: no cover
     requests = None  # type: ignore[assignment]
 
 LOG = logging.getLogger("mmek.xibo")
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+_DEFAULT_TLS_HOST = "server.kiosks.local.belize.savemarinemammals.com"
+_MAX_REDIRECTS = 5
+
+
+def _is_loopback_http(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "http" and (parsed.hostname or "") in _LOOPBACK_HOSTS
+
+
+def _tls_hostname(*, allow_default: bool = False) -> str:
+    for key in ("XIBO_CMS_TLS_HOST", "CMS_HOSTNAME", "CMS_SERVER_NAME"):
+        value = (os.environ.get(key) or "").strip()
+        if value:
+            return value
+    if allow_default:
+        return _DEFAULT_TLS_HOST
+    return ""
+
+
+def resolve_cms_base_url(base_url: str) -> str:
+    """Pick an API base URL that survives Xibo Force HTTPS behind Caddy.
+
+    Loopback ``http://127.0.0.1:8080`` is still the preferred operator setting,
+    but Force HTTPS redirects OAuth to ``https://127.0.0.1/`` where Caddy has no
+    certificate. When the env URL is loopback HTTP, use the public CMS hostname
+    over HTTPS instead (same host Caddy serves on :443).
+    """
+    trimmed = base_url.rstrip("/")
+    if not _is_loopback_http(trimmed):
+        return trimmed
+    tls_host = _tls_hostname(allow_default=False)
+    if tls_host:
+        resolved = f"https://{tls_host}"
+        if resolved != trimmed:
+            LOG.info(
+                "XIBO_CMS_URL is loopback HTTP; using %s for API (Force HTTPS / Caddy)",
+                resolved,
+            )
+        return resolved
+    return trimmed
+
+
+def _rewrite_loopback_https(location: str) -> str:
+    """Rewrite https://127.0.0.1 redirects to the CMS TLS hostname."""
+    if not location:
+        return location
+    parsed = urlparse(location)
+    if parsed.scheme != "https" or (parsed.hostname or "") not in _LOOPBACK_HOSTS:
+        return location
+    tls_host = _tls_hostname(allow_default=True)
+    if not tls_host:
+        return location
+    port = parsed.port
+    netloc = f"{tls_host}:{port}" if port and port != 443 else tls_host
+    return urlunparse(parsed._replace(netloc=netloc))
 
 
 class XiboError(RuntimeError):
@@ -82,7 +140,7 @@ def client_from_env(*, timeout: int = 120) -> "XiboClient":
             "Set XIBO_CMS_URL, XIBO_CLIENT_ID, and XIBO_CLIENT_SECRET "
             "(see ops/cms/cms-sync.env.example)"
         )
-    client = XiboClient(base_url, timeout=timeout)
+    client = XiboClient(resolve_cms_base_url(base_url), timeout=timeout)
     client.obtain_token(client_id, client_secret)
     return client
 
@@ -108,7 +166,28 @@ class XiboClient:
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         kwargs.setdefault("timeout", self.timeout)
-        response = self.session.request(method, self._url(path), **kwargs)
+        allow_redirects = kwargs.pop("allow_redirects", True)
+        url = self._url(path)
+        response = self.session.request(
+            method, url, allow_redirects=False, **kwargs
+        )
+        redirects = 0
+        while (
+            allow_redirects
+            and response.status_code in (301, 302, 303, 307, 308)
+            and redirects < _MAX_REDIRECTS
+        ):
+            location = response.headers.get("Location") or ""
+            if response.status_code in (303,) and method.upper() != "GET":
+                method = "GET"
+            if not location.startswith(("http://", "https://")):
+                location = urljoin(url, location)
+            location = _rewrite_loopback_https(location)
+            redirects += 1
+            url = location
+            response = self.session.request(
+                method, url, allow_redirects=False, **kwargs
+            )
         if response.status_code >= 400:
             body = response.text[:2000]
             raise XiboError(f"{method} {path} -> HTTP {response.status_code}: {body}")
