@@ -47,9 +47,9 @@ variable "tags" {
 }
 
 variable "enable_admin_alert" {
-  description = "Provision the admin-alert Lambda (requires Sent/SES/recipient tfvars)"
+  description = "Allow provisioning admin-alert when Sent/SES/recipient vars are also set (via TF_VAR_* or tfvars). Default true so CI secrets alone are enough; set false to force skip."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "alert_ingest_token" {

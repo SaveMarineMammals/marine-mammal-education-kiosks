@@ -9,6 +9,15 @@ cms_server_ipv4 = "10.1.10.140"
 
 create_acme_access_key = true
 
+# Admin-alert Lambda: do NOT put secrets in committed tfvars.
+# Set GitHub Environment secrets (production) or export TF_VAR_* locally — see
+# ops/runbooks/sent-dm-alerts.md. Without those vars, apply adds 0 Lambda resources.
+# enable_admin_alert = true   # default; set false to force skip
+# Non-secret overrides (optional; defaults include adm-siteerror template id):
+# alert_sms_to   = "+15551212"
+# alert_email_to = "ops@example.org"
+# ses_from_email = "alerts@example.org"
+
 tags = {
   Facility = "belize"
 }
