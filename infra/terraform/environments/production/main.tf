@@ -25,3 +25,19 @@ module "acme_route53_iam" {
   create_access_key = var.create_acme_access_key
   tags              = local.common_tags
 }
+
+module "admin_alert" {
+  count  = var.enable_admin_alert ? 1 : 0
+  source = "../../modules/admin-alert"
+
+  name_prefix                = local.name_prefix
+  alert_ingest_token         = var.alert_ingest_token
+  sent_api_key               = var.sent_api_key
+  sent_template_id           = var.sent_template_id
+  sent_template_name         = var.sent_template_name
+  alert_sms_to               = var.alert_sms_to
+  alert_email_to             = var.alert_email_to
+  ses_from_email             = var.ses_from_email
+  create_ses_email_identity  = var.create_ses_alert_identity
+  tags                       = local.common_tags
+}

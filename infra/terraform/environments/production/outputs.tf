@@ -49,3 +49,12 @@ output "caddy_acme_env" {
     AWS_HOSTED_ZONE_ID = module.dns_facility.kiosks_zone_id
   }
 }
+
+output "alert_lambda_url" {
+  description = "Admin alert Function URL (empty when enable_admin_alert=false)"
+  value       = try(module.admin_alert[0].alert_lambda_url, "")
+}
+
+output "alert_lambda_function_name" {
+  value = try(module.admin_alert[0].lambda_function_name, "")
+}

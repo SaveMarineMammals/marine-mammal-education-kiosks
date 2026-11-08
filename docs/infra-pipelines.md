@@ -53,3 +53,15 @@ terraform output -raw acme_secret_access_key
 Populate `/etc/mmek/caddy-acme.env` on the CMS host and run
 [`ops/cms/scripts/enable-cms-tls.sh`](../ops/cms/scripts/enable-cms-tls.sh).
 Details: [`ops/cms/caddy/README.md`](../ops/cms/caddy/README.md).
+
+## Admin alerts (optional)
+
+With `enable_admin_alert=true` and Sent/SES tfvars
+([`ops/runbooks/sent-dm-alerts.md`](../ops/runbooks/sent-dm-alerts.md)), Terraform
+creates the admin-alert Lambda. After apply:
+
+```text
+terraform output -raw alert_lambda_url
+```
+
+Configure host clients per [`ops/runbooks/security-patching.md`](../ops/runbooks/security-patching.md).

@@ -1,0 +1,16 @@
+[Unit]
+Description=MMEK Xibo Docker stack security refresh (pull + smoke)
+Documentation=file:///opt/mmek/repo/ops/runbooks/security-patching.md
+After=network-online.target docker.service
+Wants=network-online.target
+OnFailure=mmek-admin-alert@cms_stack_update_unit_failed.service
+
+[Service]
+Type=oneshot
+Environment=ALERT_ROLE=cms
+EnvironmentFile=-/etc/mmek/alert.env
+ExecStart=/usr/local/sbin/cms-stack-update
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

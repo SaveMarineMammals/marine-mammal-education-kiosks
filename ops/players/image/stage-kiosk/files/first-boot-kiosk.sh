@@ -22,13 +22,13 @@ if [[ ! -f "${CONF}" ]]; then
 fi
 
 # Windows/WSL copies often leave CRLF; strip before parse.
-sed -i 's/\r$//' "${CONF}" || true
+sed -i 's/\n$//' "${CONF}" || true
 
 # shellcheck disable=SC1090
 set -a
 # Parse KEY=VALUE lines (ignore comments/blank)
 while IFS= read -r line || [[ -n "${line}" ]]; do
-  line="${line%$'\r'}"
+  line="${line%$'\n'}"
   [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
   if [[ "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
     export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
@@ -89,16 +89,30 @@ EOF
 chmod 0600 "${ENV_FILE}"
 chown root:root "${ENV_FILE}"
 
+# Optional admin-alert Lambda credentials (never bake into golden image).
+ALERT_ENV="/etc/mmek/alert.env"
+if [[ -n "${ALERT_LAMBDA_URL:-}" && -n "${ALERT_INGEST_TOKEN:-}" ]]; then
+  cat > "${ALERT_ENV}" <<EOF
+ALERT_LAMBDA_URL=${ALERT_LAMBDA_URL}
+ALERT_INGEST_TOKEN=${ALERT_INGEST_TOKEN}
+ALERT_ROLE=player
+ALERT_HOSTNAME=${HOSTNAME}
+EOF
+  chmod 0600 "${ALERT_ENV}"
+  chown root:root "${ALERT_ENV}"
+fi
+
 install -d -m 0755 /var/lib/arexibo
 chown -R kiosk:kiosk /var/lib/arexibo
 # Keep kiosk home writable for Mesa/Qt caches (X may start as root).
 install -d -m 0755 /home/kiosk/.cache
 chown -R kiosk:kiosk /home/kiosk
 
-systemctl enable mmek-kiosk-display.service arexibo.service || true
+systemctl enable mmek-kiosk-display.service arexibo.service mmek-post-update-health.service || true
 # First boot already has a running multi-user target — start now, do not wait for reboot.
 systemctl start mmek-kiosk-display.service || true
 systemctl start arexibo.service || true
+systemctl start mmek-post-update-health.service || true
 
 install -d -m 0755 "${MARKER_DIR}"
 {
@@ -106,6 +120,7 @@ install -d -m 0755 "${MARKER_DIR}"
   echo "cms_url=${CMS_URL}"
   echo "display_group=${DISPLAY_GROUP:-}"
   echo "tailscale_ipv4=$(tailscale ip -4 2>/dev/null || true)"
+  echo "alert_configured=$([[ -f ${ALERT_ENV} ]] && echo yes || echo no)"
   echo "completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "${MARKER}"
 chmod 0644 "${MARKER}"
@@ -120,6 +135,7 @@ CMS_URL=${CMS_URL}
 DISPLAY_GROUP=${DISPLAY_GROUP:-}
 # CMS_KEY=removed-after-first-boot
 # TS_AUTHKEY=removed-after-first-boot
+# ALERT_INGEST_TOKEN=removed-after-first-boot
 EOF
 
 echo "first-boot-kiosk: configured ${HOSTNAME}"
