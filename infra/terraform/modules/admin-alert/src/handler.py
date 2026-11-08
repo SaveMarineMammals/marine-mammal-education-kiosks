@@ -94,6 +94,11 @@ def _send_email(*, subject: str, body: str) -> None:
 
 
 def _send_sms(*, host: str, role: str, code: str, detail: str) -> None:
+    """Send via Sent template adm-siteerror (params: site, detail).
+
+    Sent templates must not end with a variable; the approved body ends with
+    fixed text after {{detail}}.
+    """
     api_key = _env("SENT_API_KEY")
     template_id = _optional_env("SENT_TEMPLATE_ID")
     template_name = _optional_env("SENT_TEMPLATE_NAME")
@@ -105,12 +110,16 @@ def _send_sms(*, host: str, role: str, code: str, detail: str) -> None:
     if not recipients:
         raise RuntimeError("ALERT_SMS_TO is empty")
 
+    # Template variables: {{site}} {{detail}} — keep detail short for SMS segments.
+    site = f"{role}:{host}"[:80]
+    detail_param = f"{code}: {detail}".strip()
+    if len(detail_param) > 160:
+        detail_param = detail_param[:157] + "..."
+
     template: dict[str, Any] = {
         "parameters": {
-            "host": host,
-            "role": role,
-            "code": code,
-            "detail": detail[:200],
+            "site": site,
+            "detail": detail_param,
         }
     }
     if template_id:

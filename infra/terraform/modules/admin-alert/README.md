@@ -3,7 +3,8 @@
 AWS Lambda that accepts permanent-failure POSTs from CMS/players and sends:
 
 - **Email** via Amazon SES
-- **SMS** via [Sent.dm](https://docs.sent.dm/) (`POST /v3/messages`, SMS channel)
+- **SMS** via [Sent.dm](https://docs.sent.dm/) template **`adm-siteerror`**
+  (`{{site}}`, `{{detail}}`; body must not end on a variable)
 
 ## Auth
 

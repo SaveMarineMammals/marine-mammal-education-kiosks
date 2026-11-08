@@ -67,15 +67,15 @@ variable "sent_api_key" {
 }
 
 variable "sent_template_id" {
-  description = "Sent.dm permanent-failure template UUID"
+  description = "Sent.dm adm-siteerror template UUID"
   type        = string
-  default     = ""
+  default     = "5e3a2913-647a-408c-a3fe-d9cd3d103641"
 }
 
 variable "sent_template_name" {
-  description = "Sent.dm permanent-failure template name"
+  description = "Sent.dm adm-siteerror template name"
   type        = string
-  default     = "mmek_permanent_failure"
+  default     = "adm-siteerror"
 }
 
 variable "alert_sms_to" {

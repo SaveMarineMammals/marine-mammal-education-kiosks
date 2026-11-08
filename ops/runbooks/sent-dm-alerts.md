@@ -4,8 +4,9 @@ Configure [Sent.dm](https://docs.sent.dm/) so the **admin-alert** Lambda can SMS
 operators on permanent CMS/player failures. Email uses Amazon SES in the same
 Lambda (see [`security-patching.md`](security-patching.md)); Sent is SMS only.
 
-Templates are **not** managed in Terraform (no official Sent provider). Create
-them in the Sent dashboard (or API), then pass ids into Terraform tfvars.
+Templates are **not** managed in Terraform (no official Sent provider). Use the
+approved **`adm-siteerror`** template below (or recreate an equivalent if the
+account differs).
 
 ## 1. Account and SMS channel
 
@@ -13,31 +14,31 @@ them in the Sent dashboard (or API), then pass ids into Terraform tfvars.
 2. Complete SMS sender / compliance steps Sent requires for your region.
 3. Confirm you can send a test SMS from the dashboard.
 
-## 2. Permanent-failure template
+## 2. Template: `adm-siteerror`
 
-Create a **UTILITY** template named e.g. `mmek_permanent_failure` with variables
-that match the Lambda payload parameters:
+**Default template id:** `5e3a2913-647a-408c-a3fe-d9cd3d103641`  
+**Name:** `adm-siteerror`
 
-| Parameter | Meaning |
-| --- | --- |
-| `host` | Hostname (`cms-facility-01`, `kiosk-lobby-01`, …) |
-| `role` | `cms` or `player` |
-| `code` | Machine code (`cms_stack_update_failed`, `player_health_failed`, …) |
-| `detail` | Short free-text detail (Lambda truncates for SMS) |
-
-Example body (adapt to Sent’s template builder):
+Sent templates **must not end with a variable**. Approved body:
 
 ```text
-MMEK alert: {{role}} {{host}} — {{code}}. {{detail}}
+There has been a site error that requires your attention.
+Site: {{site}}
+Detail: {{detail}}
+Review run books in GitHub.
 ```
 
-Submit for review if Sent requires it. Wait until status is **APPROVED** for SMS
-before production alerts. Free-form `text` sends are **not** used for cold alerts;
-always use this template.
+| Parameter | Filled by Lambda |
+| --- | --- |
+| `site` | `{role}:{host}` (e.g. `cms:cms-facility-01`, `player:kiosk-lobby-01`) |
+| `detail` | `{code}: {detail}` from the host alert (truncated for SMS) |
 
-Optional: create the template via API (`POST /v3/templates`) per
-[Sent template definition](https://docs.sent.dm/reference/api/template-definition)
-instead of the UI; still record the resulting id/name for Terraform.
+Confirm status is **APPROVED** for SMS before production alerts. Free-form
+`text` sends are **not** used for cold alerts; always use this template.
+
+If you recreate the template in another Sent org, update Terraform
+`sent_template_id` / `sent_template_name` to match. Keep the same variable names
+and keep a fixed sentence **after** `{{detail}}`.
 
 ## 3. API key
 
@@ -55,7 +56,9 @@ In [`infra/terraform/environments/production/`](../../infra/terraform/environmen
 enable_admin_alert   = true
 alert_ingest_token   = "…"   # long random bearer shared with hosts
 sent_api_key         = "…"
-sent_template_id     = "…"   # and/or sent_template_name = "mmek_permanent_failure"
+# Defaults already point at adm-siteerror; override only if the id differs:
+# sent_template_id   = "5e3a2913-647a-408c-a3fe-d9cd3d103641"
+# sent_template_name = "adm-siteerror"
 alert_sms_to         = "+15551212,+15553434"
 alert_email_to       = "ops@example.org"
 ses_from_email       = "alerts@example.org"
@@ -90,6 +93,15 @@ Hosts never receive the Sent API key.
 sudo /usr/local/sbin/mmek-admin-alert test_alert "Sent.dm + SES smoke"
 # Clear dedup if re-testing the same code:
 sudo rm -f /var/lib/mmek/alert-sent/test_alert
+```
+
+Expected SMS shape:
+
+```text
+There has been a site error that requires your attention.
+Site: cms:…
+Detail: test_alert: Sent.dm + SES smoke
+Review run books in GitHub.
 ```
 
 Confirm SMS and email arrive. Check CloudWatch logs for
