@@ -25,7 +25,9 @@ player on x86 ([`ops/qa/`](../qa/)).
 
 Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf` /
 `/etc/mmek/arexibo.env`) plus a per-display hardware key. **Client certificates
-cannot replace the CMS key.** Use HTTPS to the CMS; trust the server CA on the Pi.
+cannot replace the CMS key.** Use HTTPS to the CMS
+  (`https://server.kiosks.local.belize.savemarinemammals.com`). Public Let's Encrypt
+  chains are trusted via Pi `ca-certificates`.
 OAuth client credentials are for the CMS REST API only, not player registration.
 
 **Never** put `CMS_KEY` (or generated `kiosk.conf` / `*-config.zip`) into GitHub
@@ -100,7 +102,7 @@ cd /path/to/marine-mammal-education-kiosks
 export CMS_KEY='…'   # from CMS; do not commit or paste into Actions
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
-  --cms-url https://cms.example.local \
+  --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
   --image-version "$(grep '^recipe_version=' ~/Downloads/mmek-images/build-info.txt | cut -d= -f2)" \
   --out-dir /tmp/kiosk-configs

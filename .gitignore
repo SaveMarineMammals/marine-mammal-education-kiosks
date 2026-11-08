@@ -15,6 +15,22 @@
 credentials.json
 secrets/
 
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+infra/bootstrap/terraform.tfvars
+!infra/**/terraform.tfvars.example
+# production tfvars are committed (non-secret facility config); bootstrap tfvars are local
+
 # Ephemeral Xibo visual QA (ops/qa)
 ops/qa/config.env
 ops/qa/.venv/

@@ -5,6 +5,7 @@ Runbooks and conventions for Xibo CMS, Raspberry Pi players, networking, and med
 | Path | Purpose |
 | --- | --- |
 | [`cms/`](cms/) | CMS install notes, folder/tag taxonomy, credentials via env |
+| [`../infra/`](../infra/) | AWS Terraform (facility Route 53 + Caddy ACME IAM) |
 | [`players/`](players/) | Raspberry Pi bootstrap and Arexibo (community aarch64) |
 | [`players/image/`](players/image/) | Golden Pi image recipe + kiosk config generator |
 | [`qa/`](qa/) | Ephemeral Docker visual QA (CMS + headless player + captures); CI stills via `ci_timeline_preview.py` |
@@ -27,7 +28,7 @@ python3 ops/qa/ci_timeline_preview.py --exhibit <slug>
 # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
-  --cms-url https://cms.example.local \
+  --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
   --image-version "$IMAGE_VERSION" \
   --out-dir /tmp/kiosk-configs

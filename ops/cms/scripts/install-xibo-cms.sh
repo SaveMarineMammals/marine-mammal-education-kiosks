@@ -5,6 +5,7 @@ set -euo pipefail
 
 XIBO_ROOT="${XIBO_ROOT:-/opt/xibo}"
 XIBO_DOWNLOAD_URL="${XIBO_DOWNLOAD_URL:-https://xibosignage.com/api/downloads/cms}"
+CMS_HOSTNAME="${CMS_HOSTNAME:-server.kiosks.local.belize.savemarinemammals.com}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "Re-running with sudo..."
@@ -65,14 +66,26 @@ else
   echo "Using existing ${XIBO_ROOT}/config.env"
 fi
 
+# Hostname used by Apache inside cms-web and by enable-cms-tls.sh / Caddy.
+if grep -q '^CMS_SERVER_NAME=' config.env; then
+  sed -i "s/^CMS_SERVER_NAME=.*/CMS_SERVER_NAME=${CMS_HOSTNAME}/" config.env
+else
+  printf '\nCMS_SERVER_NAME=%s\n' "${CMS_HOSTNAME}" >> config.env
+fi
+echo "Set CMS_SERVER_NAME=${CMS_HOSTNAME}"
+
 echo "==> Starting Xibo stack (first boot may take several minutes)"
 docker compose up -d
 
 echo
 echo "Xibo CMS containers are starting."
-echo "  UI:      http://$(hostname -I | awk '{print $1}')/"
-echo "  Default: xibo_admin / password  — change immediately"
-echo "  Data:    ${XIBO_ROOT}/shared/"
-echo "  Config:  ${XIBO_ROOT}/config.env"
+echo "  UI (temp HTTP): http://$(hostname -I | awk '{print $1}')/"
+echo "  Default:        xibo_admin / password  — change immediately"
+echo "  Data:           ${XIBO_ROOT}/shared/"
+echo "  Config:         ${XIBO_ROOT}/config.env"
+echo
+echo "Next: enable HTTPS (Caddy + Let's Encrypt) once DNS points at this host:"
+echo "  sudo ./enable-cms-tls.sh"
+echo "  Public URL: https://${CMS_HOSTNAME}/"
 echo
 echo "Then follow ops/runbooks/install-cms-host.md section 6 (folders, CMS key, API)."

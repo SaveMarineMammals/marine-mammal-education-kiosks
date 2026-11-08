@@ -17,13 +17,19 @@ Suggested env files (local only, gitignored):
 
 ```text
 # Developer machine (.env from repo root .env.example)
-XIBO_CMS_URL=https://cms.example.local
+XIBO_CMS_URL=https://server.kiosks.local.belize.savemarinemammals.com
 XIBO_CLIENT_ID=
 XIBO_CLIENT_SECRET=
 MEDIA_STORE_URI=file:///mnt/media-store
 
 # CMS host production (/etc/mmek/cms-sync.env from cms-sync.env.example)
+# Prefer loopback to cms-web after TLS (Caddy owns :80/:443):
+# XIBO_CMS_URL=http://127.0.0.1:8080
 ```
+
+TLS (Caddy + Let's Encrypt DNS-01 / Route 53):
+[`caddy/README.md`](caddy/README.md), [`scripts/enable-cms-tls.sh`](scripts/enable-cms-tls.sh),
+and [`../runbooks/install-cms-host.md`](../runbooks/install-cms-host.md) §8.
 
 For an **ephemeral local CMS + headless player** used in CI-style visual QA, see [../qa/](../qa/) (`docker-compose.test.yml` + `run_qa_pipeline.py`).
 

@@ -12,6 +12,7 @@ This repository is the **source of truth for exhibit design and operations**. Xi
 | [`framework/`](framework/) | Shared branding, layout templates, widgets, playlists, standards |
 | [`exhibits/`](exhibits/) | One folder per exhibit (grows over time) |
 | [`ops/`](ops/) | CMS, Pi provisioning, networking, runbooks |
+| [`infra/`](infra/) | AWS Terraform (Route 53 facility DNS + ACME IAM) |
 | [`tools/`](tools/) | CLI helpers (validate, sync, package, catalog) |
 | [`docs/`](docs/) | Architecture and authoring guides |
 | `media/` | Local working copies of **large** masters (**gitignored**) |
@@ -60,6 +61,7 @@ Same commands locally: [docs/local-testing.md](docs/local-testing.md).
 | [Ops](ops/) | CMS, players, runbooks |
 | [Publish exhibit](ops/runbooks/publish-exhibit.md) | Pre-publish QA gates |
 | [CMS content sync](ops/runbooks/cms-content-sync.md) | Keep facility Xibo media/layouts on `main` |
+| [Infra pipelines](docs/infra-pipelines.md) | Terraform / Route 53 / Let's Encrypt DNS-01 |
 | [AGENTS.md](AGENTS.md) | Guide for AI coding agents |
 | [Contributing](CONTRIBUTING.md) | How to contribute |
 | [Code of Conduct](CODE_OF_CONDUCT.md) | Community standards |

@@ -15,10 +15,19 @@ Examples: `kiosk-lobby-01`, `kiosk-classroom-a-02`.
 
 ## Assumptions
 
-- Players need reliable LAN/WAN access to the CMS (HTTPS preferred).
+- Players need reliable LAN access to the CMS over **HTTPS**.
+- Canonical CMS hostname:
+  `server.kiosks.local.belize.savemarinemammals.com` (Let's Encrypt DNS-01 via
+  Route 53 zone `kiosks.local.belize.savemarinemammals.com` + host Caddy — see
+  [`../cms/caddy/README.md`](../cms/caddy/README.md) and
+  [`../../infra/`](../../infra/)).
 - DHCP reservations for each Pi MAC address simplify replacement.
-- Firewall: allow player → CMS (XMDS/XMR as required by your Xibo version); block unnecessary inbound to Pis from the public internet.
-- DNS: optional internal names for CMS (`cms.example.local`).
+- Firewall: allow player → CMS on **443** (XMDS / WebSocket XMR) and **9505**
+  (classic XMR); block unnecessary inbound to Pis from the public internet.
+  Public inbound **80** is not required for ACME (DNS-01).
+- DNS zones (Terraform): `belize.savemarinemammals.com` →
+  `kiosks.local.belize.savemarinemammals.com` (ACME TXT + CMS A/AAAA); parent
+  `savemarinemammals.com` already exists.
 
 ## Inventory stub
 

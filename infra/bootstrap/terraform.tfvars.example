@@ -1,0 +1,12 @@
+aws_region        = "us-east-1"
+project_name      = "mmek"
+github_repository = "SaveMarineMammals/marine-mammal-education-kiosks"
+
+# If mmap (or another stack) already created the GitHub OIDC provider in this
+# account, paste its ARN here to avoid "EntityAlreadyExists":
+# github_oidc_provider_arn = "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+github_oidc_provider_arn = ""
+
+tags = {
+  CostCenter = "mmek"
+}

@@ -1,0 +1,7 @@
+# CI and local init pass backend settings via -backend-config (see infra/scripts).
+# Example values after bootstrap:
+#
+#   bucket         = "mmek-terraform-state-ACCOUNT_ID"
+#   key            = "production/terraform.tfstate"
+#   region         = "us-east-1"
+#   dynamodb_table = "mmek-terraform-locks"

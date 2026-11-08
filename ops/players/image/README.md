@@ -32,7 +32,9 @@ Xibo players use **XMDS** with a shared **CMS Key** plus a per-display hardware 
 Arexibo is configured with `--host` / `--key` (see `stage-kiosk/files/mmek-arexibo-start`).
 
 **Client certificates cannot replace the CMS key.** OAuth client credentials are for
-the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
+the CMS REST API only. Use HTTPS to the CMS
+(`https://server.kiosks.local.belize.savemarinemammals.com`); public Let's Encrypt
+chains are trusted via Pi `ca-certificates`.
 
 ## What’s in the image
 
@@ -78,7 +80,7 @@ Generate on a trusted workstation — never via GitHub Actions inputs/artifacts:
 export CMS_KEY='…'   # do not commit
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
-  --cms-url https://cms.example.local \
+  --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
   --image-version "$IMAGE_VERSION" \
   --out-dir /tmp/kiosk-configs

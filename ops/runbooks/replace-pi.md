@@ -11,7 +11,7 @@
    # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
    python3 ops/players/image/generate_kiosk_config.py \
      --location lobby --unit 01 \
-     --cms-url https://cms.example.local \
+     --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
      --cms-key "$CMS_KEY" \
      --image-version "$IMAGE_VERSION" \
      --out-dir /tmp/kiosk-configs

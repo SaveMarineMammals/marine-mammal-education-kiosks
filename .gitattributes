@@ -7,6 +7,13 @@
 *.sh text eol=lf
 ops/qa/entrypoint.sh text eol=lf
 
+# Terraform — LF for cross-platform applies
+*.tf text eol=lf
+*.tfvars text eol=lf
+*.tfvars.example text eol=lf
+*.hcl text eol=lf
+
+
 # Exhibit stills under 2 MB (previews + scene assets)
 exhibits/**/media/previews/**/*.jpg filter=lfs diff=lfs merge=lfs -text
 exhibits/**/media/previews/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
