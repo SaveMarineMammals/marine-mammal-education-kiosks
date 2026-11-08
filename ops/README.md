@@ -9,8 +9,8 @@ Runbooks and conventions for Xibo CMS, Raspberry Pi players, networking, and med
 | [`players/`](players/) | Raspberry Pi bootstrap and Arexibo (community aarch64) |
 | [`players/image/`](players/image/) | Golden Pi image recipe + kiosk config generator |
 | [`qa/`](qa/) | Ephemeral Docker visual QA (CMS + headless player + captures); CI stills via `ci_timeline_preview.py` |
-| [`networking/`](networking/) | Hostnames, DHCP, firewall assumptions |
-| [`runbooks/`](runbooks/) | Publish, retire, replace a Pi, install CMS host, offline behavior |
+| [`networking/`](networking/) | Hostnames, DHCP, Tailscale + firewall assumptions |
+| [`runbooks/`](runbooks/) | Publish, retire, replace a Pi, install CMS host, facility Tailscale, offline behavior |
 | [`cms/scripts/`](cms/scripts/) | Ubuntu/Docker bootstrap + Xibo CMS install helpers |
 | [`scripts/`](scripts/) | Shell helpers (`bootstrap-check.sh`, …) |
 
@@ -26,10 +26,12 @@ python3 ops/qa/ci_timeline_preview.py --exhibit <slug>
 
 # Per-kiosk first-boot config (local only — never via Actions)
 # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
+# TS_AUTHKEY = tag:mmek-player Tailscale auth key (see runbooks/facility-tailscale.md)
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
+  --ts-authkey "$TS_AUTHKEY" \
   --image-version "$IMAGE_VERSION" \
   --out-dir /tmp/kiosk-configs
 

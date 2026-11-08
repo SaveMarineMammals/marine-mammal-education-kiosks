@@ -112,9 +112,10 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
 | Facility DNS / ACME IAM (Terraform) | `infra/`, `docs/infra-pipelines.md`, `ops/cms/caddy/` |
+| Facility Tailscale (CMS + players) | `ops/runbooks/facility-tailscale.md`, `ops/cms/scripts/install-tailscale.sh` |
 | Timeline Chromium still | `ops/qa/ci_timeline_preview.py` |
 | Live player capture | `ops/qa/run_qa_pipeline.py` |
-| Golden Pi image / kiosk config | `ops/players/image/`, `.github/workflows/player-image.yml`, `kiosk-config.yml` |
+| Golden Pi image / kiosk config | `ops/players/image/`, `.github/workflows/player-image.yml` |
 | CI workflows | `.github/workflows/` |
 | Branch protection | `.github/rulesets/` |
 

@@ -7,19 +7,23 @@
    **same** hostname fields (`location` / `unit`) and CMS URL/key:
 
    ```bash
-   export CMS_KEY='…'   # do not commit
+   export CMS_KEY='…'        # do not commit
+   export TS_AUTHKEY='…'     # tag:mmek-player; do not commit
    # IMAGE_VERSION = recipe_version from the flashed image's build-info.txt
    python3 ops/players/image/generate_kiosk_config.py \
      --location lobby --unit 01 \
      --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
      --cms-key "$CMS_KEY" \
+     --ts-authkey "$TS_AUTHKEY" \
      --image-version "$IMAGE_VERSION" \
      --out-dir /tmp/kiosk-configs
    ```
 
    Copy `kiosk.conf` from the zip bundle to the SD boot partition as `kiosk.conf`.
 4. Prefer reusing the same hostname and DHCP reservation (update MAC in DHCP).
-5. Boot; first-boot re-applies hostname and Arexibo env.
+   MagicDNS name matches `HOSTNAME`; remove or disable the old Pi’s Tailscale
+   node in the admin console if it still appears online.
+5. Boot; first-boot re-applies hostname, joins Tailscale, and writes Arexibo env.
 6. In CMS: decommission the old display if needed; authorize the new one into the
    **same display group**.
 7. Confirm schedules apply automatically via the display group (no per-exhibit rebinding).

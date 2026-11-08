@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate per-kiosk first-boot configuration artifacts.
 
-For local operators only — do not run in CI or pass CMS_KEY through Actions.
-Does not print CMS_KEY to stdout.
+For local operators only — do not run in CI or pass CMS_KEY / TS_AUTHKEY through
+Actions. Does not print secrets to stdout.
 """
 
 from __future__ import annotations
@@ -55,12 +55,15 @@ def generate(
     unit: str,
     cms_url: str,
     cms_key: str,
+    ts_authkey: str,
     display_group: str | None,
     image_version: str,
     out_dir: Path,
 ) -> Path:
     if not cms_key.strip():
         raise ValueError("cms_key must be non-empty")
+    if not ts_authkey.strip():
+        raise ValueError("ts_authkey must be non-empty (tag:mmek-player Tailscale auth key)")
 
     host = _hostname(location.strip().lower(), unit.strip())
     url = _validate_cms_url(cms_url)
@@ -78,6 +81,7 @@ def generate(
                 f"HOSTNAME={host}",
                 f"CMS_URL={url}",
                 f"CMS_KEY={cms_key.strip()}",
+                f"TS_AUTHKEY={ts_authkey.strip()}",
                 f"DISPLAY_GROUP={group}",
                 "",
             ]
@@ -133,10 +137,13 @@ def generate(
                 "## 3. Network",
                 "",
                 f"- Create a DHCP reservation for this Pi's MAC → hostname `{host}`.",
+                "- First-boot joins Tailscale as `tag:mmek-player` (see "
+                "`ops/runbooks/facility-tailscale.md`). XMDS uses the CMS hostname via "
+                "Tailscale split DNS.",
                 "",
                 "## 4. Power on and authorize",
                 "",
-                "1. Boot the kiosk; first-boot applies hostname and Arexibo env.",
+                "1. Boot the kiosk; first-boot applies hostname, Tailscale, and Arexibo env.",
                 "2. In Xibo CMS → Displays: authorize the new display.",
                 f"3. Assign display group **`{group}`** (location/role, not exhibit name).",
                 "4. Set display profile to **1920×1080** landscape.",
@@ -145,7 +152,8 @@ def generate(
                 "",
                 "Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf`) "
                 "plus a per-display hardware key. Client certificates cannot replace the CMS key. "
-                "Never upload CMS_KEY or this bundle to GitHub Actions.",
+                "Tailscale uses a separate **TS_AUTHKEY** (`tag:mmek-player`). "
+                "Never upload CMS_KEY, TS_AUTHKEY, or this bundle to GitHub Actions.",
                 "",
                 "## 5. Verify",
                 "",
@@ -182,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cms-url", required=True, help="Xibo CMS base URL")
     parser.add_argument("--cms-key", required=True, help="Xibo CMS key (not printed)")
     parser.add_argument(
+        "--ts-authkey",
+        required=True,
+        help="Tailscale auth key tagged tag:mmek-player (not printed)",
+    )
+    parser.add_argument(
         "--display-group",
         default="",
         help="Xibo display group (default: same as location)",
@@ -205,6 +218,7 @@ def main(argv: list[str] | None = None) -> int:
             unit=args.unit,
             cms_url=args.cms_url,
             cms_key=args.cms_key,
+            ts_authkey=args.ts_authkey,
             display_group=args.display_group or None,
             image_version=args.image_version.strip() or "1.0.0",
             out_dir=args.out_dir,
@@ -213,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    # Never print cms_key; only paths.
+    # Never print cms_key / ts_authkey; only paths.
     print(f"wrote {zip_path}")
     return 0
 
