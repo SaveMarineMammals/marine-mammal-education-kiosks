@@ -78,6 +78,12 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 locals {
   github_oidc_provider_arn = local.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : var.github_oidc_provider_arn
+  # GitHub immutable OIDC subjects (2025+): repo:ORG@ORG_ID/REPO@REPO_ID:...
+  # CloudTrail example: repo:SaveMarineMammals@293631734/marine-mammal-education-kiosks@1305123252:pull_request
+  github_owner_name = split("/", var.github_repository)[0]
+  github_repo_name  = split("/", var.github_repository)[1]
+  github_oidc_sub_immutable = "repo:${local.github_owner_name}@${var.github_org_id}/${local.github_repo_name}@${var.github_repository_id}:*"
+  github_oidc_sub_legacy    = "repo:${var.github_repository}:*"
 }
 
 data "aws_iam_policy_document" "terraform_ci_assume" {
@@ -100,7 +106,8 @@ data "aws_iam_policy_document" "terraform_ci_assume" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:*",
+        local.github_oidc_sub_immutable,
+        local.github_oidc_sub_legacy,
       ]
     }
   }

@@ -18,11 +18,16 @@ Requires AWS credentials that can create S3, DynamoDB, and IAM resources.
 ```powershell
 cd infra/bootstrap
 copy terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars — set github_repository; reuse OIDC ARN if present
+# Edit terraform.tfvars — set github_repository, github_org_id, github_repository_id
+# (gh api orgs/ORG --jq .id / gh api repos/ORG/REPO --jq .id); reuse OIDC ARN if present
 terraform init
 terraform apply
 terraform output github_actions_secrets
 ```
+
+GitHub Actions now issues **immutable** OIDC `sub` claims
+(`repo:ORG@ORG_ID/REPO@REPO_ID:…`). The terraform-ci trust policy matches that
+form (and the legacy `repo:ORG/REPO:*` form).
 
 Add the output map as GitHub repository secrets (`AWS_TERRAFORM_ROLE_ARN`,
 `TF_STATE_BUCKET`, `TF_LOCK_TABLE`) and set repository variable

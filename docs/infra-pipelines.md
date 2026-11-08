@@ -9,7 +9,9 @@ state) with bash helpers instead of Node.
 ```powershell
 cd infra/bootstrap
 copy terraform.tfvars.example terraform.tfvars
-# set github_repository; reuse github_oidc_provider_arn if mmap already created OIDC
+# set github_repository, github_org_id, github_repository_id
+# (immutable OIDC: gh api orgs/ORG --jq .id ; gh api repos/ORG/REPO --jq .id)
+# reuse github_oidc_provider_arn if mmap already created OIDC
 terraform init
 terraform apply
 terraform output github_actions_secrets
