@@ -27,12 +27,14 @@ Players authenticate to XMDS with the shared **CMS Key** (in `kiosk.conf` /
 `/etc/mmek/arexibo.env`) plus a per-display hardware key. **Client certificates
 cannot replace the CMS key.** Use HTTPS to the CMS
   (`https://server.kiosks.local.belize.savemarinemammals.com`). Public Let's Encrypt
-  chains are trusted via Pi `ca-certificates`.
+  chains are trusted via Pi `ca-certificates`. Resolution of that hostname for
+  players is via **Tailscale split DNS** (XMDS/XMR over the tailnet) — see
+  [`../runbooks/facility-tailscale.md`](../runbooks/facility-tailscale.md).
 OAuth client credentials are for the CMS REST API only, not player registration.
 
-**Never** put `CMS_KEY` (or generated `kiosk.conf` / `*-config.zip`) into GitHub
-Actions inputs, workflow artifacts, Issues, or PRs. Generate config **only on a
-trusted local machine**.
+**Never** put `CMS_KEY`, `TS_AUTHKEY`, or generated `kiosk.conf` / `*-config.zip`
+into GitHub Actions inputs, workflow artifacts, Issues, or PRs. Generate config
+**only on a trusted local machine**.
 
 ## Image / config as code
 
@@ -99,11 +101,13 @@ sha256sum -c sha256sums.txt
 
 ```bash
 cd /path/to/marine-mammal-education-kiosks
-export CMS_KEY='…'   # from CMS; do not commit or paste into Actions
+export CMS_KEY='…'      # from CMS; do not commit or paste into Actions
+export TS_AUTHKEY='…'   # tag:mmek-player; do not commit or paste into Actions
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
+  --ts-authkey "$TS_AUTHKEY" \
   --image-version "$(grep '^recipe_version=' ~/Downloads/mmek-images/build-info.txt | cut -d= -f2)" \
   --out-dir /tmp/kiosk-configs
 # writes /tmp/kiosk-configs/kiosk-lobby-01/kiosk.conf (+ zip); keep private
@@ -178,7 +182,8 @@ udisksctl power-off -b /dev/sdX
 ### 6. Network, power on, authorize
 
 1. Create a DHCP reservation for the Pi MAC → hostname `kiosk-<location>-<nn>`.
-2. Insert the SD card, power on the kiosk; first-boot applies hostname and Arexibo env.
+2. Insert the SD card, power on the kiosk; first-boot applies hostname, joins
+   Tailscale (`tag:mmek-player`), and writes Arexibo env.
 3. In CMS: authorize the display; assign a location/role **display group** (`lobby`,
    not exhibit names).
 4. Set display profile to **1920×1080** landscape.
@@ -187,9 +192,10 @@ udisksctl power-off -b /dev/sdX
 
 1. Download + verify approved `mmek-kiosk-*` image; flash SD; place `kiosk.conf`
    **before** first power-on (next to `config.txt` on the FAT boot volume).
-2. First boot sets hostname `kiosk-<location>-<nn>`, writes Arexibo env, and starts
-   `mmek-kiosk-display` + `arexibo` (requires recipe **1.0.1+** for reliable X11/KMS;
-   **1.0.2+** for Arexibo 0.6.5 pin).
+2. First boot sets hostname `kiosk-<location>-<nn>`, joins Tailscale, writes Arexibo
+   env, and starts `mmek-kiosk-display` + `arexibo` (requires recipe **1.0.1+** for
+   reliable X11/KMS; **1.0.2+** for Arexibo 0.6.5 pin; Tailscale package in image
+   for facility overlay).
 3. Authorize the display in CMS; assign to a **display group** by location/role.
 4. Set display profile (resolution **1920×1080**, landscape, stats).
 5. Verify a known test layout plays offline after CMS cache (see runbook `offline-cache.md`).

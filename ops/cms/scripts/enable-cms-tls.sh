@@ -241,6 +241,27 @@ configure_ufw() {
     echo "ufw not installed; skip firewall rules."
     return 0
   fi
+
+  local lock_file="/etc/mmek/tailscale-ufw.lock"
+  if [[ -f "${lock_file}" ]]; then
+    # install-tailscale.sh already scoped 22/80/443/9505 to tailscale0 + LAN.
+    # Do not re-open those ports to Anywhere on TLS re-runs.
+    echo "==> Tailscale UFW lockdown present (${lock_file}); skipping world-open allows"
+    local lan_cidr
+    lan_cidr="$(grep -E '^FACILITY_LAN_CIDR=' "${lock_file}" | head -n1 | cut -d= -f2- || true)"
+    if [[ -n "${lan_cidr}" ]]; then
+      ufw allow in on tailscale0 to any port 80 proto tcp comment 'HTTP redirect via Tailscale' >/dev/null || true
+      ufw allow from "${lan_cidr}" to any port 80 proto tcp comment 'HTTP redirect via facility LAN' >/dev/null || true
+      ufw allow in on tailscale0 to any port 443 proto tcp comment 'CMS HTTPS via Tailscale' >/dev/null || true
+      ufw allow from "${lan_cidr}" to any port 443 proto tcp comment 'CMS HTTPS via facility LAN' >/dev/null || true
+      ufw allow in on tailscale0 to any port 9505 proto tcp comment 'XMR via Tailscale' >/dev/null || true
+      ufw allow from "${lan_cidr}" to any port 9505 proto tcp comment 'XMR via facility LAN' >/dev/null || true
+    fi
+    ufw --force enable >/dev/null || true
+    ufw status verbose | head -n 40 || true
+    return 0
+  fi
+
   echo "==> Ensuring UFW allows HTTPS/XMR (and HTTP redirect)"
   ufw allow OpenSSH >/dev/null || true
   ufw allow 80/tcp comment 'Xibo CMS HTTP redirect' >/dev/null || true

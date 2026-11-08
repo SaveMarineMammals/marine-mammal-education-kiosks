@@ -76,7 +76,7 @@ see [`ops/qa/`](../ops/qa/).
 | Power | **Official 27 W USB-C PSU** (5 V / 5 A); right-angle USB-C cable if needed for cavity fit |
 | Video cable | **0.3–0.5 m** Micro-HDMI (Pi) → HDMI (panel); use HDMI 2.0 or an HDMI 1.4 input on the LK7530i |
 | Touch cable | **0.3–0.5 m** USB-A (Pi) → **Touch Port** USB-B on the panel (Touch Port 1 or 2) |
-| Network | Short **Cat6** patch to facility LAN (Ethernet preferred over Wi-Fi) |
+| Network | Short **Cat6** patch to facility LAN (Ethernet preferred over Wi-Fi); CMS reachability over Tailscale — [`ops/runbooks/facility-tailscale.md`](../ops/runbooks/facility-tailscale.md) |
 | Fasteners | **M4** screws/nuts to share display or mount-bracket holes with the 75 mm wings; cable ties and adhesive clips for strain relief |
 
 **Optional:** USB-C power extension; HDMI ferrite if interference appears; USB keyboard

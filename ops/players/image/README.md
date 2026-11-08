@@ -20,8 +20,10 @@ and recorded in `build-info.txt`.
 | --- | --- |
 | **Player image** (`.github/workflows/player-image.yml`) | Build `.img.xz` on demand (`workflow_dispatch`) or publish approved Releases on tags `player-image-v*` |
 
-There is **no** GitHub Action for per-kiosk config. `CMS_KEY` and generated
-`kiosk.conf` stay on operator machines only — see [`../README.md`](../README.md).
+There is **no** GitHub Action for per-kiosk config. `CMS_KEY`, `TS_AUTHKEY`, and
+generated `kiosk.conf` stay on operator machines only — see
+[`../README.md`](../README.md) and
+[`../../runbooks/facility-tailscale.md`](../../runbooks/facility-tailscale.md).
 
 Physical mount / BOM: [`docs/facility-physical-setup.md`](../../../docs/facility-physical-setup.md).  
 Player ops (download, flash, config): [`ops/players/README.md`](../README.md).
@@ -44,13 +46,14 @@ chains are trusted via Pi `ca-certificates`.
   0.4.1 on Debian trixie).
 - Minimal X11 (`xinit` + openbox) for Qt rendering: Xorg as root (VT access), openbox as
   `kiosk`, Pi 5 KMS card selection, `Xwrapper` allowing non-console start
+- **Tailscale** package (joins on first-boot as `tag:mmek-player` via `TS_AUTHKEY`)
 - `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
-  sets hostname, writes `/etc/mmek/arexibo.env`, enables **and starts** display + player units,
-  strips `CMS_KEY` from bootfs
+  sets hostname, joins Tailscale, writes `/etc/mmek/arexibo.env`, enables **and starts**
+  display + player units, strips `CMS_KEY` / `TS_AUTHKEY` from bootfs
 - HDMI / `xrandr` forced toward **1920×1080** (Glance & Match canvas)
 - SSH enabled at build time with **pubkey-only** when a deploy key is provided to CI
 
-CMS credentials are **never** baked into the golden image.
+CMS and Tailscale credentials are **never** baked into the golden image.
 
 ### Arexibo pin and upgrade debt
 
@@ -77,11 +80,13 @@ partition `kiosk.conf`): [`ops/players/README.md`](../README.md).
 Generate on a trusted workstation — never via GitHub Actions inputs/artifacts:
 
 ```bash
-export CMS_KEY='…'   # do not commit
+export CMS_KEY='…'      # do not commit
+export TS_AUTHKEY='…'   # tag:mmek-player; do not commit
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \
   --cms-key "$CMS_KEY" \
+  --ts-authkey "$TS_AUTHKEY" \
   --image-version "$IMAGE_VERSION" \
   --out-dir /tmp/kiosk-configs
 ```

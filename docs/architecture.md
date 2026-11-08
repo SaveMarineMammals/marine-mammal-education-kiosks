@@ -33,8 +33,13 @@ Facility operator schedules mmek-<slug> onto display groups
   (schedules are never auto-mutated)
         |
         v
-Players pull layouts + media via XMDS
+Players pull layouts + media via XMDS (over facility Tailscale)
 ```
+
+Facility networking uses a **Tailscale overlay**: the CMS host and every kiosk Pi
+are tailnet peers (`tag:mmek-cms` / `tag:mmek-player`). XMDS/XMR and operator
+SSH/UI ride that overlay; Ethernet stays the underlay and LAN break-glass path.
+See [`ops/runbooks/facility-tailscale.md`](../ops/runbooks/facility-tailscale.md).
 
 Host install: [`ops/cms/scripts/deploy-cms-sync.sh`](../ops/cms/scripts/deploy-cms-sync.sh)
 and [`ops/runbooks/cms-content-sync.md`](../ops/runbooks/cms-content-sync.md).
