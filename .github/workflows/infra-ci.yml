@@ -28,6 +28,12 @@ jobs:
       - name: Terraform plan
         id: tf
         uses: ./.github/actions/terraform
+        env:
+          TF_VAR_alert_ingest_token: ${{ secrets.MMEK_ALERT_INGEST_TOKEN }}
+          TF_VAR_sent_api_key: ${{ secrets.MMEK_SENT_API_KEY }}
+          TF_VAR_alert_sms_to: ${{ secrets.MMEK_ALERT_SMS_TO }}
+          TF_VAR_alert_email_to: ${{ secrets.MMEK_ALERT_EMAIL_TO }}
+          TF_VAR_ses_from_email: ${{ secrets.MMEK_SES_FROM_EMAIL }}
         with:
           working-directory: infra/terraform/environments/production
           command: plan

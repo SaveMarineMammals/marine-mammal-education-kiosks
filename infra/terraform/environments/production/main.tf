@@ -6,6 +6,17 @@ locals {
     ManagedBy   = "terraform"
     CostCenter  = local.name_prefix
   })
+
+  # Deploy Lambda only when secrets + recipients are present (TF_VAR_* or tfvars).
+  # enable_admin_alert=false forces skip even if secrets exist.
+  admin_alert_ready = (
+    var.enable_admin_alert &&
+    var.alert_ingest_token != "" &&
+    var.sent_api_key != "" &&
+    var.alert_sms_to != "" &&
+    var.alert_email_to != "" &&
+    var.ses_from_email != ""
+  )
 }
 
 module "dns_facility" {
@@ -27,7 +38,7 @@ module "acme_route53_iam" {
 }
 
 module "admin_alert" {
-  count  = var.enable_admin_alert ? 1 : 0
+  count  = local.admin_alert_ready ? 1 : 0
   source = "../../modules/admin-alert"
 
   name_prefix                = local.name_prefix

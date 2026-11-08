@@ -56,9 +56,13 @@ Details: [`ops/cms/caddy/README.md`](../ops/cms/caddy/README.md).
 
 ## Admin alerts (optional)
 
-With `enable_admin_alert=true` and Sent/SES tfvars
-([`ops/runbooks/sent-dm-alerts.md`](../ops/runbooks/sent-dm-alerts.md)), Terraform
-creates the admin-alert Lambda. After apply:
+Terraform creates the admin-alert Lambda only when Sent/SES recipient secrets are
+set on the GitHub `production` Environment (`MMEK_ALERT_INGEST_TOKEN`,
+`MMEK_SENT_API_KEY`, `MMEK_ALERT_SMS_TO`, `MMEK_ALERT_EMAIL_TO`,
+`MMEK_SES_FROM_EMAIL`) — see [`ops/runbooks/sent-dm-alerts.md`](../ops/runbooks/sent-dm-alerts.md).
+Missing secrets → apply succeeds with **0** Lambda resources (DNS still updates).
+
+After a create:
 
 ```text
 terraform output -raw alert_lambda_url

@@ -1,8 +1,10 @@
 # Production DNS (facility)
 
 Composes `dns-facility` + `acme-route53-iam` for Belize kiosks, and optionally
-`admin-alert` (set `enable_admin_alert = true` with Sent/SES tfvars — see
+`admin-alert` when Sent/SES secrets are provided as `TF_VAR_*` / GitHub
+Environment secrets (see
 [`ops/runbooks/sent-dm-alerts.md`](../../../../ops/runbooks/sent-dm-alerts.md)).
+Without those secrets, apply correctly reports **0 added** for the Lambda.
 
 ## Prerequisites
 
@@ -44,10 +46,15 @@ Write `/etc/mmek/caddy-acme.env` on the CMS host (see
 
 ## After apply — admin alerts (optional)
 
+1. Add `MMEK_*` secrets on the `production` GitHub Environment (list in
+   [`sent-dm-alerts.md`](../../../../ops/runbooks/sent-dm-alerts.md)).
+2. Re-run Infra apply; confirm plan adds the Lambda (not 0 resources).
+3. Read the URL:
+
 ```powershell
 terraform output -raw alert_lambda_url
 ```
 
-Put the URL and ingest token in CMS `/etc/mmek/alert.env` and optional player
-`kiosk.conf` `ALERT_*` keys
-([`security-patching.md`](../../../../ops/runbooks/security-patching.md)).
+4. Put the URL and ingest token in CMS `/etc/mmek/alert.env` and optional player
+   `kiosk.conf` `ALERT_*` keys
+   ([`security-patching.md`](../../../../ops/runbooks/security-patching.md)).
