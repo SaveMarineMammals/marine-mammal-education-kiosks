@@ -194,8 +194,8 @@ udisksctl power-off -b /dev/sdX
    **before** first power-on (next to `config.txt` on the FAT boot volume).
 2. First boot sets hostname `kiosk-<location>-<nn>`, joins Tailscale, writes Arexibo
    env, and starts `mmek-kiosk-display` + `arexibo` (requires recipe **1.0.1+** for
-   reliable X11/KMS; **1.0.2+** for Arexibo 0.6.5 pin; Tailscale package in image
-   for facility overlay).
+   reliable X11/KMS; **1.0.2+** for Arexibo 0.6.5 pin; **1.0.4+** for Tailscale in
+   the golden image and a clean apt graph after Arexibo install).
 3. Authorize the display in CMS; assign to a **display group** by location/role.
 4. Set display profile (resolution **1920×1080**, landscape, stats).
 5. Verify a known test layout plays offline after CMS cache (see runbook `offline-cache.md`).

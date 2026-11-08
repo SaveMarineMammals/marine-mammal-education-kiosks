@@ -46,7 +46,8 @@ chains are trusted via Pi `ca-certificates`.
   0.4.1 on Debian trixie).
 - Minimal X11 (`xinit` + openbox) for Qt rendering: Xorg as root (VT access), openbox as
   `kiosk`, Pi 5 KMS card selection, `Xwrapper` allowing non-console start
-- **Tailscale** package (joins on first-boot as `tag:mmek-player` via `TS_AUTHKEY`)
+- **Tailscale** via `stage-kiosk/04-tailscale` (pkgs.tailscale.com Debian suite; joins on
+  first-boot as `tag:mmek-player` via `TS_AUTHKEY`)
 - `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
   sets hostname, joins Tailscale, writes `/etc/mmek/arexibo.env`, enables **and starts**
   display + player units, strips `CMS_KEY` / `TS_AUTHKEY` from bootfs
@@ -66,9 +67,9 @@ CMS and Tailscale credentials are **never** baked into the golden image.
 Revisit newer Arexibo only when Debian/RPi OS ships Qt ≥ 6.10, upstream ships a
 Qt-6.8-linked arm64 `.deb`, or we deliberately vendor a Qt 6.10 SDK (high cost).
 The image install pulls Trixie Qt 6.8 WebEngine + pulseaudio packages first,
-then uses `dpkg --force-depends` + `apt-mark hold` only because the 0.6.5
-`.deb` names `libqt6core6t64` / `libqt6gui6t64` / `libqt6widgets6t64` while
-Trixie arm64 provides `libqt6core6` / `libqt6gui6` / `libqt6widgets6`.
+then rewrites the 0.6.5 `.deb` Depends (`libqt6gui6t64` / `libqt6widgets6t64` →
+non-t64 Trixie names) before `dpkg -i` so apt stays consistent for later stages
+(Tailscale, export-image). `apt-mark hold arexibo` keeps the pin from drifting.
 
 ## Download and flash
 

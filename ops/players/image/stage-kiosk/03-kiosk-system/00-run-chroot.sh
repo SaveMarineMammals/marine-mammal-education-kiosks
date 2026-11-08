@@ -56,22 +56,3 @@ systemctl disable arexibo.service mmek-kiosk-display.service 2>/dev/null || true
 # Unattended security updates (no automatic reboot by default)
 echo 'Unattended-Upgrade::Automatic-Reboot "false";' \
   > /etc/apt/apt.conf.d/52unattended-reboot-mmek
-
-# Tailscale — facility overlay for XMDS/XMR (join on first-boot with TS_AUTHKEY).
-# https://tailscale.com/download/linux
-if ! command -v tailscale >/dev/null 2>&1; then
-  . /etc/os-release
-  TS_CODENAME="${VERSION_CODENAME:-bookworm}"
-  TS_BASE="https://pkgs.tailscale.com/stable/debian"
-  if ! curl -fsSL "${TS_BASE}/${TS_CODENAME}.noarmor.gpg" \
-    -o /usr/share/keyrings/tailscale-archive-keyring.gpg; then
-    TS_CODENAME=bookworm
-    curl -fsSL "${TS_BASE}/${TS_CODENAME}.noarmor.gpg" \
-      -o /usr/share/keyrings/tailscale-archive-keyring.gpg
-  fi
-  curl -fsSL "${TS_BASE}/${TS_CODENAME}.tailscale-keyring.list" \
-    -o /etc/apt/sources.list.d/tailscale.list
-  apt-get update -y
-  apt-get install -y tailscale
-fi
-systemctl enable tailscaled
