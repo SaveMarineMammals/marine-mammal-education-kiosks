@@ -15,7 +15,7 @@ Examples: `kiosk-lobby-01`, `kiosk-classroom-a-02`.
 
 ## Assumptions
 
-- **Tailscale overlay:** CMS host (`tag:mmek-cms`) and every kiosk Pi (`tag:mmek-player`)
+- **Tailscale overlay:** CMS host (`tag:mmek-cms`) and every kiosk Pi (`tag:mmek-players`)
   join the same tailnet. Players reach the CMS over Tailscale for **HTTPS 443**
   (XMDS / WebSocket XMR) and **9505** (classic XMR). Operators use the same
   overlay for SSH and the CMS UI. See

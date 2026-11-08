@@ -47,7 +47,7 @@ chains are trusted via Pi `ca-certificates`.
 - Minimal X11 (`xinit` + openbox) for Qt rendering: Xorg as root (VT access), openbox as
   `kiosk`, Pi 5 KMS card selection, `Xwrapper` allowing non-console start
 - **Tailscale** via `stage-kiosk/04-tailscale` (pkgs.tailscale.com Debian suite; joins on
-  first-boot as `tag:mmek-player` via `TS_AUTHKEY`)
+  first-boot as `tag:mmek-players` via `TS_AUTHKEY`)
 - `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
   sets hostname, joins Tailscale, writes `/etc/mmek/arexibo.env`, enables **and starts**
   display + player units, strips `CMS_KEY` / `TS_AUTHKEY` from bootfs
@@ -82,7 +82,7 @@ Generate on a trusted workstation — never via GitHub Actions inputs/artifacts:
 
 ```bash
 export CMS_KEY='…'      # do not commit
-export TS_AUTHKEY='…'   # tag:mmek-player; do not commit
+export TS_AUTHKEY='…'   # tag:mmek-players; do not commit
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://server.kiosks.local.belize.savemarinemammals.com \

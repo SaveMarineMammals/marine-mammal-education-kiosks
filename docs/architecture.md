@@ -37,7 +37,7 @@ Players pull layouts + media via XMDS (over facility Tailscale)
 ```
 
 Facility networking uses a **Tailscale overlay**: the CMS host and every kiosk Pi
-are tailnet peers (`tag:mmek-cms` / `tag:mmek-player`). XMDS/XMR and operator
+are tailnet peers (`tag:mmek-cms` / `tag:mmek-players`). XMDS/XMR and operator
 SSH/UI ride that overlay; Ethernet stays the underlay and LAN break-glass path.
 See [`ops/runbooks/facility-tailscale.md`](../ops/runbooks/facility-tailscale.md).
 
