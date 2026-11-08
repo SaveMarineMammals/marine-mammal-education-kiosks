@@ -68,6 +68,21 @@ validation need real binaries (`git lfs pull`; Actions `lfs: true`).
 - Timeline text: YAML `|` blocks, plain ASCII, no Markdown/emoji; band color inside
   the text widget; CTA ticker via native Xibo `marqueeLeft` (see skill).
 
+### Shell scripts (LF only)
+
+Linux hosts (CMS, Pis, containers) fail shebangs with
+`env: 'bash\r': No such file or directory` when a `.sh` file has Windows **CRLF**
+endings. [`.gitattributes`](.gitattributes) sets `*.sh text eol=lf`, but editors and
+agent file writers on Windows can still produce CRLF on disk.
+
+- Always write and save `*.sh` with **LF** line endings (no `\r`).
+- After creating or editing a shell script on Windows, verify before `scp`/commit:
+  `python -c "from pathlib import Path; p=Path('path/to/script.sh'); d=p.read_bytes(); assert d.count(b'\r')==0, 'CRLF'; print('LF ok')"`
+  If CRLF is present: rewrite with `d.replace(b'\r\n', b'\n').replace(b'\r', b'\n')`.
+- Prefer `git add` (clean filter) over raw `scp` of a dirty working tree; if you must
+  copy outside Git, confirm the remote `head -1 file | od -An -tx1` ends in `0a`
+  only (not `0d 0a`).
+
 ### Quality checks
 
 Before opening a PR, run Tier 1 locally:
@@ -102,6 +117,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 - Finish exhibit/layout work without running Tier 1 validation on touched packages
 - Over-engineer abstractions for one-off exhibit copy
 - Run long-lived background processes in agent terminals without explicit user request
+- Write or ship `*.sh` with CRLF line endings (breaks Linux shebangs; see Shell scripts above)
 
 ## Common tasks
 

@@ -1,0 +1,14 @@
+---
+description: Shell scripts must use LF line endings (no CRLF shebangs)
+alwaysApply: true
+---
+
+# Shell script line endings
+
+Follow the **Shell scripts (LF only)** standing rule in
+[`AGENTS.md`](../../AGENTS.md). [`.gitattributes`](../../.gitattributes) already
+sets `*.sh text eol=lf`.
+
+When creating or editing `*.sh` on Windows: write **LF** only. Before `scp` or
+commit, assert zero `\r` bytes in the file. CRLF shebangs fail on Linux as
+`env: 'bash\r': No such file or directory`.
