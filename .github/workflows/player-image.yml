@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       arexibo_version:
-        description: Pin Arexibo apt version (empty = latest from xiboplayer repo)
+        description: Override Arexibo pin (empty = vendor/arexibo.manifest.yaml; must match mirrored deps-arexibo-* asset)
         required: false
         type: string
         default: ""

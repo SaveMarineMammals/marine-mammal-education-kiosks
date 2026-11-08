@@ -37,7 +37,9 @@ the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
 ## What’s in the image
 
 - Raspberry Pi OS Lite (pi-gen `stage0`–`stage2`) + custom `stage-kiosk`
-- **Arexibo** from [xiboplayer.org Debian trixie](https://www.xiboplayer.org/docs/players/arexibo) apt repo
+- **Arexibo** pinned to **romoloman/arexibo 0.6.5-1** (mirrored GitHub Release; see
+  `vendor/arexibo.manifest.yaml`). Not the older xiboplayer.org apt package (still
+  0.4.1 on Debian trixie).
 - Minimal X11 (`xinit` + openbox) for Qt rendering: Xorg as root (VT access), openbox as
   `kiosk`, Pi 5 KMS card selection, `Xwrapper` allowing non-console start
 - `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
@@ -47,6 +49,20 @@ the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
 - SSH enabled at build time with **pubkey-only** when a deploy key is provided to CI
 
 CMS credentials are **never** baked into the golden image.
+
+### Arexibo pin and upgrade debt
+
+| Pin | Source | Notes |
+| --- | --- | --- |
+| **0.6.5-1** (current) | [romoloman/arexibo](https://github.com/romoloman/arexibo) v0.6.5 | Validated on Trixie + system Qt **6.8.2**; XMR / Collect Now OK on soak |
+| 0.6.6+ / 0.6.9 | same fork | Declares `libqt6*t64 (>= 6.10.2)`; Trixie has no installable Qt 6.10 stack → runtime symbol failures |
+| 0.4.1-1 | xiboplayer.org Debian trixie | Older; hit collect-path panic on soak |
+
+Revisit newer Arexibo only when Debian/RPi OS ships Qt ≥ 6.10, upstream ships a
+Qt-6.8-linked arm64 `.deb`, or we deliberately vendor a Qt 6.10 SDK (high cost).
+The image install uses `dpkg --force-depends` + `apt-mark hold` because the 0.6.5
+`.deb` names `libqt6gui6t64` / `libqt6widgets6t64` while Trixie arm64 provides
+`libqt6gui6` / `libqt6widgets6`.
 
 ## Download and flash
 
@@ -84,7 +100,8 @@ not a nested `bootfs/` folder). On the Pi that is `/boot/firmware/kiosk.conf`.
   an ephemeral random password is used; prefer SSH pubkey).
 - Arexibo is installed from a **mirrored** arm64 `.deb` (GitHub Release tag
   `deps-arexibo-*`, see `vendor/arexibo.manifest.yaml`). Upstream
-  `dl.xiboplayer.org` returns Cloudflare **403** to GitHub-hosted runners.
+  `dl.xiboplayer.org` returns Cloudflare **403** to GitHub-hosted runners; the
+  mirrored pin is romoloman 0.6.5, not xiboplayer.org’s apt version.
   Optional `AREXIBO_VERSION` input must match the mirrored version or the build fails.
 
 If the arm64 Arexibo package is unavailable for the Pi OS release, the stage **fails**

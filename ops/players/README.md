@@ -12,7 +12,9 @@ Golden image + first-boot config:
 - Aluminium **VESA** case mounted to the display rear / wall-mount brackets (not a
   separate wall plate) — see facility doc BOM
 - Fleet OS: **golden image** from [`image/`](image/) (Raspberry Pi OS 64-bit Lite + Arexibo)
-- Community **Arexibo** player (aarch64), enrolled against the central CMS
+- Community **Arexibo** player (aarch64), pinned to **romoloman 0.6.5-1** in the
+  golden image (see [`image/README.md`](image/README.md) for upgrade debt vs
+  0.6.9 / Qt 6.10)
 - Display: Vivitek NovoTouch LK7530i (or equivalent) via HDMI at **1920×1080**
 
 Official **Xibo for Linux** requires x86-64 and is **not** supported on Raspberry Pi.
@@ -184,7 +186,8 @@ udisksctl power-off -b /dev/sdX
 1. Download + verify approved `mmek-kiosk-*` image; flash SD; place `kiosk.conf`
    **before** first power-on (next to `config.txt` on the FAT boot volume).
 2. First boot sets hostname `kiosk-<location>-<nn>`, writes Arexibo env, and starts
-   `mmek-kiosk-display` + `arexibo` (requires recipe **1.0.1+** for reliable X11/KMS).
+   `mmek-kiosk-display` + `arexibo` (requires recipe **1.0.1+** for reliable X11/KMS;
+   **1.0.2+** for Arexibo 0.6.5 pin).
 3. Authorize the display in CMS; assign to a **display group** by location/role.
 4. Set display profile (resolution **1920×1080**, landscape, stats).
 5. Verify a known test layout plays offline after CMS cache (see runbook `offline-cache.md`).

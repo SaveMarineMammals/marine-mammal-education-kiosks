@@ -1,9 +1,24 @@
-# Mirrored Arexibo arm64 package for CI (dl.xiboplayer.org is Cloudflare-blocked
-# from GitHub-hosted runners). Bump version + release asset when upgrading.
-version: "0.4.1-1"
+# Mirrored Arexibo arm64 package for CI (upstream CDNs / GitHub-hosted runners
+# cannot be assumed reachable from pi-gen). Bump version + release asset when
+# upgrading; keep AREXIBO_VERSION / workflow pin in sync with `version:` below.
+#
+# Current pin: romoloman/arexibo 0.6.5-1 (community fork).
+# Validated on Debian Trixie / Raspberry Pi OS arm64 with system Qt 6.8.2.
+#
+# --- Upgrade debt (do not bump casually) ---
+# Newer romoloman builds (0.6.6+) declare Depends: libqt6core6t64 (>= 6.10.2).
+# Debian Trixie only ships Qt 6.8.x in apt; there is no installable 6.10 stack
+# (Core + Gui + WebEngine) without leaving the distro packages. Force-installing
+# 0.6.9 fails at runtime (undefined Qt_6 symbols). Revisit when:
+#   - Debian/RPi OS packages Qt >= 6.10, or
+#   - upstream publishes a Trixie/Qt-6.8-linked arm64 .deb, or
+#   - we deliberately vendor a Qt 6.10 SDK into the image (high cost).
+# xiboplayer.org Debian trixie still only lists arexibo 0.4.1-1 (older than this
+# pin and still subject to the collect-path panic seen on kiosk soak).
+version: "0.6.5-1"
 arch: arm64
-sha256: "7bc8e45fe5865516aeedf507ebb5cbea5ec02136ef30e23f38aed8bcfafa901e"
+sha256: "db6dd75bbafe28276b514c2042fbf982800760a7131e5c8c508a8f6cb23da91a"
 # GitHub Release asset on this repo (tag deps-arexibo-<version>)
-release_tag: "deps-arexibo-0.4.1-1"
-asset_name: "arexibo_0.4.1-1_arm64.deb"
-upstream_url: "https://dl.xiboplayer.org/deb/debian/trixie/arm64/arexibo_0.4.1-1_arm64.deb"
+release_tag: "deps-arexibo-0.6.5-1"
+asset_name: "arexibo_0.6.5-1_arm64.deb"
+upstream_url: "https://github.com/romoloman/arexibo/releases/download/v0.6.5/arexibo_0.6.5-1_arm64.deb"
