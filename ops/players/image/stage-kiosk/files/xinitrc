@@ -1,6 +1,24 @@
 #!/bin/sh
 # Minimal X session for Arexibo (openbox + no screen blanking).
-xset s off || true
-xset -dpms || true
-xset s noblank || true
+# Xorg is started as root (VT access); openbox runs as kiosk.
+Auth="${XAUTHORITY:-$HOME/.Xauthority}"
+chown kiosk:kiosk "$Auth" 2>/dev/null || true
+chmod 600 "$Auth" 2>/dev/null || true
+
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+xset s noblank 2>/dev/null || true
+xhost +SI:localuser:kiosk 2>/dev/null || true
+
+# Glance & Match canvas is 1920x1080; prefer that over native ultrawide/4K EDID.
+OUT=$(xrandr 2>/dev/null | awk '/ connected/{print $1; exit}')
+if [ -n "$OUT" ]; then
+  xrandr --output "$OUT" --mode 1920x1080 2>/dev/null \
+    || xrandr --output "$OUT" --mode 1920x1080 --rate 60 2>/dev/null \
+    || true
+fi
+
+if [ "$(id -u)" -eq 0 ]; then
+  exec su -s /bin/sh -c 'exec openbox-session' kiosk
+fi
 exec openbox-session

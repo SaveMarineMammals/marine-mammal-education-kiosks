@@ -3,17 +3,28 @@
 Reproducible **Raspberry Pi OS arm64** image for NovoTouch kiosks: Lite base +
 Arexibo + first-boot config from `/boot/firmware/kiosk.conf`.
 
-Recipe version: see [`VERSION`](VERSION).
+Recipe **base** version: [`VERSION`](VERSION) (e.g. `1.0.0`). Each CI run
+assigns a unique **build** version:
+
+| Trigger | Image version | Artifact / image name |
+| --- | --- | --- |
+| `workflow_dispatch` | `{VERSION}-b.{run_number}` (e.g. `1.0.0-b.42`) | `mmek-kiosk-1.0.0-b.42` |
+| Tag `player-image-v1.2.3` | `1.2.3` | `mmek-kiosk-1.2.3` |
+
+That build version is written into the image as `/etc/mmek/image-recipe-version`
+and recorded in `build-info.txt`.
 
 ## Pipelines
 
 | Workflow | Purpose |
 | --- | --- |
 | **Player image** (`.github/workflows/player-image.yml`) | Build `.img.xz` on demand (`workflow_dispatch`) or publish approved Releases on tags `player-image-v*` |
-| **Kiosk config** (`.github/workflows/kiosk-config.yml`) | Generate per-kiosk `kiosk.conf` zip from Action inputs |
+
+There is **no** GitHub Action for per-kiosk config. `CMS_KEY` and generated
+`kiosk.conf` stay on operator machines only — see [`../README.md`](../README.md).
 
 Physical mount / BOM: [`docs/facility-physical-setup.md`](../../../docs/facility-physical-setup.md).  
-Player ops checklist: [`ops/players/README.md`](../README.md).
+Player ops (download, flash, config): [`ops/players/README.md`](../README.md).
 
 ## Authentication (CMS key — not client certificates)
 
@@ -27,49 +38,41 @@ the CMS REST API only. Use HTTPS to the CMS (trust the server CA on the Pi).
 
 - Raspberry Pi OS Lite (pi-gen `stage0`–`stage2`) + custom `stage-kiosk`
 - **Arexibo** from [xiboplayer.org Debian trixie](https://www.xiboplayer.org/docs/players/arexibo) apt repo
-- Minimal X11 (`xinit` + openbox) for Qt rendering
-- `first-boot-kiosk.service` reads `/boot/firmware/kiosk.conf`, sets hostname, writes
-  `/etc/mmek/arexibo.env`, enables display + player units, strips `CMS_KEY` from bootfs
-- HDMI forced toward **1920×1080** (Glance & Match canvas)
+- Minimal X11 (`xinit` + openbox) for Qt rendering: Xorg as root (VT access), openbox as
+  `kiosk`, Pi 5 KMS card selection, `Xwrapper` allowing non-console start
+- `first-boot-kiosk.service` waits for D-Bus, reads `/boot/firmware/kiosk.conf` (CRLF-safe),
+  sets hostname, writes `/etc/mmek/arexibo.env`, enables **and starts** display + player units,
+  strips `CMS_KEY` from bootfs
+- HDMI / `xrandr` forced toward **1920×1080** (Glance & Match canvas)
 - SSH enabled at build time with **pubkey-only** when a deploy key is provided to CI
 
 CMS credentials are **never** baked into the golden image.
 
-## Per-kiosk config
+## Download and flash
 
-### GitHub Actions (preferred)
+Full Linux commands (Release vs soak artifact, `sha256sum`, `xzcat | dd`, boot
+partition `kiosk.conf`): [`ops/players/README.md`](../README.md).
 
-Actions → **Kiosk config** → Run workflow:
+## Per-kiosk config (local only)
 
-- `location` (e.g. `lobby`)
-- `unit` (e.g. `01`) → hostname `kiosk-lobby-01`
-- `cms_url`, `cms_key`
-- optional `display_group`, `image_version`
-
-Download the `*-config.zip` artifact (contains secrets — do not attach to Releases).
-
-### Local
+Generate on a trusted workstation — never via GitHub Actions inputs/artifacts:
 
 ```bash
+export CMS_KEY='…'   # do not commit
 python3 ops/players/image/generate_kiosk_config.py \
   --location lobby --unit 01 \
   --cms-url https://cms.example.local \
   --cms-key "$CMS_KEY" \
-  --image-version "$(cat ops/players/image/VERSION)" \
+  --image-version "$IMAGE_VERSION" \
   --out-dir /tmp/kiosk-configs
 ```
 
-Copy `kiosk.conf` to the SD card boot partition as `/boot/firmware/kiosk.conf`
-before first power-on.
+Set `IMAGE_VERSION` to the flashed image’s `recipe_version` from `build-info.txt`
+(or the `player-image-v*` tag suffix for Releases)—not only the in-repo base
+`VERSION` file, which is the lineage prefix for soak builds.
 
-## Flash an approved image
-
-1. Download `.img.xz` + `sha256sums.txt` from the GitHub Release `player-image-v*`
-   (or a soak artifact from a dispatch build).
-2. Verify checksum; flash to SD.
-3. Place generated `kiosk.conf` on the boot partition.
-4. DHCP reservation for the Pi MAC; power on; authorize display in CMS into the
-   location display group.
+Copy `kiosk.conf` to the **root of the FAT boot volume** (next to `config.txt`;
+not a nested `bootfs/` folder). On the Pi that is `/boot/firmware/kiosk.conf`.
 
 ## Build notes (CI)
 

@@ -31,12 +31,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Read recipe version
+      - name: Resolve image version
         id: ver
         run: |
-          VERSION="$(tr -d '[:space:]' < ops/players/image/VERSION)"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "image_name=mmek-kiosk-${VERSION}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          # ops/players/image/VERSION is the recipe base (e.g. 1.0.0).
+          # Each run gets a unique build version so artifact names never collide:
+          #   tag player-image-v1.2.3  → 1.2.3
+          #   workflow_dispatch       → 1.0.0-b.<run_number>
+          BASE="$(tr -d '[:space:]' < ops/players/image/VERSION)"
+          if [[ "${GITHUB_REF}" == refs/tags/player-image-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/player-image-v}"
+            if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.+-][0-9A-Za-z.-]+)?$ ]]; then
+              echo "Tag suffix '${VERSION}' is not a usable image version." >&2
+              exit 1
+            fi
+          else
+            VERSION="${BASE}-b.${GITHUB_RUN_NUMBER}"
+          fi
+          # Bake into both recipe files so /etc/mmek/image-recipe-version matches
+          # the artifact / Release name (stage-kiosk copies stage-kiosk/VERSION).
+          printf '%s\n' "${VERSION}" > ops/players/image/VERSION
+          printf '%s\n' "${VERSION}" > ops/players/image/stage-kiosk/VERSION
+          {
+            echo "version=${VERSION}"
+            echo "image_name=mmek-kiosk-${VERSION}"
+            echo "base=${BASE}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved image version: ${VERSION} (base ${BASE})"
 
       - name: Require SSH deploy pubkey for release tags
         if: startsWith(github.ref, 'refs/tags/player-image-v')
@@ -156,8 +178,10 @@ jobs:
           BASE="$(basename "${IMG}")"
           {
             echo "recipe_version=${{ steps.ver.outputs.version }}"
+            echo "recipe_base=${{ steps.ver.outputs.base }}"
             echo "git_sha=${GITHUB_SHA}"
             echo "git_ref=${GITHUB_REF}"
+            echo "run_number=${GITHUB_RUN_NUMBER}"
             echo "image_file=${BASE}"
             echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "runner=${RUNNER_OS}/${RUNNER_ARCH}"
@@ -187,5 +211,6 @@ jobs:
           body: |
             Approved MMEK kiosk golden image `${{ steps.ver.outputs.image_name }}`.
 
-            Flash the `.img.xz`, then place a generated `kiosk.conf` on `/boot/firmware/`
-            (see **Kiosk config** workflow / `ops/players/image/README.md`).
+            Download, verify, and flash the `.img.xz`, then place a locally generated
+            `kiosk.conf` on `/boot/firmware/` (see `ops/players/README.md`).
+            Do not generate kiosk config via GitHub Actions — CMS_KEY must stay local.

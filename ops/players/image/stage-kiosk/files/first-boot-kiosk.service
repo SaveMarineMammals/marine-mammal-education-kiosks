@@ -1,8 +1,9 @@
 [Unit]
 Description=MMEK first-boot kiosk configuration
-DefaultDependencies=no
-After=local-fs.target
-Before=network-online.target mmek-kiosk-display.service arexibo.service
+# hostnamectl needs D-Bus / hostnamed; do not use DefaultDependencies=no.
+After=local-fs.target dbus.socket systemd-hostnamed.service
+Wants=dbus.socket
+Before=mmek-kiosk-display.service arexibo.service
 ConditionPathExists=!/var/lib/mmek/first-boot-complete
 ConditionPathExists=/boot/firmware/kiosk.conf
 
