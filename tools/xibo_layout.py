@@ -35,6 +35,35 @@ GLANCE_AND_MATCH_REGIONS: dict[str, dict[str, int]] = {
     "ticker": {"left": 800, "top": 940, "width": 1120, "height": 140, "zIndex": 4},
 }
 
+# Fixed ticker band color (region background). Do not paint this on marquee HTML —
+# a full-size scrolling box never finishes a pass before the layout reloads.
+TICKER_BAND_BG = "#0A2A3A"
+DEFAULT_GLANCE_HOLD_SECONDS = 3600
+
+
+def layout_hold_seconds(timeline: dict[str, Any]) -> int:
+    """CMS layout duration: hold static regions while insight cycles repeat.
+
+    ``durationSeconds`` remains one insight cycle. ``layoutHoldSeconds`` (or the
+    glance-and-match default) is how long the player keeps the layout alive
+    before a full reload — avoiding a black flash every cycle.
+    """
+    cycle = max(1, int(timeline.get("durationSeconds") or 90))
+    explicit = timeline.get("layoutHoldSeconds")
+    if explicit is not None:
+        return max(cycle, int(explicit))
+    template = str(timeline.get("template") or "").strip()
+    loop = timeline.get("loop")
+    loop_on = loop is True or str(loop).strip().lower() in {
+        "true",
+        "1",
+        "yes",
+        "continuous",
+    }
+    if template == "glance-and-match" and loop_on:
+        return max(cycle, DEFAULT_GLANCE_HOLD_SECONDS)
+    return cycle
+
 
 def stable_layout_name(slug: str) -> str:
     return f"mmek-{slug}"
@@ -120,7 +149,21 @@ class XiboLayoutClient(Protocol):
         z_index: Optional[int] = None,
     ) -> dict[str, Any]: ...
 
+    def edit_region(
+        self,
+        region_id: int,
+        *,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        top: Optional[int] = None,
+        left: Optional[int] = None,
+        z_index: Optional[int] = None,
+        background_color: Optional[str] = None,
+    ) -> dict[str, Any]: ...
+
     def _playlist_id_from_region(self, region: dict[str, Any]) -> Optional[int]: ...
+
+    def _region_id(self, region: dict[str, Any]) -> Optional[int]: ...
 
     def assign_media_to_playlist(
         self,
@@ -264,10 +307,22 @@ def fill_playlist_from_widgets(
     media_ids: dict[str, int],
     layout_duration: int,
 ) -> None:
+    """Map absolute-timed widgets onto a sequential Xibo playlist.
+
+    Single-widget (static) playlists are stretched to ``layout_duration`` so
+    hero/ticker/wash never expire mid-hold. Multi-widget (cycling) playlists
+    keep their authored cycle and are *not* trailing-padded — Xibo repeats them
+    until the longer regions finish, which avoids a black layout reload every
+    insight cycle.
+    """
+    ordered = sorted(widgets, key=lambda w: float(w.get("startSeconds") or 0))
+    single = len(ordered) == 1
     cursor = 0.0
-    for widget in sorted(widgets, key=lambda w: float(w.get("startSeconds") or 0)):
+    for widget in ordered:
         start = float(widget.get("startSeconds") or 0)
         duration = max(1, int(round(float(widget.get("durationSeconds") or 1))))
+        if single:
+            duration = max(duration, int(layout_duration))
         gap = int(round(start - cursor))
         if gap >= 1:
             client.add_spacer_widget(playlist_id, gap)
@@ -288,6 +343,9 @@ def fill_playlist_from_widgets(
             raise XiboError(f"Unsupported timeline widget type: {wtype!r}")
         cursor = max(cursor, start) + duration
 
+    if not single:
+        # Allow the player to repeat this region playlist for the layout hold.
+        return
     trailing = int(round(layout_duration - cursor))
     if trailing >= 1:
         client.add_spacer_widget(playlist_id, trailing)
@@ -340,20 +398,23 @@ def upsert_exhibit_layout(
 
     timeline = load_yaml(path)
     name = layout_name or stable_layout_name(exhibit_slug)
-    layout_duration = int(timeline.get("durationSeconds") or 90)
+    cycle_seconds = max(1, int(timeline.get("durationSeconds") or 90))
+    layout_duration = layout_hold_seconds(timeline)
     tags = [f"exhibit:{exhibit_slug}", "mmek:managed"]
 
     if dry_run:
         widgets = collect_timeline_widgets(timeline)
         LOG.info(
-            "Dry run: would upsert layout %s duration=%ss widgets=%s",
+            "Dry run: would upsert layout %s hold=%ss cycle=%ss widgets=%s",
             name,
             layout_duration,
+            cycle_seconds,
             len(widgets),
         )
         return {
             "layout_name": name,
             "layout_duration": layout_duration,
+            "cycle_seconds": cycle_seconds,
             "dry_run": True,
             "widget_count": len(widgets),
         }
@@ -398,19 +459,32 @@ def upsert_exhibit_layout(
         )
         refreshed = client.get_layout(layout_id=draft_layout_id) or {}
         playlist_id: Optional[int] = client._playlist_id_from_region(created)
+        region_row: Optional[dict[str, Any]] = created if isinstance(created, dict) else None
         if not playlist_id:
             for region in refreshed.get("regions") or []:
                 if str(region.get("name") or "") == rname:
                     playlist_id = client._playlist_id_from_region(region)
+                    region_row = region
                     break
         if not playlist_id:
             for region in refreshed.get("regions") or []:
                 rid = client._playlist_id_from_region(region)
                 if rid and rid not in region_playlists.values():
                     playlist_id = rid
+                    region_row = region
                     break
         if not playlist_id:
             raise XiboError(f"Could not resolve playlistId for region {rname!r}")
+        # Fixed band behind native marqueeLeft text (scrolling HTML must stay transparent).
+        if rname == "ticker" or rname.startswith("ticker-"):
+            region_id = client._region_id(region_row or created)
+            if region_id is not None:
+                try:
+                    client.edit_region(region_id, background_color=TICKER_BAND_BG)
+                except Exception as exc:  # noqa: BLE001 — soft failure; text still scrolls
+                    LOG.warning(
+                        "Could not set ticker region background (%s); continuing", exc
+                    )
         region_playlists[rname] = playlist_id
         LOG.info("Region %s -> playlistId=%s", rname, playlist_id)
         return playlist_id
@@ -456,11 +530,12 @@ def upsert_exhibit_layout(
         )
 
     LOG.info(
-        "Published layout %s parentId=%s campaignId=%s duration=%ss",
+        "Published layout %s parentId=%s campaignId=%s hold=%ss cycle=%ss",
         name,
         final_layout_id,
         campaign_id,
         layout_duration,
+        cycle_seconds,
     )
     return {
         "layout_name": name,
@@ -469,6 +544,7 @@ def upsert_exhibit_layout(
         "draft_layout_id": draft_layout_id,
         "media_ids": resolved_media,
         "layout_duration": layout_duration,
+        "cycle_seconds": cycle_seconds,
         "timeline_path": str(path),
         "regions": list(region_playlists),
         "dry_run": False,

@@ -117,5 +117,34 @@ class EditMediaTests(unittest.TestCase):
         self.assertEqual(puts[-1]["retired"], 0)
 
 
+class TickerTextWidgetTests(unittest.TestCase):
+    def test_ticker_scroll_uses_text_only_marquee(self) -> None:
+        client = xibo_client.XiboClient("http://cms.example")
+        edits: list[dict] = []
+
+        def fake_request(method: str, path: str, **kwargs):
+            if method == "POST":
+                return {"widgetId": 42}
+            edits.append(kwargs.get("data") or {})
+            return {"widgetId": 42}
+
+        with patch.object(client, "request", side_effect=fake_request):
+            client.add_text_widget(
+                7,
+                "Protect mangroves — coasts need them",
+                3600,
+                effect="tickerScroll",
+            )
+
+        payload = edits[0]
+        self.assertEqual(payload["effect"], "marqueeLeft")
+        self.assertEqual(payload["speed"], 2)
+        html = payload["text"]
+        self.assertNotIn("width:100%", html)
+        self.assertNotIn("background:#0A2A3A", html)
+        self.assertIn("Protect mangroves", html)
+        self.assertGreaterEqual(html.count("Protect mangroves"), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
