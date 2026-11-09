@@ -84,9 +84,9 @@ The GitHub OIDC role `mmek-terraform-ci` must allow Lambda/SES/Logs/IAM role
 APIs for admin-alert. If apply fails with `AccessDenied` on `iam:CreateRole`,
 `ses:VerifyEmailIdentity`, or `logs:CreateLogGroup`, re-apply bootstrap locally
 ([`infra/bootstrap/README.md`](../../infra/bootstrap/README.md)), then retry
-Infra apply.
+Infrastructure Deployment.
 
-Then run **Infra apply** (`workflow_dispatch` on
+Then run **Infrastructure Deployment** (`workflow_dispatch` on
 [`.github/workflows/infra-cd.yml`](../../.github/workflows/infra-cd.yml)) or push
 a change under `infra/**` to `main`. The workflow exports those as `TF_VAR_*`.
 
@@ -164,7 +164,7 @@ Confirm SMS and email arrive. Check CloudWatch logs for
 
 ## 7. Rotation checklist
 
-- [ ] New Sent API key → update `MMEK_SENT_API_KEY` → Infra apply
+- [ ] New Sent API key → update `MMEK_SENT_API_KEY` → Infrastructure Deployment
 - [ ] New ingest token → update `MMEK_ALERT_INGEST_TOKEN` → apply + update CMS
       `alert.env` + regenerate player `kiosk.conf` / reflash or SCP
       `/etc/mmek/alert.env`

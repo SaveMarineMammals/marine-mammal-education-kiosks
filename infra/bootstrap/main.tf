@@ -228,28 +228,13 @@ data "aws_iam_policy_document" "terraform_ci" {
     ]
   }
 
+  # Broad lambda:* avoids provider whack-a-mole (e.g. GetFunctionCodeSigningConfig
+  # after CreateFunction). Scope remains this CI role only.
   statement {
     sid    = "AdminAlertLambdaSesLogs"
     effect = "Allow"
     actions = [
-      "lambda:CreateFunction",
-      "lambda:DeleteFunction",
-      "lambda:GetFunction",
-      "lambda:GetFunctionConfiguration",
-      "lambda:UpdateFunctionCode",
-      "lambda:UpdateFunctionConfiguration",
-      "lambda:ListVersionsByFunction",
-      "lambda:PublishVersion",
-      "lambda:CreateFunctionUrlConfig",
-      "lambda:DeleteFunctionUrlConfig",
-      "lambda:GetFunctionUrlConfig",
-      "lambda:UpdateFunctionUrlConfig",
-      "lambda:AddPermission",
-      "lambda:RemovePermission",
-      "lambda:GetPolicy",
-      "lambda:ListTags",
-      "lambda:TagResource",
-      "lambda:UntagResource",
+      "lambda:*",
       "logs:CreateLogGroup",
       "logs:DeleteLogGroup",
       "logs:DescribeLogGroups",
