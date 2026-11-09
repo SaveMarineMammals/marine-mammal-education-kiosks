@@ -45,7 +45,7 @@ jobs:
 
       - name: Comment if destroys detected
         if: steps.tf.outputs.destroy_detected == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
