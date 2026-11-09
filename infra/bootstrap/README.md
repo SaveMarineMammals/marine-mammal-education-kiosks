@@ -34,6 +34,20 @@ Add the output map as GitHub repository secrets (`AWS_TERRAFORM_ROLE_ARN`,
 `TF_INFRA_ENABLED=true`. Then apply
 [`../terraform/environments/production`](../terraform/environments/production/).
 
+## Re-apply after CI permission changes
+
+Bootstrap is not applied by GitHub Actions (local state). When the
+`mmek-terraform-ci` policy grows (e.g. Lambda / SES for admin-alert), re-run
+locally with the same `terraform.tfvars`:
+
+```powershell
+cd infra/bootstrap
+terraform init
+terraform apply
+```
+
+Then re-run **Infra apply** on `main`.
+
 ## Reusing an existing OIDC provider
 
 If `marine-mammal-assessment` bootstrap already created

@@ -80,6 +80,12 @@ In the repo **Settings → Environments → `production` → Environment secrets
 | `MMEK_ALERT_EMAIL_TO` | Comma-separated emails |
 | `MMEK_SES_FROM_EMAIL` | Verified SES From address |
 
+The GitHub OIDC role `mmek-terraform-ci` must allow Lambda/SES/Logs/IAM role
+APIs for admin-alert. If apply fails with `AccessDenied` on `iam:CreateRole`,
+`ses:VerifyEmailIdentity`, or `logs:CreateLogGroup`, re-apply bootstrap locally
+([`infra/bootstrap/README.md`](../../infra/bootstrap/README.md)), then retry
+Infra apply.
+
 Then run **Infra apply** (`workflow_dispatch` on
 [`.github/workflows/infra-cd.yml`](../../.github/workflows/infra-cd.yml)) or push
 a change under `infra/**` to `main`. The workflow exports those as `TF_VAR_*`.
