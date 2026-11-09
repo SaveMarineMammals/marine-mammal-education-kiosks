@@ -48,7 +48,7 @@ Write `/etc/mmek/caddy-acme.env` on the CMS host (see
 
 1. Add `MMEK_*` secrets on the `production` GitHub Environment (list in
    [`sent-dm-alerts.md`](../../../../ops/runbooks/sent-dm-alerts.md)).
-2. Re-run Infra apply; confirm plan adds the Lambda (not 0 resources).
+2. Re-run Infrastructure Deployment; confirm plan adds the Lambda (not 0 resources).
 3. Read the URL:
 
 ```powershell

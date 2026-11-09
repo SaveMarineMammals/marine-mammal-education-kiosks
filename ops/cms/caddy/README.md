@@ -13,7 +13,7 @@ Route 53 zone **`kiosks.local.belize.savemarinemammals.com`** (created by
 ## Operator setup
 
 1. Apply [`infra/terraform/environments/production`](../../../infra/terraform/environments/production/)
-   (or wait for Infra apply CI).
+   (or wait for Infrastructure Deployment CI).
 2. On the CMS host:
 
    ```bash

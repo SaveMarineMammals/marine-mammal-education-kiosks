@@ -1,4 +1,4 @@
-name: Infra apply
+name: Infrastructure Deployment
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   terraform-apply:
-    name: Apply production DNS
+    name: Infrastructure Deployment
     runs-on: ubuntu-latest
     if: vars.TF_INFRA_ENABLED == 'true'
     environment: production
@@ -46,8 +46,8 @@ jobs:
           lock-table: ${{ secrets.TF_LOCK_TABLE }}
 
   terraform-apply-skipped:
-    name: Apply skipped (TF_INFRA_ENABLED)
+    name: Deployment skipped (TF_INFRA_ENABLED)
     runs-on: ubuntu-latest
     if: vars.TF_INFRA_ENABLED != 'true'
     steps:
-      - run: echo "TF_INFRA_ENABLED is not true — infra apply skipped."
+      - run: echo "TF_INFRA_ENABLED is not true — infrastructure deployment skipped."

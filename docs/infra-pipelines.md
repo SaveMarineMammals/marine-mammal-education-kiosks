@@ -36,8 +36,8 @@ CMS hostname: `server.kiosks.local.belize.savemarinemammals.com` (A record from
 
 | Workflow | When |
 | --- | --- |
-| [Infra plan](../.github/workflows/infra-ci.yml) | PRs touching `infra/**` |
-| [Infra apply](../.github/workflows/infra-cd.yml) | Push to `main` touching `infra/**`, or `workflow_dispatch` |
+| [Infrastructure Plan](../.github/workflows/infra-ci.yml) | PRs touching `infra/**` |
+| [Infrastructure Deployment](../.github/workflows/infra-cd.yml) | Push to `main` touching `infra/**`, or `workflow_dispatch` |
 
 When `TF_INFRA_ENABLED` is not `true`, jobs skip as pass so branch protection is
 not blocked before bootstrap.

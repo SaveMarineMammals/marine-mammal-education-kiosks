@@ -1,4 +1,4 @@
-name: Infra plan
+name: Infrastructure Plan
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   terraform-plan:
-    name: Plan production DNS
+    name: Infrastructure Plan
     runs-on: ubuntu-latest
     if: vars.TF_INFRA_ENABLED == 'true'
     steps:
@@ -52,7 +52,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: '⚠️ Terraform plan for **production** DNS includes resource **destroys**. Review carefully before merge.'
+              body: '⚠️ Terraform plan for **production** infrastructure includes resource **destroys**. Review carefully before merge.'
             })
 
   terraform-plan-skipped:
@@ -60,4 +60,4 @@ jobs:
     runs-on: ubuntu-latest
     if: vars.TF_INFRA_ENABLED != 'true'
     steps:
-      - run: echo "TF_INFRA_ENABLED is not true — infra plan skipped (pass)."
+      - run: echo "TF_INFRA_ENABLED is not true — infrastructure plan skipped (pass)."

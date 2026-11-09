@@ -46,7 +46,7 @@ terraform init
 terraform apply
 ```
 
-Then re-run **Infra apply** on `main`.
+Then re-run **Infrastructure Deployment** on `main`.
 
 ## Reusing an existing OIDC provider
 
