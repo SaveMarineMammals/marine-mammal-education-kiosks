@@ -25,7 +25,8 @@ Sent API key and recipient lists stay in Lambda env only.
 ## Prerequisites
 
 1. Follow [`ops/runbooks/sent-dm-alerts.md`](../../../../ops/runbooks/sent-dm-alerts.md).
-2. Verify SES From address (module can create `aws_ses_email_identity`; click the
-   verification email). Exit SES sandbox before production sends to arbitrary To:
-   addresses.
+2. Verify SES From address in the SES console (default: Terraform does **not**
+   create the identity — set `create_ses_alert_identity=true` only if you want
+   Terraform to manage it). Exit SES sandbox before production sends to
+   arbitrary To: addresses.
 3. Set production tfvars / GitHub Environment secrets (see environment README).

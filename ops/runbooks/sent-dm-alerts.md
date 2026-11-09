@@ -122,9 +122,11 @@ After a successful apply that creates the module:
 terraform output -raw alert_lambda_url
 ```
 
-Verify the SES From address (click the verification email if
-`create_ses_alert_identity=true`). Exit the SES sandbox before sending to
-arbitrary recipients.
+Verify the SES From address in the SES console first. Terraform defaults to
+`create_ses_alert_identity=false` (reference the verified address via
+`MMEK_SES_FROM_EMAIL` only). Set that flag to `true` only if you want Terraform
+to create/manage the identity. Exit the SES sandbox before sending to arbitrary
+recipients.
 
 Module details: [`infra/terraform/modules/admin-alert/`](../../infra/terraform/modules/admin-alert/).
 

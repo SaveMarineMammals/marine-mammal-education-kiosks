@@ -43,9 +43,9 @@ variable "ses_from_email" {
 }
 
 variable "create_ses_email_identity" {
-  description = "Create aws_ses_email_identity for ses_from_email (verify via SES email)"
+  description = "Create aws_ses_email_identity for ses_from_email (set true only if Terraform should own verification)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "tags" {

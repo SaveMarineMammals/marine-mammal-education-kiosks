@@ -97,7 +97,7 @@ variable "ses_from_email" {
 }
 
 variable "create_ses_alert_identity" {
-  description = "Create SES email identity for ses_from_email"
+  description = "Create SES email identity for ses_from_email (false when already verified in SES console)"
   type        = bool
-  default     = true
+  default     = false
 }
