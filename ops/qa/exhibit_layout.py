@@ -179,6 +179,7 @@ class XiboLayoutClient(Protocol):
         duration: int,
         *,
         effect: str = "none",
+        region: Optional[str] = None,
     ) -> int: ...
 
     def publish_layout(self, layout_id: int) -> dict[str, Any]: ...
@@ -431,6 +432,7 @@ def fill_playlist_from_widgets(
     *,
     media_ids: dict[str, int],
     layout_duration: int,
+    region_name: Optional[str] = None,
 ) -> None:
     """Map absolute-timed widgets onto a sequential Xibo playlist.
 
@@ -455,7 +457,9 @@ def fill_playlist_from_widgets(
         if wtype == "text":
             copy = str(widget.get("copy") or "").strip()
             effect = str(widget.get("effect") or "none").strip() or "none"
-            client.add_text_widget(playlist_id, copy, duration, effect=effect)
+            client.add_text_widget(
+                playlist_id, copy, duration, effect=effect, region=region_name
+            )
         elif wtype in {"image", "html-package", ""}:
             asset_id = str(widget.get("asset") or "").strip()
             media_id = media_ids.get(asset_id)
@@ -588,6 +592,7 @@ def publish_exhibit_layout(
                 track_widgets,
                 media_ids=media_ids,
                 layout_duration=layout_duration,
+                region_name=region_name,
             )
 
     parent_id = int(draft.get("parentId") or published_layout_id)
