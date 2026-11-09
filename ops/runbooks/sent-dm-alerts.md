@@ -80,6 +80,12 @@ In the repo **Settings → Environments → `production` → Environment secrets
 | `MMEK_ALERT_EMAIL_TO` | Comma-separated emails |
 | `MMEK_SES_FROM_EMAIL` | Verified SES From address |
 
+The GitHub OIDC role `mmek-terraform-ci` must allow Lambda/SES/Logs/IAM role
+APIs for admin-alert. If apply fails with `AccessDenied` on `iam:CreateRole`,
+`ses:VerifyEmailIdentity`, or `logs:CreateLogGroup`, re-apply bootstrap locally
+([`infra/bootstrap/README.md`](../../infra/bootstrap/README.md)), then retry
+Infra apply.
+
 Then run **Infra apply** (`workflow_dispatch` on
 [`.github/workflows/infra-cd.yml`](../../.github/workflows/infra-cd.yml)) or push
 a change under `infra/**` to `main`. The workflow exports those as `TF_VAR_*`.
@@ -116,9 +122,11 @@ After a successful apply that creates the module:
 terraform output -raw alert_lambda_url
 ```
 
-Verify the SES From address (click the verification email if
-`create_ses_alert_identity=true`). Exit the SES sandbox before sending to
-arbitrary recipients.
+Verify the SES From address in the SES console first. Terraform defaults to
+`create_ses_alert_identity=false` (reference the verified address via
+`MMEK_SES_FROM_EMAIL` only). Set that flag to `true` only if you want Terraform
+to create/manage the identity. Exit the SES sandbox before sending to arbitrary
+recipients.
 
 Module details: [`infra/terraform/modules/admin-alert/`](../../infra/terraform/modules/admin-alert/).
 

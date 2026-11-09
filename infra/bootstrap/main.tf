@@ -203,6 +203,69 @@ data "aws_iam_policy_document" "terraform_ci" {
     ]
     resources = ["*"]
   }
+
+  # admin-alert Lambda + SES From identity (IAM role APIs are global).
+  statement {
+    sid    = "AdminAlertIamRoles"
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:PassRole",
+      "iam:ListInstanceProfilesForRole",
+    ]
+    resources = [
+      "arn:aws:iam::${local.account_id}:role/${var.project_name}-*-admin-alert-role",
+    ]
+  }
+
+  statement {
+    sid    = "AdminAlertLambdaSesLogs"
+    effect = "Allow"
+    actions = [
+      "lambda:CreateFunction",
+      "lambda:DeleteFunction",
+      "lambda:GetFunction",
+      "lambda:GetFunctionConfiguration",
+      "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
+      "lambda:ListVersionsByFunction",
+      "lambda:PublishVersion",
+      "lambda:CreateFunctionUrlConfig",
+      "lambda:DeleteFunctionUrlConfig",
+      "lambda:GetFunctionUrlConfig",
+      "lambda:UpdateFunctionUrlConfig",
+      "lambda:AddPermission",
+      "lambda:RemovePermission",
+      "lambda:GetPolicy",
+      "lambda:ListTags",
+      "lambda:TagResource",
+      "lambda:UntagResource",
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:DescribeLogGroups",
+      "logs:PutRetentionPolicy",
+      "logs:DeleteRetentionPolicy",
+      "logs:ListTagsForResource",
+      "logs:TagResource",
+      "logs:UntagResource",
+      "ses:VerifyEmailIdentity",
+      "ses:DeleteIdentity",
+      "ses:GetIdentityVerificationAttributes",
+      "ses:ListIdentities",
+      "ses:GetSendQuota",
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "terraform_ci" {
