@@ -618,6 +618,36 @@ class XiboClient:
     def delete_region(self, region_id: int) -> None:
         self.request("DELETE", f"/api/region/{region_id}")
 
+    def edit_region(
+        self,
+        region_id: int,
+        *,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        top: Optional[int] = None,
+        left: Optional[int] = None,
+        z_index: Optional[int] = None,
+        background_color: Optional[str] = None,
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        if width is not None:
+            data["width"] = int(width)
+        if height is not None:
+            data["height"] = int(height)
+        if top is not None:
+            data["top"] = int(top)
+        if left is not None:
+            data["left"] = int(left)
+        if z_index is not None:
+            data["zIndex"] = int(z_index)
+        if background_color is not None:
+            data["backgroundColor"] = background_color
+        if not data:
+            return {}
+        payload = self.request("PUT", f"/api/region/{region_id}", data=data)
+        result = payload[0] if isinstance(payload, list) else (payload or {})
+        return result if isinstance(result, dict) else {}
+
     def edit_layout(
         self,
         layout_id: int,
@@ -736,12 +766,14 @@ class XiboClient:
         plain = " ".join(text.split())
         band_bg = "#0A2A3A"
         if effect_key == "tickerScroll":
+            # Region background paints the band; marquee HTML must stay text-only
+            # (a width:100% colored box scrolls as a panel and dies mid-pass).
+            crawl = f"{plain}        ·        " * 4
             html = (
-                "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
-                "font-size:34px;line-height:1.2;font-weight:600;color:#E8F4F8;"
-                f"background:{band_bg};padding:28px 32px;box-sizing:border-box;"
-                "width:100%;height:100%;white-space:nowrap;\">"
-                f"{_escape_html(plain)}</div>"
+                "<span style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
+                "font-size:34px;line-height:140px;font-weight:600;color:#E8F4F8;"
+                "white-space:nowrap;padding:0 32px;\">"
+                f"{_escape_html(crawl.strip())}</span>"
             )
             edit_payload: dict[str, Any] = {
                 "duration": duration,
@@ -749,7 +781,7 @@ class XiboClient:
                 "text": html,
                 "ta_text": html,
                 "effect": "marqueeLeft",
-                "speed": 1,
+                "speed": 2,
             }
         else:
             html = (
@@ -778,7 +810,7 @@ class XiboClient:
             }
             if effect_key == "tickerScroll":
                 fallback["effect"] = "marqueeLeft"
-                fallback["speed"] = 1
+                fallback["speed"] = 2
             self.edit_widget(widget_id, fallback)
         return widget_id
 

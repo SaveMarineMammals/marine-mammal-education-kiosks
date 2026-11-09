@@ -146,6 +146,8 @@ body {
   width: 1120px;
   height: 140px;
   inset: auto;
+  /* Matches CMS ticker region backgroundColor (band stays fixed; text marquees). */
+  background: #0a2a3a;
 }
 
 #stage.glance-and-match #layer-hero .widget.img-widget img {

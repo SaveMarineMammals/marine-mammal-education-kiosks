@@ -67,7 +67,8 @@ second gap between `insights-copy` and `ticker`, so card copy and CTA never sit
 as two adjacent text blocks.
 
 Set `template: glance-and-match` and `durationSeconds` to one full insight cycle
-(typically **24s** = 4 x 6s).
+(typically **24s** = 4 x 6s). Also set `layoutHoldSeconds: 3600` so the CMS keeps
+hero/ticker held while insight playlists repeat (avoids a black flash every cycle).
 
 ### Zone A — Static hero (Tier 1)
 
@@ -89,6 +90,8 @@ Set `template: glance-and-match` and `durationSeconds` to one full insight cycle
 - **Split art and copy into separate regions** (`insights-art` + `insights-copy`).
   Never stack card text over the illustration in the same region.
 - Fade art and copy **together** on the same card window.
+- First card: `transitionIn: none`; last card: `transitionOut: none` so the
+  playlist wrap does not flash empty between cycles.
 - Right pane must have `insights-bg` (teal/habitat wash with a soft left-edge
   divider) so Zone A and Zone B are visually separated. Do not rely on the default
   black player canvas.
@@ -105,11 +108,11 @@ Set `template: glance-and-match` and `durationSeconds` to one full insight cycle
 
 These rules come from live Xibo Linux Player QA failures. Follow them exactly.
 
-### Text + background must be one widget
+### Card copy + background must be one widget
 
-- Paint card-copy and ticker band color **inside the text widget HTML**
+- Paint **card-copy** band color **inside the text widget HTML**
   (e.g. `background:#0A2A3A` on the content div).
-- Do **not** place a separate scrim/image behind the text.
+- Do **not** place a separate scrim/image behind card copy.
 - Why: Xibo aspect-fits images to the region. A scrim whose pixel aspect does not
   match the region is scaled and **centered**, while text stays left-aligned —
   the dark “highlight” drifts away from the glyphs.
@@ -117,8 +120,10 @@ These rules come from live Xibo Linux Player QA failures. Follow them exactly.
 ### Ticker must use native marquee
 
 - Timeline sets `effect: tickerScroll`.
-- QA publisher (`ops/qa/run_qa_pipeline.py` `add_text_widget`) must map that to
-  Xibo native **`effect=marqueeLeft`** with a slow **`speed`** (e.g. `1`).
+- Publisher maps that to Xibo native **`effect=marqueeLeft`** with **`speed: 2`**,
+  duplicates the CTA for a continuous crawl, and sets the ticker region
+  `backgroundColor` to the band color. Marquee HTML must be **text-only** — a
+  full-size colored `width:100%` box scrolls as a panel and dies mid-pass.
 - Do **not** rely on CSS `@keyframes` / HTML marquee animations inside text HTML —
   they stay **frozen** on the Linux player even when Chromium preview scrolls.
 - CTA copy should be a single short sentence (not a pipe-joined slogan list).

@@ -5,7 +5,9 @@
 
 layoutId: asian-small-clawed-otters-glance-and-match
 template: glance-and-match
+# One insight cycle (4 x 6s). CMS hold keeps hero/ticker alive while cards repeat.
 durationSeconds: 24
+layoutHoldSeconds: 3600
 loop: true
 resolution: { width: 1920, height: 1080 }
 
@@ -69,7 +71,8 @@ regions:
         asset: graphic-diet-paws
         startSeconds: 0
         durationSeconds: 6
-        transitionIn: fade
+        # No fade-in on first card — seamless when the insight playlist repeats.
+        transitionIn: none
         transitionOut: fade
         transitionDurationMs: 500
 
@@ -97,7 +100,8 @@ regions:
         startSeconds: 18
         durationSeconds: 6
         transitionIn: fade
-        transitionOut: fade
+        # No fade-out on last card — seamless wrap to card 1.
+        transitionOut: none
         transitionDurationMs: 500
 
   insights-copy:
@@ -109,7 +113,7 @@ regions:
         card: 1
         startSeconds: 0
         durationSeconds: 6
-        transitionIn: fade
+        transitionIn: none
         transitionOut: fade
         transitionDurationMs: 500
         effect: none
@@ -158,7 +162,7 @@ regions:
         startSeconds: 18
         durationSeconds: 6
         transitionIn: fade
-        transitionOut: fade
+        transitionOut: none
         transitionDurationMs: 500
         effect: none
         copy: |
@@ -186,4 +190,4 @@ cueSheet:
   - { t: 6, action: "insights: Threat art + copy" }
   - { t: 12, action: "insights: Hidden Fact art + copy" }
   - { t: 18, action: "insights: How to Help art + copy" }
-  - { t: 24, action: "layout loops to t=0 (hero never changes)" }
+  - { t: 24, action: "insight cycle repeats (hero/ticker held; no layout reload)" }
