@@ -180,8 +180,8 @@ body {
 
 #stage.glance-and-match #layer-hero-labels .text-widget,
 #stage.glance-and-match #layer-hero .text-widget {
-  align-items: flex-start;
-  padding-top: 8px;
+  align-items: stretch;
+  padding: 0;
 }
 
 #stage.glance-and-match #layer-hero-labels .text-widget .scrim,
@@ -189,6 +189,14 @@ body {
   background: rgba(8, 24, 40, 0.62);
   white-space: pre-wrap;
   font-size: 40px;
+  line-height: 1.3;
+  padding: 20px 24px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+  max-width: none;
+  display: block;
 }
 
 #stage.glance-and-match #layer-ticker .text-widget {
