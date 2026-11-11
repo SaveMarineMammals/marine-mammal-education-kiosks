@@ -33,9 +33,6 @@ LOG = logging.getLogger("xibo_qa")
 
 QA_DIR = Path(__file__).resolve().parent
 REPO_ROOT = QA_DIR.parent.parent
-TOOLS_DIR = REPO_ROOT / "tools"
-if str(TOOLS_DIR) not in sys.path:
-    sys.path.insert(0, str(TOOLS_DIR))
 EXHIBITS_DIR = REPO_ROOT / "exhibits"
 COMPOSE_FILE = QA_DIR / "docker-compose.test.yml"
 PLAYER_RUNTIME_DIR = QA_DIR / "player-runtime"
@@ -1043,7 +1040,6 @@ class XiboClient:
         duration: int,
         *,
         effect: str = "none",
-        region: Optional[str] = None,
     ) -> int:
         duration = max(1, int(duration))
         widget: Optional[dict[str, Any]] = None
@@ -1076,6 +1072,7 @@ class XiboClient:
         # Card copy still paints band inside the text widget (glyphs + bg share
         # one box). Ticker band is the region backgroundColor — marquee HTML
         # must stay text-only so the player does not scroll a full-size panel.
+        band_bg = "#0A2A3A"
         if effect_key == "tickerScroll":
             crawl = f"{plain}        ·        " * 4
             html = (
@@ -1094,9 +1091,13 @@ class XiboClient:
                 "speed": 2,
             }
         else:
-            from xibo_client import _plain_text_widget_html  # noqa: WPS433 — tools on sys.path
-
-            html = _plain_text_widget_html(text, region=region)
+            html = (
+                "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
+                "font-size:36px;line-height:1.35;font-weight:600;color:#F4F8FC;"
+                f"background:{band_bg};padding:24px 28px;box-sizing:border-box;"
+                "width:100%;height:100%;white-space:pre-wrap;\">"
+                f"{_escape_html(text)}</div>"
+            )
             edit_payload = {
                 "duration": duration,
                 "useDuration": 1,

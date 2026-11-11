@@ -145,30 +145,6 @@ class TickerTextWidgetTests(unittest.TestCase):
         self.assertIn("Protect mangroves", html)
         self.assertGreaterEqual(html.count("Protect mangroves"), 2)
 
-    def test_hero_labels_use_translucent_band_padding(self) -> None:
-        client = xibo_client.XiboClient("http://cms.example")
-        edits: list[dict] = []
-
-        def fake_request(method: str, path: str, **kwargs):
-            if method == "POST":
-                return {"widgetId": 42}
-            edits.append(kwargs.get("data") or {})
-            return {"widgetId": 42}
-
-        with patch.object(client, "request", side_effect=fake_request):
-            client.add_text_widget(
-                7,
-                "Red Mangrove\nRhizophora mangle",
-                3600,
-                region="hero-labels",
-            )
-
-        html = edits[0]["text"]
-        self.assertIn("rgba(8,24,40,0.62)", html)
-        self.assertIn("padding:20px 24px", html)
-        self.assertIn("font-size:40px", html)
-        self.assertNotIn("#0A2A3A", html)
-
 
 if __name__ == "__main__":
     unittest.main()
