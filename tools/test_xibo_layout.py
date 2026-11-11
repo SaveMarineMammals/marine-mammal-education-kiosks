@@ -50,7 +50,7 @@ class FillPlaylistTests(unittest.TestCase):
             client, 9, widgets, media_ids={}, layout_duration=3600
         )
         client.add_text_widget.assert_called_once_with(
-            9, "Protect mangroves", 3600, effect="tickerScroll", region=None
+            9, "Protect mangroves", 3600, effect="tickerScroll"
         )
         client.add_spacer_widget.assert_not_called()
 

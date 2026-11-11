@@ -91,27 +91,6 @@ def _escape_html(value: str) -> str:
     )
 
 
-def _plain_text_widget_html(text: str, *, region: Optional[str] = None) -> str:
-    """HTML body for a non-ticker text widget (region selects hero vs insight band)."""
-    region_key = (region or "").strip()
-    if region_key == "hero-labels":
-        return (
-            "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
-            "font-size:40px;line-height:1.3;font-weight:600;color:#F4F8FC;"
-            "background:rgba(8,24,40,0.62);padding:20px 24px;box-sizing:border-box;"
-            "width:100%;height:100%;white-space:pre-wrap;\">"
-            f"{_escape_html(text)}</div>"
-        )
-    band_bg = "#0A2A3A"
-    return (
-        "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
-        "font-size:36px;line-height:1.35;font-weight:600;color:#F4F8FC;"
-        f"background:{band_bg};padding:24px 28px;box-sizing:border-box;"
-        "width:100%;height:100%;white-space:pre-wrap;\">"
-        f"{_escape_html(text)}</div>"
-    )
-
-
 def _mime_for_path(path: Path) -> str:
     guessed, _ = mimetypes.guess_type(str(path))
     if guessed:
@@ -756,7 +735,6 @@ class XiboClient:
         duration: int,
         *,
         effect: str = "none",
-        region: Optional[str] = None,
     ) -> int:
         duration = max(1, int(duration))
         widget: Optional[dict[str, Any]] = None
@@ -786,6 +764,7 @@ class XiboClient:
 
         effect_key = (effect or "none").strip()
         plain = " ".join(text.split())
+        band_bg = "#0A2A3A"
         if effect_key == "tickerScroll":
             # Region background paints the band; marquee HTML must stay text-only
             # (a width:100% colored box scrolls as a panel and dies mid-pass).
@@ -805,7 +784,13 @@ class XiboClient:
                 "speed": 2,
             }
         else:
-            html = _plain_text_widget_html(text, region=region)
+            html = (
+                "<div style=\"font-family:'Source Sans 3',Segoe UI,sans-serif;"
+                "font-size:36px;line-height:1.35;font-weight:600;color:#F4F8FC;"
+                f"background:{band_bg};padding:24px 28px;box-sizing:border-box;"
+                "width:100%;height:100%;white-space:pre-wrap;\">"
+                f"{_escape_html(text)}</div>"
+            )
             edit_payload = {
                 "duration": duration,
                 "useDuration": 1,
