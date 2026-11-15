@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+TOOLS = Path(__file__).resolve().parent
+if str(TOOLS) not in sys.path:
+    sys.path.insert(0, str(TOOLS))
+from pathutil import is_git_lfs_pointer  # noqa: E402
+
 EXHIBITS = ROOT / "exhibits"
 FRAMEWORK = ROOT / "framework"
 SCHEMAS = ROOT / "schemas"
@@ -170,17 +175,6 @@ def validate_catalog(catalog: dict[str, Any], exhibit_dirs: list[Path]) -> list[
         if entry.get("path") != expected_path:
             errors.append(f"catalog path for {d.name} should be {expected_path}")
     return errors
-
-
-def is_git_lfs_pointer(path: Path) -> bool:
-    """True when the working tree file is an unresolved Git LFS pointer stub."""
-    try:
-        if path.stat().st_size > 1024:
-            return False
-        head = path.read_bytes()[:120]
-    except OSError:
-        return False
-    return head.startswith(b"version https://git-lfs.github.com/spec/")
 
 
 def file_sha256(path: Path) -> str:

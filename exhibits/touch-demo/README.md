@@ -16,6 +16,29 @@ If the text layout appears but the large left-pane box is blank, Arexibo is not
 playing the HTML package (`.htz`). The rest of the layout is intentionally
 native text so a failed HTZ cannot blank the whole screen.
 
+### Blank button box (Git LFS / CMS library)
+
+The touch-toggle package is `touch-toggle.zip` in git (uploaded as `.htz`). If CMS
+sync ran while that file was still an **LFS pointer stub**, the library holds an
+invalid HTZ and the player shows an empty region even though text widgets work.
+
+On the machine that runs **CMS preview sync**:
+
+```bash
+git lfs pull --include="exhibits/touch-demo/media/assets/touch-toggle.zip"
+python3 tools/validate_exhibits.py --exhibit touch-demo --skip-secrets
+```
+
+Re-run preview sync, then let the Pi collect (or restart the player):
+
+```bash
+python3 tools/sync_cms.py --preview --exhibit touch-demo
+```
+
+`sync_media` and `upload_media` refuse LFS pointer files so a bad upload cannot
+repeat. Delete stale `preview-touch-demo-touch-toggle` library rows only if sync
+reuses a broken file without re-uploading (rare once sha256 tags match).
+
 ## Before scheduling
 
 Confirm the panel USB touch cable is connected and HID is visible

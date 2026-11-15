@@ -307,6 +307,14 @@ class XiboClient:
         if not file_path.is_file():
             raise XiboError(f"Media file not found: {file_path}")
 
+        from pathutil import is_git_lfs_pointer
+
+        if is_git_lfs_pointer(file_path):
+            raise XiboError(
+                f"Refusing to upload Git LFS pointer at {file_path} — "
+                "run `git lfs pull` (CMS preview sync needs real binaries)"
+            )
+
         display_name = name or file_path.stem
         mime = _mime_for_path(file_path)
         if file_path.suffix.lower() == ".zip":
