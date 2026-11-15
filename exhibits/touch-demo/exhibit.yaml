@@ -3,12 +3,13 @@ id: "00000000-0000-4000-8000-000000000005"
 slug: touch-demo
 title: Touch Hardware Demo
 status: draft
-version: 0.1.0
+version: 0.2.0
 summary: >
-  Ops-only full-screen HTML probe that reports which pointer and touch
-  behaviors reach Arexibo on a Pi-driven touchscreen (tap, multi-finger,
-  drag, long-press, pinch, edge accuracy). Not visitor education content.
-species: []
+  Ops Glance & Match copy of the otter tank panel with one extra touch-toggle
+  control that shows and hides an info label. Used to validate USB HID touch
+  on a Pi-driven panel without replacing the whole canvas with HTML.
+species:
+  - Aonyx cinereus
 topics:
   - ops
   - touch
@@ -17,7 +18,7 @@ tags:
   - ops
   - touch
   - demo
-  - html-interactive
+  - glance-and-match
 displayGroups:
   - lobby
-layoutTemplate: html-interactive
+layoutTemplate: glance-and-match

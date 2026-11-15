@@ -1,21 +1,195 @@
 # Widget timeline script — Touch Hardware Demo
-# Full-canvas offline HTML package for physical Pi + panel touch validation.
+# Glance & Match otter panel plus a bottom-hero touch-toggle overlay.
+# Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
 
-layoutId: touch-demo-html-interactive
-template: html-interactive
-durationSeconds: 3600
+layoutId: touch-demo-glance-and-match
+template: glance-and-match
+# One insight cycle (4 x 6s). CMS hold keeps hero/ticker alive while cards repeat.
+durationSeconds: 24
 layoutHoldSeconds: 3600
 loop: true
 resolution: { width: 1920, height: 1080 }
 
 regions:
-  html:
+  insights-bg:
     widgets:
-      - id: touch-probe
-        type: html-package
-        asset: touch-probe
+      - id: panel-insights
+        type: image
+        asset: bg-insights-panel
         startSeconds: 0
-        durationSeconds: 3600
+        durationSeconds: 24
         transitionIn: none
         transitionOut: none
-        notes: Offline touch diagnostic UI; hold layout until schedule change.
+
+  hero-bg:
+    widgets:
+      - id: hero-wetland
+        type: image
+        asset: bg-hero-wetland
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-still:
+    widgets:
+      - id: hero-otter-id
+        type: image
+        asset: graphic-otter-silhouette
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        notes: Transparent PNG in the lower hero frame for 3-second tank match.
+
+  hero-labels:
+    widgets:
+      - id: hero-labels
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          Asian Small-Clawed Otter
+          Aonyx cinereus
+
+          Touch Demo
+          Tap Show info below
+          Ops panel check
+
+  insights-art:
+    widgets:
+      - id: icon-diet
+        type: image
+        asset: graphic-diet-paws
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: none
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-threat
+        type: image
+        asset: graphic-threat-wetland
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-hidden-fact
+        type: image
+        asset: graphic-fact-family
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-how-to-help
+        type: image
+        asset: graphic-help-donate
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: none
+        transitionDurationMs: 500
+
+  insights-copy:
+    widgets:
+      - id: card-diet
+        type: text
+        card: 1
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: none
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Diet
+
+          - Hunt crabs, snails, and shrimp
+          - Feel for food with soft paws
+          - Love shallow wetlands and rice fields
+
+      - id: card-threat
+        type: text
+        card: 2
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Threat
+
+          - Wetlands shrink when people fill them
+          - Illegal pet trade takes wild otters
+          - Dirty water poisons their crab meals
+
+      - id: card-hidden-fact
+        type: text
+        card: 3
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Hidden Fact
+
+          - Smallest otter species on Earth
+          - Live in family groups up to 15
+          - Use 12 or more calls to stay together
+
+      - id: card-how-to-help
+        type: text
+        card: 4
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: none
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          How to Help
+
+          - Never keep wild otters as pets
+          - Keep trash and plastic out of water
+          - Share what you learned today
+
+  ticker:
+    widgets:
+      - id: ticker-cta
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: tickerScroll
+        copy: |
+          Touch demo: tap Show info on the hero, then Hide info
+
+  touch-toggle:
+    # Overlay on lower hero — isolated HTZ so a blank package cannot wipe the layout.
+    widgets:
+      - id: touch-toggle
+        type: html-package
+        asset: touch-toggle
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        notes: Offline button toggles an info label on and off.
+
+cueSheet:
+  - { t: 0, action: "hero + touch toggle; Diet art + copy; ticker on" }
+  - { t: 6, action: "insights: Threat art + copy" }
+  - { t: 12, action: "insights: Hidden Fact art + copy" }
+  - { t: 18, action: "insights: How to Help art + copy" }
+  - { t: 24, action: "insight cycle repeats (hero/ticker/toggle held; no layout reload)" }

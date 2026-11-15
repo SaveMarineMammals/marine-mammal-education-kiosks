@@ -1,4 +1,5 @@
-# Touch Hardware Demo (ops copy)
+# Touch Hardware Demo
 
-This exhibit has no visitor-facing timeline copy. All UI text lives in the
-offline HTML package (`media/assets/touch-probe.html` / `.zip`).
+Visitor-facing timeline copy matches the otter Glance & Match cards (plain text
+in `layouts/timeline.yaml`). The Show info / Hide info control text lives in the
+offline HTML package `media/assets/touch-toggle.html`.

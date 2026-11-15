@@ -46,6 +46,16 @@ HTML_INTERACTIVE_REGIONS: dict[str, dict[str, int]] = {
     "html": {"left": 0, "top": 0, "width": 1920, "height": 1080, "zIndex": 0},
 }
 
+# Optional Glance & Match overlay (ops touch demos). Lower hero strip above the
+# bottom safe margin so a failed HTZ cannot blank the full canvas.
+TOUCH_TOGGLE_REGION: dict[str, int] = {
+    "left": 40,
+    "top": 900,
+    "width": 720,
+    "height": 140,
+    "zIndex": 5,
+}
+
 # Fixed ticker band color (region background). Do not paint this on marquee HTML —
 # a full-size scrolling box never finishes a pass before the layout reloads.
 TICKER_BAND_BG = "#0A2A3A"
@@ -84,6 +94,17 @@ def preview_layout_name() -> str:
     return PREVIEW_LAYOUT_NAME
 
 
+def _with_optional_touch_toggle(
+    geometry: dict[str, dict[str, int]],
+    region_names: set[str],
+) -> dict[str, dict[str, int]]:
+    if "touch-toggle" not in region_names:
+        return geometry
+    out = dict(geometry)
+    out["touch-toggle"] = dict(TOUCH_TOGGLE_REGION)
+    return out
+
+
 def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str, int]]:
     template = str(timeline.get("template") or "").strip()
     regions = timeline.get("regions") or {}
@@ -101,15 +122,18 @@ def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str
     }
     if template == "glance-and-match" or region_names & glance_keys:
         if "hero-bg" in region_names or "hero-still" in region_names:
-            return GLANCE_AND_MATCH_REGIONS
+            return _with_optional_touch_toggle(GLANCE_AND_MATCH_REGIONS, region_names)
         if "insights-art" in region_names or "insights-copy" in region_names:
-            return {
-                "insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"],
-                "hero": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
-                "insights-art": GLANCE_AND_MATCH_REGIONS["insights-art"],
-                "insights-copy": GLANCE_AND_MATCH_REGIONS["insights-copy"],
-                "ticker": GLANCE_AND_MATCH_REGIONS["ticker"],
-            }
+            return _with_optional_touch_toggle(
+                {
+                    "insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"],
+                    "hero": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
+                    "insights-art": GLANCE_AND_MATCH_REGIONS["insights-art"],
+                    "insights-copy": GLANCE_AND_MATCH_REGIONS["insights-copy"],
+                    "ticker": GLANCE_AND_MATCH_REGIONS["ticker"],
+                },
+                region_names,
+            )
         legacy = {
             "hero": {"left": 0, "top": 0, "width": 800, "height": 1080, "zIndex": 1},
             "insights": {
@@ -123,7 +147,7 @@ def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str
         }
         if "insights-bg" in region_names:
             legacy = {"insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"], **legacy}
-        return legacy
+        return _with_optional_touch_toggle(legacy, region_names)
     if template == "html-interactive" or region_names == {"html"}:
         return HTML_INTERACTIVE_REGIONS
     return LAYERED_STILLS_REGIONS

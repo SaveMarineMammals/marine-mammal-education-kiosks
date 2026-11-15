@@ -14,10 +14,9 @@ dayparts:
     start: "00:00"
     end: "23:59"
 notes: >
-  Lab/ops only. Schedule mmek-touch-demo on one physical kiosk while validating
-  USB touch HID. Layout hold is 3600 seconds so the probe does not reload mid
-  test; remove from the schedule (or replace with attract) when finished.
-  Idle return (60-120s) does not apply -- this exhibit is the session itself,
-  not an interactive overlay on visitor content. Do not leave scheduled on
-  public lobby groups after commissioning.
+  Lab/ops only. Schedule mmek-touch-demo (or mmek-preview) on one physical
+  kiosk while validating USB touch. Layout hold is 3600 seconds so the otter
+  Glance & Match panel and the touch-toggle overlay stay up. Remove from the
+  schedule when finished. Do not leave on public lobby groups after
+  commissioning.
 ```
