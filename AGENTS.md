@@ -127,6 +127,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Media policy / hashes | `docs/media-policy.md`, `exhibits/<slug>/media/manifest.yaml` |
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
+| CMS branch preview (manual) | `.github/workflows/cms-preview.yml`, `tools/sync_cms.py --preview`, `ops/runbooks/cms-content-sync.md` |
 | Facility DNS / ACME IAM (Terraform) | `infra/`, `docs/infra-pipelines.md`, `ops/cms/caddy/` |
 | Security patching + admin alerts | `ops/runbooks/security-patching.md`, `ops/runbooks/sent-dm-alerts.md`, `infra/terraform/modules/admin-alert/` |
 | Facility Tailscale (CMS + players) | `ops/runbooks/facility-tailscale.md`, `ops/cms/scripts/install-tailscale.sh` |
@@ -146,7 +147,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | [docs/media-policy.md](docs/media-policy.md) | In-repo vs media-store binaries |
 | [docs/exhibit-authoring.md](docs/exhibit-authoring.md) | New exhibit checklist |
 | [docs/local-testing.md](docs/local-testing.md) | Tier 1–3 quality checks |
-| [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts (no schedules) |
+| [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts; optional branch preview (`mmek-preview`) |
 | [ops/runbooks/security-patching.md](ops/runbooks/security-patching.md) | Off-hours OS/stack updates + Lambda alerts |
 | [ops/runbooks/sent-dm-alerts.md](ops/runbooks/sent-dm-alerts.md) | Sent.dm SMS template + API key for alerts |
 | [docs/infra-pipelines.md](docs/infra-pipelines.md) | AWS Terraform CI + Route 53 / LE DNS-01 / admin-alert |

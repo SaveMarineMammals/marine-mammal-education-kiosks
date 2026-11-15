@@ -28,15 +28,18 @@
 
    Review `ops/qa/artifacts/` stills/video. Treat a black frame or empty `regions`
    as a publish blocker even though this job is not a required merge check yet.
-5. Set `exhibit.yaml` `status` to `review`, then `published` after sign-off.
-6. Merge to `main`. CMS content sync (self-hosted runner + daily timer) uploads
+5. Optional **facility preview** before merge: Actions → **CMS preview sync** on
+   the PR branch (sets layout `mmek-preview` on the preview display group only).
+   See [cms-content-sync.md](cms-content-sync.md#branch-preview-before-merge).
+6. Set `exhibit.yaml` `status` to `review`, then `published` after sign-off.
+7. Merge to `main`. CMS content sync (self-hosted runner + daily timer) uploads
    Library media and upserts layout **`mmek-<slug>`** automatically — see
    [cms-content-sync.md](cms-content-sync.md). Manual fallback:
    [media-sync.md](../cms/media-sync.md).
-7. Confirm layout `mmek-<slug>` exists in CMS and regions look correct.
-8. **Locally in CMS**, schedule the `mmek-<slug>` campaign onto the intended
+8. Confirm layout `mmek-<slug>` exists in CMS and regions look correct.
+9. **Locally in CMS**, schedule the `mmek-<slug>` campaign onto the intended
    **display groups** (use `schedule/intent.yaml` as human intent only — sync
    never mutates schedules).
-9. Spot-check on at least one physical Pi.
-10. Update `exhibits/_catalog.yaml` status/version to match (`python tools/catalog.py --write`
+10. Spot-check on at least one physical Pi.
+11. Update `exhibits/_catalog.yaml` status/version to match (`python tools/catalog.py --write`
     after editing `exhibit.yaml`, or edit the catalog by hand).

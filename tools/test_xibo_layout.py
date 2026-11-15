@@ -82,5 +82,32 @@ class FillPlaylistTests(unittest.TestCase):
         client.add_spacer_widget.assert_not_called()
 
 
+class PreviewLayoutNamingTests(unittest.TestCase):
+    def test_preview_layout_is_stable_slot_not_per_slug(self) -> None:
+        self.assertEqual(xibo_layout.preview_layout_name(), "mmek-preview")
+        self.assertEqual(xibo_layout.PREVIEW_LAYOUT_NAME, "mmek-preview")
+        self.assertNotEqual(
+            xibo_layout.preview_layout_name(),
+            xibo_layout.stable_layout_name("asian-small-clawed-otters"),
+        )
+
+    def test_stable_production_name_unchanged(self) -> None:
+        self.assertEqual(
+            xibo_layout.stable_layout_name("red-mangrove"),
+            "mmek-red-mangrove",
+        )
+
+    def test_preview_dry_run_uses_preview_layout_name(self) -> None:
+        result = xibo_layout.upsert_exhibit_layout(
+            None,
+            exhibit_slug="asian-small-clawed-otters",
+            layout_name=xibo_layout.PREVIEW_LAYOUT_NAME,
+            extra_tags=[xibo_layout.PREVIEW_TAG],
+            dry_run=True,
+        )
+        self.assertEqual(result["layout_name"], "mmek-preview")
+        self.assertNotEqual(result["layout_name"], "mmek-asian-small-clawed-otters")
+
+
 if __name__ == "__main__":
     unittest.main()

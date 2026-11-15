@@ -2,8 +2,9 @@
 """Sync exhibit media into Xibo CMS Library.
 
 Resolves repo-relative URIs and optional MEDIA_STORE_URI objects, verifies
-sha256, uploads when missing/outdated, places under exhibits/<slug>, and
-applies xiboTags plus a CMS-safe sha256 prefix / mmek:managed.
+sha256, uploads when missing/outdated, places under exhibits/<slug> (or
+exhibits-preview/<slug> for branch preview), and applies xiboTags plus a
+CMS-safe sha256 prefix / mmek:managed (plus mmek:preview in preview mode).
 
 Usage:
   python tools/sync_media.py --exhibit humpback-migration --dry-run
@@ -41,6 +42,7 @@ except ImportError:  # pragma: no cover
 XIBO_TAG_MAX_LEN = 50
 _HASH_TAG_PREFIX = "sha256:"
 _HASH_TAG_HEX_LEN = XIBO_TAG_MAX_LEN - len(_HASH_TAG_PREFIX)
+PREVIEW_TAG = "mmek:preview"
 
 
 def content_hash_tag(digest: str) -> str:
@@ -57,7 +59,13 @@ def content_hash_tag(digest: str) -> str:
     return f"{_HASH_TAG_PREFIX}{hex_digest[:_HASH_TAG_HEX_LEN]}"
 
 
-def library_tags(slug: str, asset_tags: list[Any], digest: str) -> list[str]:
+def library_tags(
+    slug: str,
+    asset_tags: list[Any],
+    digest: str,
+    *,
+    preview: bool = False,
+) -> list[str]:
     """Tags applied to one Library item, all within Xibo's length limit."""
     tags = [str(t).strip() for t in asset_tags if str(t).strip()]
     tags = [t for t in tags if not t.lower().startswith(_HASH_TAG_PREFIX)]
@@ -66,6 +74,8 @@ def library_tags(slug: str, asset_tags: list[Any], digest: str) -> list[str]:
         tags.insert(0, exhibit_tag)
     if "mmek:managed" not in tags:
         tags.append("mmek:managed")
+    if preview and PREVIEW_TAG not in tags:
+        tags.append(PREVIEW_TAG)
     if digest.strip():
         tags.append(content_hash_tag(digest))
     for tag in tags:
@@ -199,9 +209,40 @@ def plan_uploads(manifest: dict) -> list[dict]:
     return [a for a in assets if isinstance(a, dict)]
 
 
-def library_name_for(slug: str, asset: dict[str, Any]) -> str:
+def library_name_for(
+    slug: str,
+    asset: dict[str, Any],
+    *,
+    preview: bool = False,
+) -> str:
     asset_id = str(asset.get("id") or "asset").strip()
+    if preview:
+        return f"preview-{slug}-{asset_id}"
     return f"{slug}-{asset_id}"
+
+
+def library_folder_segments(slug: str, *, preview: bool = False) -> list[str]:
+    if preview:
+        return ["exhibits-preview", slug]
+    return ["exhibits", slug]
+
+
+def orphan_preview_media_ids(
+    tagged_items: list[dict[str, Any]],
+    keep_ids: set[int],
+) -> list[int]:
+    """Media ids tagged for preview that are not used by the current sync."""
+    orphans: list[int] = []
+    for item in tagged_items:
+        if not isinstance(item, dict):
+            continue
+        raw = item.get("mediaId") if item.get("mediaId") is not None else item.get("id")
+        if raw in (None, "", 0, "0"):
+            continue
+        mid = int(raw)
+        if mid not in keep_ids:
+            orphans.append(mid)
+    return orphans
 
 
 def sync_exhibit_media(
@@ -209,13 +250,16 @@ def sync_exhibit_media(
     *,
     client: Any = None,
     dry_run: bool = False,
+    preview: bool = False,
 ) -> dict[str, Any]:
     """Sync one exhibit's manifest assets. Returns media_ids map and stats."""
     manifest = load_manifest(slug)
     planned = plan_uploads(manifest)
+    folder_segments = library_folder_segments(slug, preview=preview)
+    folder_label = "/".join(folder_segments)
     folder_id = None
     if client is not None and not dry_run:
-        folder_id = client.ensure_folder_path(["exhibits", slug])
+        folder_id = client.ensure_folder_path(folder_segments)
 
     media_ids: dict[str, int] = {}
     uploaded = 0
@@ -228,14 +272,16 @@ def sync_exhibit_media(
             if not asset_id:
                 continue
             expected = str(asset.get("sha256") or "").strip().lower()
-            name = library_name_for(slug, asset)
-            tags = library_tags(slug, asset.get("xiboTags") or [], expected)
+            name = library_name_for(slug, asset, preview=preview)
+            tags = library_tags(
+                slug, asset.get("xiboTags") or [], expected, preview=preview
+            )
             hash_tag = content_hash_tag(expected) if expected else ""
 
             if dry_run or client is None:
                 print(
                     f"  - {asset_id}: {asset.get('uri')} "
-                    f"-> Library exhibits/{slug}/ ({asset.get('filename')}) as {name}"
+                    f"-> Library {folder_label}/ ({asset.get('filename')}) as {name}"
                 )
                 continue
 
@@ -276,6 +322,7 @@ def sync_exhibit_media(
         "uploaded": uploaded,
         "reused": reused,
         "media_ids": media_ids,
+        "preview": preview,
         "dry_run": dry_run or client is None,
     }
 

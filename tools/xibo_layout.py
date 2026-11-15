@@ -2,6 +2,9 @@
 
 Production layouts use the stable name ``mmek-<slug>`` so facility schedules
 that bind the layout campaign keep working across content refreshes.
+
+Branch preview uses a single shared layout name ``mmek-preview`` so a lab
+display group can stay scheduled while content is replaced each preview run.
 """
 
 from __future__ import annotations
@@ -17,6 +20,10 @@ LOG = logging.getLogger("mmek.xibo_layout")
 
 ROOT = Path(__file__).resolve().parents[1]
 EXHIBITS_DIR = ROOT / "exhibits"
+
+# Single CMS layout slot for manual branch preview (never mmek-<slug>).
+PREVIEW_LAYOUT_NAME = "mmek-preview"
+PREVIEW_TAG = "mmek:preview"
 
 LAYERED_STILLS_REGIONS: dict[str, dict[str, int]] = {
     "background": {"left": 0, "top": 0, "width": 1920, "height": 1080, "zIndex": 0},
@@ -67,6 +74,10 @@ def layout_hold_seconds(timeline: dict[str, Any]) -> int:
 
 def stable_layout_name(slug: str) -> str:
     return f"mmek-{slug}"
+
+
+def preview_layout_name() -> str:
+    return PREVIEW_LAYOUT_NAME
 
 
 def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str, int]]:
@@ -389,6 +400,7 @@ def upsert_exhibit_layout(
     exhibit_slug: str,
     layout_name: Optional[str] = None,
     media_ids: Optional[dict[str, int]] = None,
+    extra_tags: Optional[list[str]] = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Update-in-place (or create once) the stable layout for an exhibit."""
@@ -401,6 +413,10 @@ def upsert_exhibit_layout(
     cycle_seconds = max(1, int(timeline.get("durationSeconds") or 90))
     layout_duration = layout_hold_seconds(timeline)
     tags = [f"exhibit:{exhibit_slug}", "mmek:managed"]
+    for tag in extra_tags or []:
+        text = str(tag).strip()
+        if text and text not in tags:
+            tags.append(text)
 
     if dry_run:
         widgets = collect_timeline_widgets(timeline)
