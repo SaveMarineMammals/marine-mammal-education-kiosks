@@ -273,6 +273,35 @@ class XiboClient:
                         return True
         return False
 
+    def list_media_by_tag(self, tag: str) -> list[dict[str, Any]]:
+        """Return Library items that carry ``tag`` (exact tag match)."""
+        text = str(tag).strip()
+        if not text:
+            return []
+        payload = self.request(
+            "GET",
+            "/api/library",
+            params={"tags": text, "exactTags": 1},
+        )
+        items = (
+            payload
+            if isinstance(payload, list)
+            else payload.get("data")
+            if isinstance(payload, dict)
+            else None
+        )
+        if not isinstance(items, list):
+            return []
+        matched: list[dict[str, Any]] = []
+        for item in items:
+            if isinstance(item, dict) and self.media_has_tag(item, text):
+                matched.append(item)
+        return matched
+
+    def delete_media(self, media_id: int) -> None:
+        LOG.info("Deleting mediaId=%s", media_id)
+        self.request("DELETE", f"/api/library/{int(media_id)}")
+
     def upload_media(self, file_path: Path, name: Optional[str] = None) -> int:
         LOG.info("Uploading media %s", file_path)
         if not file_path.is_file():

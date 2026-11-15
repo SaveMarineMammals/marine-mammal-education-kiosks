@@ -68,15 +68,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /usr/bin/google-chrome-stable /usr/local/bin/chromium-browser
 
 # Download the official Xibo Linux Player snap and extract it (no snapd daemon at runtime).
-# Pin channel via build-arg so CI can bump deliberately.
+# Pin revision 108 (1.8-R6): latest/stable jumped to Chromium-based 4.x which lacks
+# bin/player + Boost libs this image/shim expect. Override deliberately when ready.
 ARG XIBO_PLAYER_SNAP_CHANNEL=stable
 ARG XIBO_PLAYER_SNAP_NAME=xibo-player
+ARG XIBO_PLAYER_SNAP_REVISION=108
 COPY download_player_snap.py /tmp/download_player_snap.py
 RUN mkdir -p /tmp/snap-dl \
     && cd /tmp/snap-dl \
     && python3 /tmp/download_player_snap.py \
          --name "${XIBO_PLAYER_SNAP_NAME}" \
          --channel "${XIBO_PLAYER_SNAP_CHANNEL}" \
+         --revision "${XIBO_PLAYER_SNAP_REVISION}" \
          --out "${XIBO_PLAYER_SNAP_NAME}.snap" \
     && SNAP_FILE="$(ls -1 *.snap | head -n1)" \
     && ls -lh "${SNAP_FILE}" \
@@ -87,7 +90,7 @@ RUN mkdir -p /tmp/snap-dl \
     && find /opt/xibo-player -maxdepth 4 -type f -name 'xibo-player*' | head -n 40 \
     && echo "Player extract complete"
 
-# Normalize binary paths used by entrypoint.sh
+# Normalize binary paths used by entrypoint.sh (1.8-R6 layout: bin/player + bin/options).
 RUN set -eux; \
     mkdir -p /opt/xibo-player/bin; \
     if [ -x /opt/xibo-player/bin/player ]; then \
@@ -95,6 +98,13 @@ RUN set -eux; \
     fi; \
     if [ -x /opt/xibo-player/bin/options ]; then \
       ln -sfn /opt/xibo-player/bin/options /opt/xibo-player/bin/xibo-player-options; \
+    fi; \
+    if [ ! -x /opt/xibo-player/bin/player ] || [ ! -x /opt/xibo-player/bin/options ]; then \
+      echo "ERROR: expected 1.8-R6 binaries under /opt/xibo-player/bin/{player,options}." >&2; \
+      echo "If the snap tip moved to 4.x, pin XIBO_PLAYER_SNAP_REVISION=108 (or adapt the QA image)." >&2; \
+      find /opt/xibo-player -maxdepth 3 -type f \( -name 'player' -o -name 'options' -o -name 'xibo-player' \) -print >&2 || true; \
+      ls -la /opt/xibo-player /opt/xibo-player/bin >&2 || true; \
+      exit 1; \
     fi; \
     ls -la /opt/xibo-player/bin/player /opt/xibo-player/bin/xibo-player /opt/xibo-player/bin/options
 

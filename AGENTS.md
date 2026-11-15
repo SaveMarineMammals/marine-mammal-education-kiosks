@@ -83,6 +83,32 @@ agent file writers on Windows can still produce CRLF on disk.
   copy outside Git, confirm the remote `head -1 file | od -An -tx1` ends in `0a`
   only (not `0d 0a`).
 
+### Runtime version pins (QA ↔ production)
+
+Keep facility and ephemeral QA stacks on **compatible, pinned** Xibo versions.
+Do not float “latest” channel tips in CI or golden images without a deliberate
+upgrade + capture validation.
+
+| Layer | Canonical pin | Notes |
+| --- | --- | --- |
+| Facility / QA CMS | `ghcr.io/xibosignage/xibo-cms:…` in [`ops/qa/docker-compose.test.yml`](ops/qa/docker-compose.test.yml) | QA compose tag should match (or be explicitly compatible with) the facility CMS Docker bundle. Bump both together when upgrading CMS. |
+| Pi kiosk player | [`ops/players/image/stage-kiosk/01-arexibo/AREXIBO_VERSION`](ops/players/image/stage-kiosk/01-arexibo/AREXIBO_VERSION) + [`ops/players/image/vendor/arexibo.manifest.yaml`](ops/players/image/vendor/arexibo.manifest.yaml) | Production uses **Arexibo** (arm64 `.deb`), not the Snap Store player. Keep `AREXIBO_VERSION`, manifest `version`/`sha256`/`release_tag`, and `player-image.yml` in sync. |
+| QA headless player | `XIBO_PLAYER_SNAP_REVISION` in [`ops/qa/Dockerfile.player`](ops/qa/Dockerfile.player) / [`ops/qa/config.env.example`](ops/qa/config.env.example) | Ephemeral Docker QA extracts the **xibo-player** snap (no snapd). Pin revision **108 (1.8-R6)** today — `latest/stable` is Chromium 4.x and breaks `bin/player` + the Boost QA shim. |
+
+Rules for agents:
+
+- When changing any pin above, update the table’s files in the **same PR** and note
+  upgrade debt (Qt ABI, snap layout, CMS API) in the PR body.
+- Do not set QA to an unpinned Snap `stable` tip, and do not bump Arexibo past the
+  mirrored manifest without a Pi image rebuild + soak.
+- After player or CMS pin changes, run **QA player capture**
+  (`ops/qa/run_qa_pipeline.py` or the `QA player capture` workflow) before treating
+  the change as done.
+- Pi Arexibo and the QA snap are different binaries; “consistent” means **compatible
+  CMS protocol / layout behavior**, not identical package names. Prefer upgrading the
+  QA image toward production’s player generation when facility moves off 1.8-era
+  assumptions — do not silently diverge.
+
 ### Quality checks
 
 Before opening a PR, run Tier 1 locally:
@@ -127,6 +153,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Media policy / hashes | `docs/media-policy.md`, `exhibits/<slug>/media/manifest.yaml` |
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
+| CMS branch preview (manual) | `.github/workflows/cms-preview.yml`, `tools/sync_cms.py --preview`, `ops/runbooks/cms-content-sync.md` |
 | Facility DNS / ACME IAM (Terraform) | `infra/`, `docs/infra-pipelines.md`, `ops/cms/caddy/` |
 | Security patching + admin alerts | `ops/runbooks/security-patching.md`, `ops/runbooks/sent-dm-alerts.md`, `infra/terraform/modules/admin-alert/` |
 | Facility Tailscale (CMS + players) | `ops/runbooks/facility-tailscale.md`, `ops/cms/scripts/install-tailscale.sh` |
@@ -146,7 +173,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | [docs/media-policy.md](docs/media-policy.md) | In-repo vs media-store binaries |
 | [docs/exhibit-authoring.md](docs/exhibit-authoring.md) | New exhibit checklist |
 | [docs/local-testing.md](docs/local-testing.md) | Tier 1–3 quality checks |
-| [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts (no schedules) |
+| [ops/runbooks/cms-content-sync.md](ops/runbooks/cms-content-sync.md) | Git main → Xibo media/layouts; optional branch preview (`mmek-preview`) |
 | [ops/runbooks/security-patching.md](ops/runbooks/security-patching.md) | Off-hours OS/stack updates + Lambda alerts |
 | [ops/runbooks/sent-dm-alerts.md](ops/runbooks/sent-dm-alerts.md) | Sent.dm SMS template + API key for alerts |
 | [docs/infra-pipelines.md](docs/infra-pipelines.md) | AWS Terraform CI + Route 53 / LE DNS-01 / admin-alert |

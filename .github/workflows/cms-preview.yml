@@ -1,0 +1,93 @@
+name: CMS preview sync
+
+# Manual branch preview onto the facility CMS.
+# Writes layout mmek-preview + preview-prefixed media only — never mmek-<slug>.
+# Schedules are never mutated; operators bind mmek-preview to a preview display group.
+# Secrets come from /etc/mmek/cms-sync.env on the host (not GitHub Secrets).
+
+on:
+  workflow_dispatch:
+    inputs:
+      exhibit:
+        description: Exhibit slug to preview (e.g. asian-small-clawed-otters)
+        required: true
+        type: string
+      dry_run:
+        description: Print planned CMS mutations without applying them
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: cms-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Preview exhibit on CMS
+    runs-on: [self-hosted, mmek-cms]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+
+      - name: Prefer host venv when present
+        id: venv
+        run: |
+          if [[ -x /opt/mmek/venv/bin/python ]]; then
+            echo "python=/opt/mmek/venv/bin/python" >> "${GITHUB_OUTPUT}"
+          else
+            echo "python=python3" >> "${GITHUB_OUTPUT}"
+            python3 -m pip install --user -r tools/requirements.txt
+          fi
+
+      - name: Sync preview layout
+        id: sync
+        env:
+          EXHIBIT: ${{ inputs.exhibit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+          if [[ ! -f "${ENV_FILE}" ]]; then
+            echo "Missing ${ENV_FILE} on the CMS host" >&2
+            exit 1
+          fi
+          set -a
+          # shellcheck disable=SC1090
+          source "${ENV_FILE}"
+          set +a
+
+          EXTRA=()
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            EXTRA+=(--dry-run)
+          fi
+
+          echo "Preview sync exhibit=${EXHIBIT} ref=${GITHUB_REF_NAME} dry_run=${DRY_RUN}"
+          set +e
+          OUTPUT="$(
+            "${{ steps.venv.outputs.python }}" tools/sync_cms.py \
+              --preview --exhibit "${EXHIBIT}" "${EXTRA[@]}" 2>&1
+          )"
+          STATUS=$?
+          set -e
+          printf '%s\n' "${OUTPUT}"
+          {
+            echo "## CMS preview sync"
+            echo ""
+            echo "- Exhibit: \`${EXHIBIT}\`"
+            echo "- Ref: \`${GITHUB_REF_NAME}\`"
+            echo "- Layout: \`mmek-preview\`"
+            echo "- Dry run: \`${DRY_RUN}\`"
+            echo ""
+            echo "Schedule campaign **mmek-preview** only on the preview display group."
+            echo "This run replaces the previous preview layout content and purges"
+            echo "orphan Library items tagged \`mmek:preview\`."
+            echo ""
+            echo '```'
+            printf '%s\n' "${OUTPUT}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+          exit "${STATUS}"

@@ -146,5 +146,31 @@ class TickerTextWidgetTests(unittest.TestCase):
         self.assertGreaterEqual(html.count("Protect mangroves"), 2)
 
 
+class PreviewMediaApiTests(unittest.TestCase):
+    def test_list_media_by_tag_filters_exact_tag(self) -> None:
+        client = xibo_client.XiboClient("http://cms.example")
+
+        def fake_request(method: str, path: str, **kwargs):
+            self.assertEqual(method, "GET")
+            self.assertEqual(path, "/api/library")
+            self.assertEqual(kwargs["params"]["tags"], "mmek:preview")
+            return [
+                {"mediaId": 1, "name": "preview-a", "tags": [{"tag": "mmek:preview"}]},
+                {"mediaId": 2, "name": "other", "tags": [{"tag": "mmek:managed"}]},
+                {"mediaId": 3, "name": "preview-b", "tags": "mmek:preview,mmek:managed"},
+            ]
+
+        with patch.object(client, "request", side_effect=fake_request):
+            items = client.list_media_by_tag("mmek:preview")
+
+        self.assertEqual([i["mediaId"] for i in items], [1, 3])
+
+    def test_delete_media_calls_library_delete(self) -> None:
+        client = xibo_client.XiboClient("http://cms.example")
+        with patch.object(client, "request", return_value=None) as mock_request:
+            client.delete_media(99)
+        mock_request.assert_called_once_with("DELETE", "/api/library/99")
+
+
 if __name__ == "__main__":
     unittest.main()

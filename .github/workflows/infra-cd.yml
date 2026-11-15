@@ -24,7 +24,7 @@ jobs:
     if: vars.TF_INFRA_ENABLED == 'true'
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Terraform apply
         uses: ./.github/actions/terraform
@@ -39,11 +39,12 @@ jobs:
         with:
           working-directory: infra/terraform/environments/production
           command: apply
-          aws-role-arn: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          # Prefer repository variables (readable by Dependabot); secrets remain a fallback.
+          aws-role-arn: ${{ vars.AWS_TERRAFORM_ROLE_ARN || secrets.AWS_TERRAFORM_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
-          state-bucket: ${{ secrets.TF_STATE_BUCKET }}
+          state-bucket: ${{ vars.TF_STATE_BUCKET || secrets.TF_STATE_BUCKET }}
           state-key: production/terraform.tfstate
-          lock-table: ${{ secrets.TF_LOCK_TABLE }}
+          lock-table: ${{ vars.TF_LOCK_TABLE || secrets.TF_LOCK_TABLE }}
 
   terraform-apply-skipped:
     name: Deployment skipped (TF_INFRA_ENABLED)
