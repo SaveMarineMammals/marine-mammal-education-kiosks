@@ -7,6 +7,7 @@ Usage:
   python tools/sync_cms.py --all-published --dry-run
   python tools/sync_cms.py --exhibit asian-small-clawed-otters
   python tools/sync_cms.py --all-published
+  python tools/sync_cms.py --preview --exhibit asian-small-clawed-otters
 """
 
 from __future__ import annotations
@@ -145,29 +146,78 @@ def sync_one(
     *,
     client: Optional[Any],
     dry_run: bool,
+    preview: bool = False,
 ) -> dict[str, Any]:
-    from sync_media import sync_exhibit_media
-    from xibo_layout import upsert_exhibit_layout
+    from sync_media import PREVIEW_TAG, orphan_preview_media_ids, sync_exhibit_media
+    from xibo_layout import PREVIEW_LAYOUT_NAME, upsert_exhibit_layout
 
     validate_exhibit(slug)
-    media_result = sync_exhibit_media(slug, client=client, dry_run=dry_run)
-    layout_result = upsert_exhibit_layout(
-        client,
-        exhibit_slug=slug,
-        media_ids=media_result.get("media_ids") or None,
-        dry_run=dry_run,
+    media_result = sync_exhibit_media(
+        slug, client=client, dry_run=dry_run, preview=preview
     )
-    return {"slug": slug, "media": media_result, "layout": layout_result}
+    layout_kwargs: dict[str, Any] = {
+        "exhibit_slug": slug,
+        "media_ids": media_result.get("media_ids") or None,
+        "dry_run": dry_run,
+    }
+    if preview:
+        layout_kwargs["layout_name"] = PREVIEW_LAYOUT_NAME
+        layout_kwargs["extra_tags"] = [PREVIEW_TAG]
+    layout_result = upsert_exhibit_layout(client, **layout_kwargs)
+
+    purged: list[int] = []
+    if preview:
+        keep_ids = {
+            int(mid)
+            for mid in (media_result.get("media_ids") or {}).values()
+            if mid is not None
+        }
+        if dry_run or client is None:
+            print(
+                f"  Preview layout target: {PREVIEW_LAYOUT_NAME} "
+                f"(would purge Library items tagged {PREVIEW_TAG} "
+                f"not in keep set of {len(keep_ids)})"
+            )
+        else:
+            tagged = client.list_media_by_tag(PREVIEW_TAG)
+            for mid in orphan_preview_media_ids(tagged, keep_ids):
+                client.delete_media(mid)
+                purged.append(mid)
+                LOG.info("Purged orphan preview mediaId=%s", mid)
+            print(
+                f"  Purged {len(purged)} orphan preview media "
+                f"(kept {len(keep_ids)} for {slug})"
+            )
+
+    return {
+        "slug": slug,
+        "media": media_result,
+        "layout": layout_result,
+        "purged_media_ids": purged,
+        "preview": preview,
+    }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--exhibit", help="Sync a single slug (must be published unless --force)")
+    group.add_argument(
+        "--exhibit",
+        help="Sync a single slug (must be published unless --force or --preview)",
+    )
     group.add_argument(
         "--all-published",
         action="store_true",
         help="Sync every exhibit with status: published",
+    )
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help=(
+            "Branch preview: write layout mmek-preview + preview media, "
+            "allow any exhibit status, purge orphan mmek:preview media "
+            "(requires --exhibit; not valid with --all-published)"
+        ),
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
@@ -194,6 +244,16 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
+    if args.preview and args.all_published:
+        print(
+            "error: --preview requires --exhibit (not --all-published)",
+            file=sys.stderr,
+        )
+        return 2
+    if args.preview and not args.exhibit:
+        print("error: --preview requires --exhibit <slug>", file=sys.stderr)
+        return 2
+
     try:
         if args.all_published:
             slugs = discover_published_slugs()
@@ -201,10 +261,11 @@ def main() -> int:
             slug = args.exhibit
             exhibit = load_yaml(EXHIBITS / slug / "exhibit.yaml")
             status = str(exhibit.get("status") or "").strip()
-            if status != "published" and not args.force:
+            if status != "published" and not args.force and not args.preview:
                 print(
                     f"error: exhibit {slug!r} status is {status!r}; "
-                    "only published exhibits sync (use --force to override)",
+                    "only published exhibits sync "
+                    "(use --force or --preview to override)",
                     file=sys.stderr,
                 )
                 return 1
@@ -217,7 +278,8 @@ def main() -> int:
         print("OK: no published exhibits to sync")
         return 0
 
-    print(f"Syncing {len(slugs)} exhibit(s): {', '.join(slugs)}")
+    mode = "preview" if args.preview else "production"
+    print(f"Syncing {len(slugs)} exhibit(s) [{mode}]: {', '.join(slugs)}")
     if args.dry_run:
         print("Dry run: no CMS mutations")
 
@@ -236,11 +298,17 @@ def main() -> int:
         failures = 0
         for slug in slugs:
             try:
-                result = sync_one(slug, client=client, dry_run=args.dry_run)
+                result = sync_one(
+                    slug,
+                    client=client,
+                    dry_run=args.dry_run,
+                    preview=args.preview,
+                )
                 layout = result["layout"]
+                purged = result.get("purged_media_ids") or []
                 print(
                     f"OK {slug}: layout={layout.get('layout_name')} "
-                    f"dry_run={args.dry_run}"
+                    f"purged={len(purged)} dry_run={args.dry_run}"
                 )
             except Exception as exc:  # noqa: BLE001 — report per-exhibit, fail closed
                 failures += 1

@@ -84,6 +84,43 @@ Both paths call `tools/sync_cms.py --all-published` (with flock so they cannot o
    (see exhibit `schedule/intent.yaml` for human intent only).
 4. Spot-check a physical player.
 
+## Branch preview (before merge)
+
+Use this to judge pixel-perfect output on a **lab/preview Pi** without touching
+live lobby layouts. Preview sync never writes `mmek-<slug>` and never edits
+schedules.
+
+### One-time CMS setup
+
+1. Create a display group named **`preview`** (or equivalent).
+2. Enroll one spare/lab Pi into that group (or temporarily move a kiosk off lobby).
+3. After the first successful preview sync, in CMS schedule campaign
+   **`mmek-preview`** onto the **preview** display group only — never onto lobby
+   groups. The same schedule keeps working for later preview runs.
+
+### Manual dispatch
+
+1. Push the PR branch with exhibit changes (`status` may stay `draft` / `review`).
+2. Actions → **CMS preview sync** → select the **branch** → set `exhibit` → Run
+   (optional `dry_run`).
+3. Confirm on the preview Pi. Each live run:
+   - Upserts layout **`mmek-preview`** in place (same campaign)
+   - Uploads Library media under `exhibits-preview/<slug>/` as
+     `preview-<slug>-<asset-id>` tagged `mmek:preview`
+   - Deletes orphan Library items tagged `mmek:preview` that this run does not use
+4. Merge to `main` when satisfied. Production sync updates `mmek-<slug>` as usual.
+   The preview slot is unchanged until the next preview dispatch replaces it.
+
+Host equivalent:
+
+```bash
+sudo -E bash -c 'set -a; source /etc/mmek/cms-sync.env; set +a; \
+  /opt/mmek/venv/bin/python /opt/mmek/repo/tools/sync_cms.py \
+    --preview --exhibit <slug>'
+```
+
+Workflow: [`.github/workflows/cms-preview.yml`](../../.github/workflows/cms-preview.yml).
+
 ## Operator commands
 
 ```bash
