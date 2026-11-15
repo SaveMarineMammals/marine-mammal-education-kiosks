@@ -68,6 +68,24 @@ validation need real binaries (`git lfs pull`; Actions `lfs: true`).
 - Timeline text: YAML `|` blocks, plain ASCII, no Markdown/emoji; band color inside
   the text widget; CTA ticker via native Xibo `marqueeLeft` (see skill).
 
+### Interactivity (no HTML widgets on facility players)
+
+Facility Pis run **Arexibo**, which does **not** reliably play HTML packages
+(`.htz` / `html-package`), embedded HTML, or full-canvas `html-interactive`
+layouts — regions render blank. Do **not** author new touch or interactive demos
+with HTML packages, offline HTML zips, or embedded HTML widgets.
+
+Use **native Xibo widgets and Interactive Actions** instead:
+
+- Interactive Button / Link / Zone (`type: interactive-button` in timeline YAML)
+- Touch → Next/Previous Widget or Navigate to Widget/Layout actions (wired by
+  `tools/xibo_layout.py` / content sync when declared on the timeline widget)
+- Image and text widgets for everything else
+
+Reference: [`exhibits/touch-demo/`](exhibits/touch-demo/) (ops touch validation).
+Headless QA may still skip or stub HTML packages; that does not make them valid
+for production layouts.
+
 ### Shell scripts (LF only)
 
 Linux hosts (CMS, Pis, containers) fail shebangs with
@@ -128,8 +146,9 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 - Work on feature branches; merge to `main` via PR only.
 - Do not create commits unless the user asks.
 - Do not push unless the user asks.
-- PRs need green required CI, one non-pusher approval, resolved threads, linear
-  history (squash/rebase merge) — see [`.github/rulesets/README.md`](.github/rulesets/README.md).
+- PRs need green required CI, one approval, resolved threads, linear history
+  (squash/rebase merge) — see [`.github/rulesets/README.md`](.github/rulesets/README.md).
+  Dependabot rebases do not require re-approval (`require_last_push_approval` is off).
 - Update docs when setup or author-visible behavior changes.
 - Prefer focused diffs; avoid rewriting unrelated docs.
 
@@ -139,6 +158,8 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 - Commit video or files ≥ 2 MB (use the media store)
 - Invent Glance & Match region names that `ops/qa/exhibit_layout.py` does not know
 - Put Markdown or emoji in timeline `copy:` fields
+- Author new `html-package` / `.htz` / embedded-HTML interactivity for facility
+  layouts — use native Interactive Button + Actions (see Interactivity above)
 - Bypass branch protection instructions for users (except documented bypass actors)
 - Finish exhibit/layout work without running Tier 1 validation on touched packages
 - Over-engineer abstractions for one-off exhibit copy
@@ -150,6 +171,7 @@ before `status: published` — see [`ops/runbooks/publish-exhibit.md`](ops/runbo
 | Task | Location |
 | --- | --- |
 | New Glance & Match exhibit | `.agents/skills/exhibit-generator/SKILL.md`, `exhibits/<slug>/` |
+| Touch / interactive (native only) | `exhibits/touch-demo/`, Interactive Button + Actions in `tools/xibo_layout.py` |
 | Media policy / hashes | `docs/media-policy.md`, `exhibits/<slug>/media/manifest.yaml` |
 | Contract validation | `tools/validate_exhibits.py`, `schemas/` |
 | CMS content sync (media + layouts) | `tools/sync_cms.py`, `ops/cms/scripts/deploy-cms-sync.sh`, `ops/runbooks/cms-content-sync.md` |
