@@ -177,6 +177,12 @@ def preview_one(slug: str, out_root: Path) -> dict[str, Any]:
         return result
 
     index_html = Path(meta["index_html"]).resolve()
+    html_text = index_html.read_text(encoding="utf-8")
+    if "touch-toggle" in regions and 'id="layer-touch-toggle"' not in html_text:
+        result["errors"].append(
+            "timeline defines touch-toggle region but render omitted layer-touch-toggle"
+        )
+        return result
     still_path = (exhibit_out / "still.png").resolve()
     width = 1920
     height = 1080

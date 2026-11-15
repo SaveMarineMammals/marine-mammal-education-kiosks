@@ -15,6 +15,18 @@ If the otter layout appears but the lower-left strip is blank, Arexibo is not
 playing the small HTML package (`.htz`). The rest of the layout is intentionally
 native image/text so a failed HTZ cannot blank the whole screen.
 
+If **images show broken icons** but text widgets look fine, the player or CMS
+host likely has **unresolved Git LFS pointers** instead of real binaries (common
+when a clone skipped `git lfs pull`). On the sync host:
+
+```bash
+git lfs pull
+python tools/validate_exhibits.py --exhibit touch-demo --skip-secrets
+python tools/sync_cms.py --preview --exhibit touch-demo
+```
+
+Then trigger a layout collect on the Pi (or wait for XMDS) before re-testing.
+
 ## Before scheduling
 
 Confirm the panel USB touch cable is connected and HID is visible

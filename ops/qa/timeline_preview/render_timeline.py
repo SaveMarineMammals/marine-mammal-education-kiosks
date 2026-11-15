@@ -24,7 +24,8 @@ STATIC_DIR = Path(__file__).resolve().parent
 # ops/qa on sys.path so pathutil resolves the same way as the pipeline.
 if str(QA_DIR) not in sys.path:
     sys.path.insert(0, str(QA_DIR))
-from pathutil import resolve_manifest_path  # noqa: E402
+from exhibit_layout import region_geometry_for_timeline  # noqa: E402
+from pathutil import is_git_lfs_pointer, resolve_manifest_path  # noqa: E402
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -67,6 +68,11 @@ def resolve_asset_file(exhibit_dir: Path, asset: dict[str, Any]) -> Optional[Pat
 
 
 def copy_media(src: Path, media_dir: Path) -> str:
+    if is_git_lfs_pointer(src):
+        raise SystemExit(
+            f"Git LFS pointer at {src} — run `git lfs pull` for exhibit media "
+            "before rendering the timeline preview"
+        )
     media_dir.mkdir(parents=True, exist_ok=True)
     dest = media_dir / src.name
     if not dest.exists() or dest.stat().st_mtime < src.stat().st_mtime:
@@ -212,7 +218,7 @@ def layer_order_for_timeline(timeline: dict[str, Any]) -> tuple[str, ...]:
         "ticker",
     }:
         if "hero-bg" in region_names or "hero-still" in region_names:
-            return (
+            base = (
                 "insights-bg",
                 "hero-bg",
                 "hero-still",
@@ -221,10 +227,34 @@ def layer_order_for_timeline(timeline: dict[str, Any]) -> tuple[str, ...]:
                 "insights-copy",
                 "ticker",
             )
-        if "insights-art" in region_names or "insights-copy" in region_names:
-            return ("insights-bg", "hero", "insights-art", "insights-copy", "ticker")
-        return ("hero", "insights", "ticker")
+        elif "insights-art" in region_names or "insights-copy" in region_names:
+            base = ("insights-bg", "hero", "insights-art", "insights-copy", "ticker")
+        else:
+            base = ("hero", "insights", "ticker")
+        return _layer_order_with_extras(timeline, base)
     return ("background", "midground", "text", "accent")
+
+
+def _layer_order_with_extras(
+    timeline: dict[str, Any],
+    base: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Keep the canonical stack, then append extra regions (e.g. touch-toggle) by z-index."""
+    regions = timeline.get("regions") or {}
+    region_names = set(regions.keys()) if isinstance(regions, dict) else set()
+    geometry = region_geometry_for_timeline(timeline)
+    seen = set(base)
+    extras = [
+        name
+        for name, _geo in sorted(
+            geometry.items(),
+            key=lambda item: (int(item[1].get("zIndex", 0)), item[0]),
+        )
+        if name in region_names and name not in seen
+    ]
+    if not extras:
+        return base
+    return base + tuple(extras)
 def render_exhibit(
     slug: str,
     *,

@@ -150,6 +150,16 @@ body {
   background: #0a2a3a;
 }
 
+#stage.glance-and-match #layer-touch-toggle {
+  z-index: 5;
+  left: 40px;
+  top: 900px;
+  width: 720px;
+  height: 140px;
+  inset: auto;
+  pointer-events: auto;
+}
+
 #stage.glance-and-match #layer-hero .widget.img-widget img {
   object-fit: contain;
 }
