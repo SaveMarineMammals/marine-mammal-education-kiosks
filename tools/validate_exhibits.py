@@ -324,9 +324,13 @@ def validate_timeline(
     errors: list[str] = []
     timeline_path = exhibit_dir / "layouts" / "timeline.yaml"
     if not timeline_path.is_file():
-        # Timelines are expected for Glance & Match / layered stills packages.
+        # Timelines are expected for Glance & Match / layered stills / html-interactive.
         layout_template = str(exhibit.get("layoutTemplate") or "")
-        if layout_template in {"glance-and-match", "layered-stills-loop"}:
+        if layout_template in {
+            "glance-and-match",
+            "layered-stills-loop",
+            "html-interactive",
+        }:
             errors.append("missing layouts/timeline.yaml")
         return errors
 
@@ -340,6 +344,13 @@ def validate_timeline(
     if not isinstance(regions, dict) or not regions:
         errors.append("timeline.regions must be a non-empty mapping")
         return errors
+
+    if template == "html-interactive" or exhibit.get("layoutTemplate") == "html-interactive":
+        if set(regions.keys()) != {"html"}:
+            errors.append(
+                "html-interactive must use exactly one region named html "
+                f"(got: {', '.join(sorted(regions)) or '(none)'})"
+            )
 
     if template == "glance-and-match" or exhibit.get("layoutTemplate") == "glance-and-match":
         missing = [name for name in GLANCE_AND_MATCH_REGIONS if name not in regions]

@@ -1,0 +1,21 @@
+# Widget timeline script — Touch Hardware Demo
+# Full-canvas offline HTML package for physical Pi + panel touch validation.
+
+layoutId: touch-demo-html-interactive
+template: html-interactive
+durationSeconds: 3600
+layoutHoldSeconds: 3600
+loop: true
+resolution: { width: 1920, height: 1080 }
+
+regions:
+  html:
+    widgets:
+      - id: touch-probe
+        type: html-package
+        asset: touch-probe
+        startSeconds: 0
+        durationSeconds: 3600
+        transitionIn: none
+        transitionOut: none
+        notes: Offline touch diagnostic UI; hold layout until schedule change.

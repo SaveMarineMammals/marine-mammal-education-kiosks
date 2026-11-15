@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: touch-demo
+store: media-store-primary
+assets:
+  - id: touch-probe
+    role: html-interactive
+    filename: touch-probe.zip
+    sha256: "4e286086173dad9e6acb881b48a002ed94f26c0270f74501d2606672732ce2d6"
+    uri: exhibits/touch-demo/media/assets/touch-probe.zip
+    mime: application/zip
+    bytes: 5312
+    durationSeconds: 3600
+    xiboTags:
+      - exhibit:touch-demo
+      - role:html-interactive
+      - ops:touch-probe

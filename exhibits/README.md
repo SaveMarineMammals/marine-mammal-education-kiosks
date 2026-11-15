@@ -9,5 +9,6 @@ One directory per exhibit. Slugs are **kebab-case** and must not change after pu
 | [`seagrass-for-manatees/`](seagrass-for-manatees/) | Glance & Match seagrass / manatee panel |
 | [`red-mangrove/`](red-mangrove/) | Glance & Match red mangrove / walking-tree panel |
 | [`humpback-migration/`](humpback-migration/) | Stub/example layered-stills exhibit |
+| [`touch-demo/`](touch-demo/) | Ops HTML probe for Pi + panel touch (html-interactive) |
 
 See [docs/exhibit-authoring.md](../docs/exhibit-authoring.md) and schemas under [`schemas/`](../schemas/).

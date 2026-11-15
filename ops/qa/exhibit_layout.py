@@ -36,6 +36,10 @@ GLANCE_AND_MATCH_REGIONS: dict[str, dict[str, int]] = {
     "ticker": {"left": 800, "top": 940, "width": 1120, "height": 140, "zIndex": 4},
 }
 
+HTML_INTERACTIVE_REGIONS: dict[str, dict[str, int]] = {
+    "html": {"left": 0, "top": 0, "width": 1920, "height": 1080, "zIndex": 0},
+}
+
 # Fixed ticker band color (region background). Do not paint this on marquee HTML.
 TICKER_BAND_BG = "#0A2A3A"
 DEFAULT_GLANCE_HOLD_SECONDS = 3600
@@ -103,6 +107,8 @@ def region_geometry_for_timeline(timeline: dict[str, Any]) -> dict[str, dict[str
         if "insights-bg" in region_names:
             legacy = {"insights-bg": GLANCE_AND_MATCH_REGIONS["insights-bg"], **legacy}
         return legacy
+    if template == "html-interactive" or region_names == {"html"}:
+        return HTML_INTERACTIVE_REGIONS
     return LAYERED_STILLS_REGIONS
 
 

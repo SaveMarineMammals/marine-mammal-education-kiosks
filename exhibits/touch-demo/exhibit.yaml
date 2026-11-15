@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000005"
+slug: touch-demo
+title: Touch Hardware Demo
+status: draft
+version: 0.1.0
+summary: >
+  Ops-only full-screen HTML probe that reports which pointer and touch
+  behaviors reach Arexibo on a Pi-driven touchscreen (tap, multi-finger,
+  drag, long-press, pinch, edge accuracy). Not visitor education content.
+species: []
+topics:
+  - ops
+  - touch
+  - commissioning
+tags:
+  - ops
+  - touch
+  - demo
+  - html-interactive
+displayGroups:
+  - lobby
+layoutTemplate: html-interactive
