@@ -29,10 +29,20 @@ GitHub Actions now issues **immutable** OIDC `sub` claims
 (`repo:ORG@ORG_ID/REPO@REPO_ID:…`). The terraform-ci trust policy matches that
 form (and the legacy `repo:ORG/REPO:*` form).
 
-Add the output map as GitHub repository secrets (`AWS_TERRAFORM_ROLE_ARN`,
-`TF_STATE_BUCKET`, `TF_LOCK_TABLE`) and set repository variable
-`TF_INFRA_ENABLED=true`. Then apply
+Add the output map as GitHub repository **variables** (`AWS_TERRAFORM_ROLE_ARN`,
+`TF_STATE_BUCKET`, `TF_LOCK_TABLE`) — preferred so Dependabot can run
+Infrastructure Plan — and set `TF_INFRA_ENABLED=true`. Matching repository
+secrets still work as a fallback. Then apply
 [`../terraform/environments/production`](../terraform/environments/production/).
+
+```powershell
+# From bootstrap output (example):
+gh variable set AWS_TERRAFORM_ROLE_ARN --body "<role arn>"
+gh variable set TF_STATE_BUCKET --body "<bucket>"
+gh variable set TF_LOCK_TABLE --body "<table>"
+gh variable set TF_INFRA_ENABLED --body true
+gh variable set AWS_REGION --body us-east-1
+```
 
 ## Re-apply after CI permission changes
 
