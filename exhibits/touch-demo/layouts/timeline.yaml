@@ -1,10 +1,10 @@
 # Widget timeline script — Touch Hardware Demo
-# Glance & Match otter panel plus a bottom-hero touch-toggle overlay.
+# Text-only Glance & Match shell plus a large Show info / Hide info HTZ button.
+# No image assets — native text always paints even if the HTML package fails.
 # Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
 
 layoutId: touch-demo-glance-and-match
 template: glance-and-match
-# One insight cycle (4 x 6s). CMS hold keeps hero/ticker alive while cards repeat.
 durationSeconds: 24
 layoutHoldSeconds: 3600
 loop: true
@@ -13,34 +13,47 @@ resolution: { width: 1920, height: 1080 }
 regions:
   insights-bg:
     widgets:
-      - id: panel-insights
-        type: image
-        asset: bg-insights-panel
+      - id: panel-label
+        type: text
         startSeconds: 0
         durationSeconds: 24
         transitionIn: none
         transitionOut: none
+        effect: none
+        copy: |
+          Touch Hardware Demo
+
+          Ops panel check
+          Text layout only
+          No image assets
 
   hero-bg:
     widgets:
-      - id: hero-wetland
-        type: image
-        asset: bg-hero-wetland
+      - id: hero-wash-label
+        type: text
         startSeconds: 0
         durationSeconds: 24
         transitionIn: none
         transitionOut: none
+        effect: none
+        copy: |
+          USB touch validation
 
   hero-still:
     widgets:
-      - id: hero-otter-id
-        type: image
-        asset: graphic-otter-silhouette
+      - id: hero-still-hint
+        type: text
         startSeconds: 0
         durationSeconds: 24
         transitionIn: none
         transitionOut: none
-        notes: Transparent PNG in the lower hero frame for 3-second tank match.
+        effect: none
+        copy: |
+          Button lives in the large
+          box on this left pane.
+
+          If that box is blank, the
+          HTML package did not load.
 
   hero-labels:
     widgets:
@@ -52,116 +65,40 @@ regions:
         transitionOut: none
         effect: none
         copy: |
-          Asian Small-Clawed Otter
-          Aonyx cinereus
-
           Touch Demo
           Tap Show info below
-          Ops panel check
+
+          Plain text button
+          No images required
 
   insights-art:
     widgets:
-      - id: icon-diet
-        type: image
-        asset: graphic-diet-paws
+      - id: check-header
+        type: text
         startSeconds: 0
-        durationSeconds: 6
+        durationSeconds: 24
         transitionIn: none
-        transitionOut: fade
-        transitionDurationMs: 500
-
-      - id: icon-threat
-        type: image
-        asset: graphic-threat-wetland
-        startSeconds: 6
-        durationSeconds: 6
-        transitionIn: fade
-        transitionOut: fade
-        transitionDurationMs: 500
-
-      - id: icon-hidden-fact
-        type: image
-        asset: graphic-fact-family
-        startSeconds: 12
-        durationSeconds: 6
-        transitionIn: fade
-        transitionOut: fade
-        transitionDurationMs: 500
-
-      - id: icon-how-to-help
-        type: image
-        asset: graphic-help-donate
-        startSeconds: 18
-        durationSeconds: 6
-        transitionIn: fade
         transitionOut: none
-        transitionDurationMs: 500
+        effect: none
+        copy: |
+          What to check
 
   insights-copy:
     widgets:
-      - id: card-diet
+      - id: check-steps
         type: text
-        card: 1
         startSeconds: 0
-        durationSeconds: 6
+        durationSeconds: 24
         transitionIn: none
-        transitionOut: fade
-        transitionDurationMs: 500
-        effect: none
-        copy: |
-          Diet
-
-          - Hunt crabs, snails, and shrimp
-          - Feel for food with soft paws
-          - Love shallow wetlands and rice fields
-
-      - id: card-threat
-        type: text
-        card: 2
-        startSeconds: 6
-        durationSeconds: 6
-        transitionIn: fade
-        transitionOut: fade
-        transitionDurationMs: 500
-        effect: none
-        copy: |
-          Threat
-
-          - Wetlands shrink when people fill them
-          - Illegal pet trade takes wild otters
-          - Dirty water poisons their crab meals
-
-      - id: card-hidden-fact
-        type: text
-        card: 3
-        startSeconds: 12
-        durationSeconds: 6
-        transitionIn: fade
-        transitionOut: fade
-        transitionDurationMs: 500
-        effect: none
-        copy: |
-          Hidden Fact
-
-          - Smallest otter species on Earth
-          - Live in family groups up to 15
-          - Use 12 or more calls to stay together
-
-      - id: card-how-to-help
-        type: text
-        card: 4
-        startSeconds: 18
-        durationSeconds: 6
-        transitionIn: fade
         transitionOut: none
-        transitionDurationMs: 500
         effect: none
         copy: |
-          How to Help
+          Steps
 
-          - Never keep wild otters as pets
-          - Keep trash and plastic out of water
-          - Share what you learned today
+          - Confirm this text is on screen
+          - Tap Show info on the left
+          - Confirm the green label appears
+          - Tap Hide info to clear it
 
   ticker:
     widgets:
@@ -173,10 +110,10 @@ regions:
         transitionOut: none
         effect: tickerScroll
         copy: |
-          Touch demo: tap Show info on the hero, then Hide info
+          Touch demo: tap Show info on the left pane, then Hide info
 
   touch-toggle:
-    # Overlay on lower hero — isolated HTZ so a blank package cannot wipe the layout.
+    # Large left-pane HTZ — CSS text button only (no image files inside the package).
     widgets:
       - id: touch-toggle
         type: html-package
@@ -185,11 +122,8 @@ regions:
         durationSeconds: 24
         transitionIn: none
         transitionOut: none
-        notes: Offline button toggles an info label on and off.
+        notes: Offline text button toggles an info label on and off.
 
 cueSheet:
-  - { t: 0, action: "hero + touch toggle; Diet art + copy; ticker on" }
-  - { t: 6, action: "insights: Threat art + copy" }
-  - { t: 12, action: "insights: Hidden Fact art + copy" }
-  - { t: 18, action: "insights: How to Help art + copy" }
-  - { t: 24, action: "insight cycle repeats (hero/ticker/toggle held; no layout reload)" }
+  - { t: 0, action: "text shell + large touch toggle held; no layout reload" }
+  - { t: 24, action: "cycle repeats (hero/ticker/toggle held)" }

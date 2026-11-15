@@ -40,12 +40,13 @@ HTML_INTERACTIVE_REGIONS: dict[str, dict[str, int]] = {
     "html": {"left": 0, "top": 0, "width": 1920, "height": 1080, "zIndex": 0},
 }
 
-# Optional Glance & Match overlay (ops touch demos). Lower hero strip.
+# Optional Glance & Match overlay (ops touch demos). Large left-pane hit target
+# so a CSS text button is obvious without any image assets.
 TOUCH_TOGGLE_REGION: dict[str, int] = {
     "left": 40,
-    "top": 900,
+    "top": 320,
     "width": 720,
-    "height": 140,
+    "height": 560,
     "zIndex": 5,
 }
 

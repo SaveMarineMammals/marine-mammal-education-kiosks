@@ -153,9 +153,9 @@ body {
 #stage.glance-and-match #layer-touch-toggle {
   z-index: 5;
   left: 40px;
-  top: 900px;
+  top: 320px;
   width: 720px;
-  height: 140px;
+  height: 560px;
   inset: auto;
   pointer-events: auto;
 }

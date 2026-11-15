@@ -1,11 +1,8 @@
 # Touch demo assets
 
-Otter Glance & Match stills are copied from `asian-small-clawed-otters` for this
-ops demo. The only unique interactive asset is:
+Text-only ops demo. The only package is a CSS **text button** (no image files):
 
-| File | Role |
+| File | Notes |
 | --- | --- |
 | `touch-toggle.html` | Loose HTML for local browser checks |
 | `touch-toggle.zip` | Offline HTML package (`index.html`) uploaded as `.htz` |
-
-Keep under 2 MB. No network dependencies.

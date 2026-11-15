@@ -48,11 +48,12 @@ exhibits:
     slug: touch-demo
     title: Touch Hardware Demo
     status: draft
-    version: 0.2.0
+    version: 0.3.0
     path: exhibits/touch-demo
     tags:
       - ops
       - touch
       - demo
       - glance-and-match
+
 

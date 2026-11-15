@@ -3,13 +3,11 @@ id: "00000000-0000-4000-8000-000000000005"
 slug: touch-demo
 title: Touch Hardware Demo
 status: draft
-version: 0.2.0
+version: 0.3.0
 summary: >
-  Ops Glance & Match copy of the otter tank panel with one extra touch-toggle
-  control that shows and hides an info label. Used to validate USB HID touch
-  on a Pi-driven panel without replacing the whole canvas with HTML.
-species:
-  - Aonyx cinereus
+  Ops text-only Glance & Match shell with one large Show info / Hide info
+  control (CSS text button in an HTZ). Used to validate USB HID touch on a
+  Pi-driven panel without depending on image media.
 topics:
   - ops
   - touch
