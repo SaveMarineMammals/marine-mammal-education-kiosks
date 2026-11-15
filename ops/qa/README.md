@@ -193,6 +193,7 @@ ffmpeg -f x11grab -video_size 1920x1080 -i :99 -t 5 /artifacts/clip.mp4
 ## Notes
 
 - First player image build downloads the `xibo-player` snap and extracts it with `unsquashfs` (no snapd daemon at runtime).
+- The image pins snap **revision 108 (1.8-R6)** via `XIBO_PLAYER_SNAP_REVISION` (`Dockerfile.player` / `config.env`). `latest/stable` moved to Chromium-based 4.x (no `bin/player` / Boost layout); leave the pin until the QA image is adapted.
 - The player container still uses `privileged` for extracted snap device access under Xvfb, but the entrypoint **drops to a non-root UID** (`QA_PLAYER_UID` / `QA_PLAYER_GID`, defaulting to the host orchestrator identity on Linux) after chowning bind mounts and volumes. That keeps `ops/qa/player-runtime/` host-writable and avoids root-owned `cmsSettings.xml` on CI.
 - Fresh CMS bootstrap can take several minutes; the orchestrator polls until `/api/authorize/access_token` responds.
 - The stack always includes `cms-xmr` (Xibo Message Relay). The pipeline seeds `XMR_ADDRESS` (`http://cms-xmr:8081`) / `XMR_PUB_ADDRESS` (`tcp://cms-xmr:9505`), authorises the display **before** the player's READY `RegisterDisplay` (CMS Soap5 only persists `xmrChannel` when licensed), then `collectNow` / `changeLayout` over XMR. Pipeline XMDS register is skipped once a display row exists so it cannot wipe `xmrChannel`.

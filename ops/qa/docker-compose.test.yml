@@ -117,6 +117,8 @@ services:
       dockerfile: Dockerfile.player
       args:
         XIBO_PLAYER_SNAP_CHANNEL: ${XIBO_PLAYER_SNAP_CHANNEL:-stable}
+        # 1.8-R6; stable tip is Chromium 4.x and breaks this image/shim.
+        XIBO_PLAYER_SNAP_REVISION: ${XIBO_PLAYER_SNAP_REVISION:-108}
     image: marine-mammal-kiosks/xibo-qa-player:local
     container_name: xibo-qa-kiosk-player
     depends_on:
