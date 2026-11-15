@@ -1,6 +1,6 @@
 # Dependencies for tools/ (validate_exhibits, catalog, packaging, CMS sync)
 PyYAML>=6.0.3
 jsonschema>=4.26.0
-requests>=2.32.0
+requests>=2.34.2
 # Optional: only needed when MEDIA_STORE_URI uses s3://
 # boto3>=1.34.0
