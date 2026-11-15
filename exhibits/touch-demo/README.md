@@ -32,13 +32,23 @@ Then trigger a layout collect on the Pi (or wait for XMDS) before re-testing.
 Confirm the panel USB touch cable is connected and HID is visible
 ([`ops/players/README.md`](../../ops/players/README.md)).
 
-## Run on a lab Pi
+## Run on a lab Pi (`mmek-preview`)
 
-1. Preview-sync this slug (`touch-demo`) onto `mmek-preview`, or sync the
-   stable layout `mmek-touch-demo` — see
+1. **CMS preview sync** — Actions → **CMS preview sync** → branch
+   `feature/touch-demo-exhibit` (or your PR branch) → **`exhibit`: `touch-demo`**
+   → Run. This replaces layout **`mmek-preview`** and uploads Library media as
+   `preview-touch-demo-*` (tag `mmek:preview`). See
    [`ops/runbooks/cms-content-sync.md`](../../ops/runbooks/cms-content-sync.md).
-2. Schedule that layout on the preview/lab display only.
-3. Exercise the toggle; remove the schedule when finished.
+2. **Schedule** — In CMS, bind campaign **`mmek-preview`** to the **preview**
+   display group only (not lobby). The Pi playing your panel must be in that group.
+3. **Collect** — After sync, let the player XMDS-collect (or restart the player
+   service) so Library files download.
+4. **CMS spot-check** — Library → `exhibits-preview/touch-demo/`: hero JPEG should
+   be ~100KB+, not ~130-byte LFS pointer text. Layout **mmek-preview** should show
+   assigned images in each image region and the touch-toggle HTZ in **touch-toggle**.
+5. Exercise **Show info** / **Hide info**; remove the preview schedule when done.
+
+Production stable name after merge: `mmek-touch-demo` (not used for branch preview).
 
 ## Out of scope
 
