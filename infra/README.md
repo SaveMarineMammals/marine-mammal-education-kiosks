@@ -34,13 +34,14 @@ Child NS for `kiosks.local` is written into the `belize` zone.
 | [`infra-ci.yml`](../.github/workflows/infra-ci.yml) | PR → `main` (path-filtered) | `terraform plan` when `vars.TF_INFRA_ENABLED=true` |
 | [`infra-cd.yml`](../.github/workflows/infra-cd.yml) | Push → `main` (path-filtered) | `terraform apply` to production |
 
-Repo secrets (from bootstrap outputs): `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET`,
-`TF_LOCK_TABLE`. Optional variable: `AWS_REGION` (default `us-east-1`).
+Repo **variables** (from bootstrap outputs; preferred over secrets so Dependabot
+can plan): `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET`, `TF_LOCK_TABLE`. Optional:
+`AWS_REGION` (default `us-east-1`). Matching repository secrets remain a fallback.
 
 ## Operator quick start
 
 1. Bootstrap once (local AWS admin credentials): see [`bootstrap/README.md`](bootstrap/README.md).
-2. Set GitHub secrets from bootstrap `github_actions_secrets` output; set
+2. Set GitHub variables from bootstrap `github_actions_secrets` output; set
    `TF_INFRA_ENABLED=true`.
 3. Apply production (CI on `main`, or locally with backend config): see
    [`terraform/environments/production/README.md`](terraform/environments/production/README.md).

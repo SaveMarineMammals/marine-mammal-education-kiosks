@@ -43,6 +43,25 @@ runs:
         terraform_version: 1.9.8
         terraform_wrapper: false
 
+    - name: Require AWS role and state backend inputs
+      shell: bash
+      env:
+        AWS_ROLE_ARN: ${{ inputs.aws-role-arn }}
+        STATE_BUCKET: ${{ inputs.state-bucket }}
+        LOCK_TABLE: ${{ inputs.lock-table }}
+      run: |
+        missing=()
+        [[ -n "${AWS_ROLE_ARN}" ]] || missing+=("aws-role-arn")
+        [[ -n "${STATE_BUCKET}" ]] || missing+=("state-bucket")
+        [[ -n "${LOCK_TABLE}" ]] || missing+=("lock-table")
+        if ((${#missing[@]})); then
+          echo "::error::Missing required Terraform action input(s): ${missing[*]}."
+          echo "Set repository variables AWS_TERRAFORM_ROLE_ARN, TF_STATE_BUCKET, and TF_LOCK_TABLE"
+          echo "(preferred; Dependabot can read vars) or the matching repository secrets."
+          echo "See docs/infra-pipelines.md."
+          exit 1
+        fi
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:

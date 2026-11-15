@@ -17,9 +17,11 @@ terraform apply
 terraform output github_actions_secrets
 ```
 
-Add repository secrets: `AWS_TERRAFORM_ROLE_ARN`, `TF_STATE_BUCKET`,
-`TF_LOCK_TABLE`. Set variable `TF_INFRA_ENABLED=true`. Create GitHub Environment
-`production` for apply approval if desired.
+Add repository **variables** (preferred): `AWS_TERRAFORM_ROLE_ARN`,
+`TF_STATE_BUCKET`, `TF_LOCK_TABLE`. Repository secrets with the same names still
+work as a fallback, but Dependabot PRs cannot read repository secrets — only
+variables (or Dependabot-scoped secrets). Set `TF_INFRA_ENABLED=true`. Create
+GitHub Environment `production` for apply approval if desired.
 
 ## Zones
 
@@ -41,6 +43,10 @@ CMS hostname: `server.kiosks.local.belize.savemarinemammals.com` (A record from
 
 When `TF_INFRA_ENABLED` is not `true`, jobs skip as pass so branch protection is
 not blocked before bootstrap.
+
+Workflows resolve the role ARN and state backend from `vars.*` first, then
+`secrets.*`. Keep those identifiers in variables so Actions bumps that touch
+`.github/workflows/infra-ci.yml` can still run `terraform plan` under Dependabot.
 
 ## After apply → CMS TLS
 
