@@ -21,6 +21,17 @@ _WSL_MOUNT_RE = re.compile(r"^/mnt/([a-zA-Z])/(.*)$")
 _WIN_ABS_RE = re.compile(r"^([A-Za-z]):/(.*)$")
 
 
+def is_git_lfs_pointer(path: Path) -> bool:
+    """True when the working tree file is an unresolved Git LFS pointer stub."""
+    try:
+        if path.stat().st_size > 1024:
+            return False
+        head = path.read_bytes()[:120]
+    except OSError:
+        return False
+    return head.startswith(b"version https://git-lfs.github.com/spec/")
+
+
 def resolve_manifest_path(uri: str, *, root: Path) -> Path:
     """Resolve a manifest/timeline ``uri`` to a host filesystem path.
 

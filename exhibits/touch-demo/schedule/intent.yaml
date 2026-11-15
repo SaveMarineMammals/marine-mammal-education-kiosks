@@ -1,0 +1,21 @@
+# Schedule intent: Touch Hardware Demo
+
+Logical targets for CMS scheduling (bind in Xibo; keep this file as the design intent).
+
+```yaml
+displayGroups:
+  - lobby
+priority: high
+layoutDurationSeconds: 3600
+loop: continuous
+dayparts:
+  - name: lab-session
+    days: [mon, tue, wed, thu, fri, sat, sun]
+    start: "00:00"
+    end: "23:59"
+notes: >
+  Lab/ops only. Schedule mmek-touch-demo (or mmek-preview) on one physical
+  kiosk while validating USB touch. Layout hold is 3600 seconds so the text
+  shell and native Interactive Button stay up. Remove from the schedule when
+  finished. Do not leave on public lobby groups after commissioning.
+```
