@@ -3,11 +3,11 @@ id: "00000000-0000-4000-8000-000000000005"
 slug: touch-demo
 title: Touch Hardware Demo
 status: draft
-version: 0.3.0
+version: 0.4.0
 summary: >
-  Ops text-only Glance & Match shell with one large Show info / Hide info
-  control (CSS text button in an HTZ). Used to validate USB HID touch on a
-  Pi-driven panel without depending on image media.
+  Ops text-only Glance & Match shell with a native Xibo Interactive Button that
+  advances an info label on tap. Used to validate USB HID touch on a Pi-driven
+  panel without HTML packages or image media.
 topics:
   - ops
   - touch

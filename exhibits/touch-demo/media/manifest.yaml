@@ -1,17 +1,5 @@
 # yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
 exhibit: touch-demo
 store: media-store-primary
-assets:
-  # CSS text button only (Show info / Hide info). No PNG/JPEG in this exhibit.
-  - id: touch-toggle
-    role: touch-toggle
-    filename: touch-toggle.zip
-    sha256: "9b7d73cffd957bc26f6a4fe99478f3a1b552df20a11885a7adb309d1ae3f101f"
-    uri: exhibits/touch-demo/media/assets/touch-toggle.zip
-    mime: application/zip
-    bytes: 1046
-    durationSeconds: 24
-    xiboTags:
-      - exhibit:touch-demo
-      - role:touch-toggle
-      - ops:touch-probe
+# No binary media — Interactive Button is a native Xibo widget.
+assets: []

@@ -1,20 +1,17 @@
 # Touch Hardware Demo
 
-Ops exhibit: a **text-only** Glance & Match shell plus one large
-**Show info / Hide info** control on the left pane. No PNG/JPEG assets —
-native text always paints even if the HTML package fails.
+Ops exhibit: a **text-only** Glance & Match shell plus a native Xibo
+**Interactive Button** (`Toggle info`) on the left pane. No HTML package and no
+PNG/JPEG assets. Each tap runs a **Next Widget** action on the info playlist.
 
 Layout name after CMS sync: `mmek-touch-demo`.
 
 ## What to check on the Pi
 
-1. Left and right panes show instructional text (not images).
-2. Tap **Show info** in the large left-pane button — a green info label appears.
-3. Tap **Hide info** — the label disappears.
-
-If the text layout appears but the large left-pane box is blank, Arexibo is not
-playing the HTML package (`.htz`). The rest of the layout is intentionally
-native text so a failed HTZ cannot blank the whole screen.
+1. Left and right panes show instructional text.
+2. The left pane shows a native **Toggle info** button (not a blank HTZ box).
+3. Tap the button — the info label advances (Waiting for tap ↔ Touch works).
+4. Tap again — the label advances again.
 
 ### Blank button box (Git LFS / CMS library)
 
@@ -47,21 +44,20 @@ Confirm the panel USB touch cable is connected and HID is visible
 ## Run on a lab Pi (`mmek-preview`)
 
 1. **CMS preview sync** — Actions → **CMS preview sync** → your PR branch →
-   **`exhibit`: `touch-demo`** → Run. This replaces layout **`mmek-preview`**
-   and uploads Library media as `preview-touch-demo-*` (tag `mmek:preview`).
+   **`exhibit`: `touch-demo`** → Run. This replaces layout **`mmek-preview`**.
    See [`ops/runbooks/cms-content-sync.md`](../../ops/runbooks/cms-content-sync.md).
-2. **Schedule** — In CMS, bind campaign **`mmek-preview`** to the **preview**
-   display group only (not lobby). The Pi playing your panel must be in that group.
-3. **Collect** — After sync, let the player XMDS-collect (or restart the player
-   service) so the HTZ downloads.
-4. **CMS spot-check** — Layout **mmek-preview** should show text in the Glance &
-   Match regions and the touch-toggle HTZ in **touch-toggle** (large left pane).
-5. Exercise **Show info** / **Hide info**; remove the preview schedule when done.
+2. **Schedule** — Bind campaign **`mmek-preview`** to the **preview** display
+   group only (not lobby).
+3. **Collect** — Let the player XMDS-collect (or restart the player service).
+4. **CMS spot-check** — Layout **mmek-preview** should show text regions, an
+   Interactive Button in **touch-toggle**, and an Interactive Action targeting
+   **touch-info**.
+5. Exercise **Toggle info** on the panel; remove the preview schedule when done.
 
 Production stable name after merge: `mmek-touch-demo` (not used for branch preview).
 
-## Out of scope
+## Notes
 
-Xibo Interactive Actions (Button/Zone navigate to widget/layout) are not wired
-by content sync. This demo uses a small offline HTML package with a CSS text
-button only.
+Content sync creates the Interactive Button and its touch → Next Widget action.
+Manual Interactive Mode edits on `mmek-preview` are replaced on the next preview
+sync.

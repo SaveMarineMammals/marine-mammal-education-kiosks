@@ -1,6 +1,6 @@
 # Widget timeline script — Touch Hardware Demo
-# Text-only Glance & Match shell plus a large Show info / Hide info HTZ button.
-# No image assets — native text always paints even if the HTML package fails.
+# Text-only Glance & Match shell plus a native Xibo Interactive Button.
+# No HTML package / HTZ. Tap advances the touch-info playlist (Next Widget).
 # Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
 
 layoutId: touch-demo-glance-and-match
@@ -24,8 +24,8 @@ regions:
           Touch Hardware Demo
 
           Ops panel check
-          Text layout only
-          No image assets
+          Native Interactive Button
+          No HTML package
 
   hero-bg:
     widgets:
@@ -49,11 +49,11 @@ regions:
         transitionOut: none
         effect: none
         copy: |
-          Button lives in the large
-          box on this left pane.
+          Use the button on this
+          left pane.
 
-          If that box is blank, the
-          HTML package did not load.
+          Each tap advances the
+          info label below it.
 
   hero-labels:
     widgets:
@@ -66,10 +66,10 @@ regions:
         effect: none
         copy: |
           Touch Demo
-          Tap Show info below
+          Tap Toggle info below
 
-          Plain text button
-          No images required
+          Native Xibo button
+          No HTML required
 
   insights-art:
     widgets:
@@ -96,9 +96,9 @@ regions:
           Steps
 
           - Confirm this text is on screen
-          - Tap Show info on the left
-          - Confirm the green label appears
-          - Tap Hide info to clear it
+          - Tap Toggle info on the left
+          - Confirm the info label changes
+          - Tap again to advance again
 
   ticker:
     widgets:
@@ -110,20 +110,46 @@ regions:
         transitionOut: none
         effect: tickerScroll
         copy: |
-          Touch demo: tap Show info on the left pane, then Hide info
+          Touch demo: tap Toggle info on the left pane to advance the info label
 
   touch-toggle:
-    # Large left-pane HTZ — CSS text button only (no image files inside the package).
     widgets:
-      - id: touch-toggle
-        type: html-package
-        asset: touch-toggle
+      - id: toggle-info-button
+        type: interactive-button
+        label: Toggle info
         startSeconds: 0
         durationSeconds: 24
         transitionIn: none
         transitionOut: none
-        notes: Offline text button toggles an info label on and off.
+        action:
+          type: next
+          trigger: touch
+          targetRegion: touch-info
+        notes: Native Interactive Button; Next Widget on touch-info.
+
+  touch-info:
+    # Long durations so playlist items stay put until the button advances them.
+    widgets:
+      - id: info-idle
+        type: text
+        startSeconds: 0
+        durationSeconds: 3600
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          Waiting for tap
+
+      - id: info-on
+        type: text
+        startSeconds: 3600
+        durationSeconds: 3600
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          Touch works — info label is on
 
 cueSheet:
-  - { t: 0, action: "text shell + large touch toggle held; no layout reload" }
-  - { t: 24, action: "cycle repeats (hero/ticker/toggle held)" }
+  - { t: 0, action: "text shell + native button + info playlist held" }
+  - { t: 24, action: "cycle repeats (regions held; tap advances touch-info)" }

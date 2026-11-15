@@ -40,13 +40,20 @@ HTML_INTERACTIVE_REGIONS: dict[str, dict[str, int]] = {
     "html": {"left": 0, "top": 0, "width": 1920, "height": 1080, "zIndex": 0},
 }
 
-# Optional Glance & Match overlay (ops touch demos). Large left-pane hit target
-# so a CSS text button is obvious without any image assets.
+# Optional Glance & Match overlays (ops touch demos). Native Interactive Button
+# plus a sibling playlist that Next Widget advances on tap (no HTML package).
 TOUCH_TOGGLE_REGION: dict[str, int] = {
     "left": 40,
     "top": 320,
     "width": 720,
-    "height": 560,
+    "height": 280,
+    "zIndex": 5,
+}
+TOUCH_INFO_REGION: dict[str, int] = {
+    "left": 40,
+    "top": 620,
+    "width": 720,
+    "height": 240,
     "zIndex": 5,
 }
 
@@ -78,10 +85,13 @@ def _with_optional_touch_toggle(
     geometry: dict[str, dict[str, int]],
     region_names: set[str],
 ) -> dict[str, dict[str, int]]:
-    if "touch-toggle" not in region_names:
+    if "touch-toggle" not in region_names and "touch-info" not in region_names:
         return geometry
     out = dict(geometry)
-    out["touch-toggle"] = dict(TOUCH_TOGGLE_REGION)
+    if "touch-toggle" in region_names:
+        out["touch-toggle"] = dict(TOUCH_TOGGLE_REGION)
+    if "touch-info" in region_names:
+        out["touch-info"] = dict(TOUCH_INFO_REGION)
     return out
 
 
@@ -201,6 +211,28 @@ class XiboLayoutClient(Protocol):
     ) -> Any: ...
 
     def add_spacer_widget(self, playlist_id: int, duration: int) -> int: ...
+
+    def add_interactive_button_widget(
+        self,
+        playlist_id: int,
+        label: str,
+        duration: int,
+    ) -> int: ...
+
+    def add_layout_action(
+        self,
+        *,
+        layout_id: int,
+        action_type: str,
+        target: str,
+        trigger_type: str = "touch",
+        source: str = "widget",
+        source_id: Optional[int] = None,
+        target_id: Optional[int] = None,
+        widget_id: Optional[int] = None,
+        layout_code: Optional[str] = None,
+        trigger_code: Optional[str] = None,
+    ) -> dict[str, Any]: ...
 
     def add_text_widget(
         self,
@@ -414,7 +446,7 @@ def upload_timeline_assets(
     media_ids: dict[str, int] = {}
     for _region, widget in collect_timeline_widgets(timeline):
         wtype = str(widget.get("type") or "").strip()
-        if wtype == "text":
+        if wtype in {"text", "interactive-button", "spacer"}:
             continue
         asset_id = str(widget.get("asset") or "").strip()
         if not asset_id or asset_id in media_ids:
@@ -461,16 +493,19 @@ def fill_playlist_from_widgets(
     *,
     media_ids: dict[str, int],
     layout_duration: int,
-) -> None:
+) -> list[dict[str, Any]]:
     """Map absolute-timed widgets onto a sequential Xibo playlist.
 
     Single-widget playlists stretch to ``layout_duration``. Multi-widget
     (cycling) playlists are not trailing-padded so Xibo can repeat them for
     the layout hold without a black reload every insight cycle.
+
+    Returns one entry per authored timeline widget with the CMS ``widget_id``.
     """
     ordered = sorted(widgets, key=lambda w: float(w.get("startSeconds") or 0))
     single = len(ordered) == 1
     cursor = 0.0
+    created: list[dict[str, Any]] = []
     for widget in ordered:
         start = float(widget.get("startSeconds") or 0)
         duration = max(1, int(round(float(widget.get("durationSeconds") or 1))))
@@ -482,10 +517,16 @@ def fill_playlist_from_widgets(
             cursor += gap
 
         wtype = str(widget.get("type") or "").strip()
+        widget_id: Optional[int] = None
         if wtype == "text":
             copy = str(widget.get("copy") or "").strip()
             effect = str(widget.get("effect") or "none").strip() or "none"
-            client.add_text_widget(playlist_id, copy, duration, effect=effect)
+            widget_id = client.add_text_widget(playlist_id, copy, duration, effect=effect)
+        elif wtype == "interactive-button":
+            label = str(widget.get("label") or widget.get("copy") or "Button").strip()
+            widget_id = client.add_interactive_button_widget(playlist_id, label, duration)
+        elif wtype == "spacer":
+            widget_id = client.add_spacer_widget(playlist_id, duration)
         elif wtype in {"image", "html-package", ""}:
             asset_id = str(widget.get("asset") or "").strip()
             media_id = media_ids.get(asset_id)
@@ -494,13 +535,22 @@ def fill_playlist_from_widgets(
             client.assign_media_to_playlist(playlist_id, media_id, duration=duration)
         else:
             raise PipelineError(f"Unsupported timeline widget type: {wtype!r}")
+        created.append(
+            {
+                "id": widget.get("id"),
+                "type": wtype,
+                "widget_id": widget_id,
+                "action": widget.get("action"),
+            }
+        )
         cursor = max(cursor, start) + duration
 
     if not single:
-        return
+        return created
     trailing = int(round(layout_duration - cursor))
     if trailing >= 1:
         client.add_spacer_widget(playlist_id, trailing)
+    return created
 
 
 def publish_exhibit_layout(
@@ -543,6 +593,8 @@ def publish_exhibit_layout(
         raise PipelineError("timeline.regions must be a mapping")
 
     region_playlists: dict[str, int] = {}
+    region_ids: dict[str, int] = {}
+    pending_actions: list[dict[str, Any]] = []
 
     def ensure_region(name: str, geometry: dict[str, int]) -> int:
         if name in region_playlists:
@@ -574,8 +626,8 @@ def publish_exhibit_layout(
                     break
         if not playlist_id:
             raise PipelineError(f"Could not resolve playlistId for region {name!r}")
+        region_id = client._region_id(region_row or created)
         if name == "ticker" or name.startswith("ticker-"):
-            region_id = client._region_id(region_row or created)
             if region_id is not None:
                 try:
                     client.edit_region(region_id, background_color=TICKER_BAND_BG)
@@ -584,7 +636,9 @@ def publish_exhibit_layout(
                         "Could not set ticker region background (%s); continuing", exc
                     )
         region_playlists[name] = playlist_id
-        LOG.info("Region %s -> playlistId=%s", name, playlist_id)
+        if region_id is not None:
+            region_ids[name] = region_id
+        LOG.info("Region %s -> playlistId=%s regionId=%s", name, playlist_id, region_id)
         return playlist_id
 
     geometry_map = region_geometry_for_timeline(timeline)
@@ -612,12 +666,65 @@ def publish_exhibit_layout(
                 geom = dict(base_geometry)
                 geom["zIndex"] = int(base_geometry.get("zIndex") or 0) + track_idx
             playlist_id = ensure_region(rname, geom)
-            fill_playlist_from_widgets(
+            created_widgets = fill_playlist_from_widgets(
                 client,
                 playlist_id,
                 track_widgets,
                 media_ids=media_ids,
                 layout_duration=layout_duration,
+            )
+            for created in created_widgets:
+                action = created.get("action")
+                if not isinstance(action, dict):
+                    continue
+                pending_actions.append(
+                    {
+                        "source_widget_id": created.get("widget_id"),
+                        "timeline_id": created.get("id"),
+                        "action": action,
+                    }
+                )
+
+    for pending in pending_actions:
+        source_widget_id = pending.get("source_widget_id")
+        action = pending.get("action") or {}
+        if not isinstance(action, dict) or not source_widget_id:
+            LOG.warning(
+                "Skipping interactive action for timeline widget %s (missing widget id)",
+                pending.get("timeline_id"),
+            )
+            continue
+        action_type = str(action.get("type") or "next").strip() or "next"
+        trigger = str(action.get("trigger") or "touch").strip() or "touch"
+        target_region = str(action.get("targetRegion") or "").strip()
+        target_region_id = region_ids.get(target_region) if target_region else None
+        if target_region and target_region_id is None:
+            raise PipelineError(
+                f"interactive action targetRegion {target_region!r} was not created"
+            )
+        try:
+            client.add_layout_action(
+                layout_id=draft_layout_id,
+                action_type=action_type,
+                target="region" if target_region_id is not None else "screen",
+                target_id=target_region_id,
+                source="widget",
+                source_id=int(source_widget_id),
+                trigger_type=trigger,
+                widget_id=action.get("widgetId"),
+                layout_code=action.get("layoutCode"),
+            )
+            LOG.info(
+                "Added %s action from widget %s -> %s",
+                action_type,
+                source_widget_id,
+                target_region or "screen",
+            )
+        except Exception as exc:  # noqa: BLE001
+            LOG.warning(
+                "Could not add interactive action for widget %s (%s); continuing",
+                pending.get("timeline_id"),
+                exc,
             )
 
     parent_id = int(draft.get("parentId") or published_layout_id)
