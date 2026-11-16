@@ -150,6 +150,42 @@ body {
   background: #0a2a3a;
 }
 
+#stage.glance-and-match #layer-touch-toggle {
+  z-index: 5;
+  left: 40px;
+  top: 320px;
+  width: 720px;
+  height: 280px;
+  inset: auto;
+  pointer-events: auto;
+}
+
+#stage.glance-and-match #layer-touch-info {
+  z-index: 5;
+  left: 40px;
+  top: 620px;
+  width: 720px;
+  height: 240px;
+  inset: auto;
+}
+
+#stage.glance-and-match .interactive-button-widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 4px solid #4db8d9;
+  border-radius: 14px;
+  background: #163d4d;
+  color: #e8f4f8;
+  font-size: 48px;
+  font-weight: 700;
+  text-align: center;
+  padding: 24px;
+}
+
 #stage.glance-and-match #layer-hero .widget.img-widget img {
   object-fit: contain;
 }

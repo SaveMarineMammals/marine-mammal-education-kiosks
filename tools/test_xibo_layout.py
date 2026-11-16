@@ -46,13 +46,14 @@ class FillPlaylistTests(unittest.TestCase):
                 "copy": "Protect mangroves",
             }
         ]
-        xibo_layout.fill_playlist_from_widgets(
+        created = xibo_layout.fill_playlist_from_widgets(
             client, 9, widgets, media_ids={}, layout_duration=3600
         )
         client.add_text_widget.assert_called_once_with(
             9, "Protect mangroves", 3600, effect="tickerScroll"
         )
         client.add_spacer_widget.assert_not_called()
+        self.assertEqual(created[0]["widget_id"], 1)
 
     def test_multi_widget_skips_trailing_spacer(self) -> None:
         client = MagicMock()
@@ -80,6 +81,50 @@ class FillPlaylistTests(unittest.TestCase):
         )
         self.assertEqual(client.assign_media_to_playlist.call_count, 2)
         client.add_spacer_widget.assert_not_called()
+
+    def test_interactive_button_uses_native_widget(self) -> None:
+        client = MagicMock()
+        client.add_interactive_button_widget.return_value = 42
+        widgets = [
+            {
+                "id": "toggle-info-button",
+                "type": "interactive-button",
+                "label": "Toggle info",
+                "startSeconds": 0,
+                "durationSeconds": 24,
+                "action": {"type": "next", "trigger": "touch", "targetRegion": "touch-info"},
+            }
+        ]
+        created = xibo_layout.fill_playlist_from_widgets(
+            client, 9, widgets, media_ids={}, layout_duration=3600
+        )
+        client.add_interactive_button_widget.assert_called_once_with(
+            9, "Toggle info", 3600
+        )
+        self.assertEqual(created[0]["widget_id"], 42)
+        self.assertEqual(created[0]["action"]["targetRegion"], "touch-info")
+
+    def test_touch_regions_in_geometry(self) -> None:
+        geom = xibo_layout.region_geometry_for_timeline(
+            {
+                "template": "glance-and-match",
+                "regions": {
+                    "hero-bg": {},
+                    "hero-still": {},
+                    "hero-labels": {},
+                    "insights-bg": {},
+                    "insights-art": {},
+                    "insights-copy": {},
+                    "ticker": {},
+                    "touch-toggle": {},
+                    "touch-info": {},
+                },
+            }
+        )
+        self.assertIn("touch-toggle", geom)
+        self.assertIn("touch-info", geom)
+        self.assertEqual(geom["touch-toggle"]["height"], 280)
+        self.assertEqual(geom["touch-info"]["top"], 620)
 
 
 class PreviewLayoutNamingTests(unittest.TestCase):

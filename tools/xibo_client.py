@@ -6,6 +6,7 @@ cannot mutate facility schedules.
 
 from __future__ import annotations
 
+import io
 import logging
 import mimetypes
 import os
@@ -164,6 +165,27 @@ class XiboClient:
             path = "/" + path
         return f"{self.base_url}{path}"
 
+    @staticmethod
+    def _rewind_upload_handles(kwargs: dict[str, Any]) -> None:
+        """Reset file handles so a redirect retry does not upload 0 bytes."""
+        files = kwargs.get("files")
+        if not files:
+            return
+        handles: list[Any] = []
+        if isinstance(files, dict):
+            handles.extend(files.values())
+        elif isinstance(files, (list, tuple)):
+            handles.extend(files)
+        for item in handles:
+            handle = (
+                item[1] if isinstance(item, (list, tuple)) and len(item) >= 2 else item
+            )
+            if hasattr(handle, "seek"):
+                try:
+                    handle.seek(0)
+                except OSError:
+                    pass
+
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         kwargs.setdefault("timeout", self.timeout)
         allow_redirects = kwargs.pop("allow_redirects", True)
@@ -184,6 +206,8 @@ class XiboClient:
                 location = urljoin(url, location)
             location = _rewrite_loopback_https(location)
             redirects += 1
+            # Multipart uploads leave the file pointer at EOF after the first try.
+            self._rewind_upload_handles(kwargs)
             url = location
             response = self.session.request(
                 method, url, allow_redirects=False, **kwargs
@@ -298,14 +322,23 @@ class XiboClient:
                 matched.append(item)
         return matched
 
-    def delete_media(self, media_id: int) -> None:
-        LOG.info("Deleting mediaId=%s", media_id)
-        self.request("DELETE", f"/api/library/{int(media_id)}")
+    def delete_media(self, media_id: int, *, force: bool = False) -> None:
+        LOG.info("Deleting mediaId=%s force=%s", media_id, force)
+        data = {"forceDelete": 1 if force else 0}
+        self.request("DELETE", f"/api/library/{int(media_id)}", data=data)
 
     def upload_media(self, file_path: Path, name: Optional[str] = None) -> int:
         LOG.info("Uploading media %s", file_path)
         if not file_path.is_file():
             raise XiboError(f"Media file not found: {file_path}")
+
+        from pathutil import is_git_lfs_pointer
+
+        if is_git_lfs_pointer(file_path):
+            raise XiboError(
+                f"Refusing to upload Git LFS pointer at {file_path} — "
+                "run `git lfs pull` (CMS preview sync needs real binaries)"
+            )
 
         display_name = name or file_path.stem
         mime = _mime_for_path(file_path)
@@ -315,10 +348,15 @@ class XiboClient:
         else:
             upload_name = f"{display_name}{file_path.suffix.lower()}"
 
-        with file_path.open("rb") as handle:
-            files = {"files": (upload_name, handle, mime)}
-            data = {"name": display_name}
-            payload = self.request("POST", "/api/library", files=files, data=data)
+        # Buffer into memory so redirect retries cannot upload an EOF'd handle
+        # (which previously created 0-byte Library files that still got mediaIds).
+        raw = file_path.read_bytes()
+        if not raw:
+            raise XiboError(f"Refusing to upload empty media file: {file_path}")
+        handle = io.BytesIO(raw)
+        files = {"files": (upload_name, handle, mime)}
+        data = {"name": display_name}
+        payload = self.request("POST", "/api/library", files=files, data=data)
 
         if isinstance(payload, dict):
             for item in payload.get("files") or []:
@@ -343,7 +381,26 @@ class XiboClient:
         media_id = _extract_id(payload, keys=("mediaId", "id"))
         if media_id is None:
             raise XiboError(f"Could not parse mediaId from upload response: {payload}")
-        LOG.info("Uploaded mediaId=%s name=%s", media_id, display_name)
+
+        stored = self.get_media(media_id)
+        stored_size = stored.get("fileSize")
+        if stored_size is None:
+            stored_size = stored.get("size")
+        try:
+            size_int = int(stored_size) if stored_size not in (None, "") else -1
+        except (TypeError, ValueError):
+            size_int = -1
+        if size_int == 0:
+            raise XiboError(
+                f"Library stored 0-byte file for mediaId={media_id} name={display_name} "
+                f"(source had {len(raw)} bytes); refusing empty media"
+            )
+        LOG.info(
+            "Uploaded mediaId=%s name=%s fileSize=%s",
+            media_id,
+            display_name,
+            size_int if size_int >= 0 else "unknown",
+        )
         return media_id
 
     def get_media(self, media_id: int) -> dict[str, Any]:
@@ -756,6 +813,82 @@ class XiboClient:
             raise XiboError(f"spacer widget missing id: {widget}")
         self.edit_widget(widget_id, {"duration": duration, "useDuration": 1})
         return widget_id
+
+    def add_interactive_button_widget(
+        self,
+        playlist_id: int,
+        label: str,
+        duration: int,
+    ) -> int:
+        """Add a native Interactive Button widget (no HTML package)."""
+        duration = max(1, int(duration))
+        text = " ".join(str(label or "Button").split()) or "Button"
+        widget = self.add_widget("interactive-button", playlist_id)
+        widget_id = int(widget.get("widgetId") or widget.get("widgetid") or 0)
+        if not widget_id:
+            raise XiboError(f"interactive-button widget missing id: {widget}")
+        self.edit_widget(
+            widget_id,
+            {
+                "duration": duration,
+                "useDuration": 1,
+                "text": text,
+                "fontSize": 48,
+                "bold": 1,
+                "fontColor": "#e8f4f8",
+                "backgroundColor": "#163d4d",
+                "outline": 1,
+                "outlineColor": "#4db8d9",
+                "outlineWidth": 4,
+                "roundBorder": 1,
+                "borderRadius": 14,
+                "horizontalAlign": "center",
+                "verticalAlign": "center",
+                "fitToArea": 0,
+            },
+        )
+        return widget_id
+
+    def add_layout_action(
+        self,
+        *,
+        layout_id: int,
+        action_type: str,
+        target: str,
+        trigger_type: str = "touch",
+        source: str = "widget",
+        source_id: Optional[int] = None,
+        target_id: Optional[int] = None,
+        widget_id: Optional[int] = None,
+        layout_code: Optional[str] = None,
+        trigger_code: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Create a layout Interactive Action (touch → next/navWidget/…).
+
+        This is layout design metadata, not XMR display-control commands.
+        """
+        data: dict[str, Any] = {
+            "layoutId": int(layout_id),
+            "actionType": str(action_type).strip(),
+            "target": str(target).strip(),
+            "triggerType": str(trigger_type).strip() or "touch",
+            "source": str(source).strip() or "widget",
+        }
+        if source_id is not None:
+            data["sourceId"] = int(source_id)
+        if target_id is not None:
+            data["targetId"] = int(target_id)
+        if widget_id is not None:
+            data["widgetId"] = int(widget_id)
+        if layout_code:
+            data["layoutCode"] = layout_code
+        if trigger_code:
+            data["triggerCode"] = trigger_code
+        payload = self.request("POST", "/api/action", data=data)
+        result = payload[0] if isinstance(payload, list) else payload
+        if not isinstance(result, dict):
+            return {"raw": payload}
+        return result
 
     def add_text_widget(
         self,

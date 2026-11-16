@@ -24,7 +24,8 @@ STATIC_DIR = Path(__file__).resolve().parent
 # ops/qa on sys.path so pathutil resolves the same way as the pipeline.
 if str(QA_DIR) not in sys.path:
     sys.path.insert(0, str(QA_DIR))
-from pathutil import resolve_manifest_path  # noqa: E402
+from exhibit_layout import region_geometry_for_timeline  # noqa: E402
+from pathutil import is_git_lfs_pointer, resolve_manifest_path  # noqa: E402
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -67,6 +68,11 @@ def resolve_asset_file(exhibit_dir: Path, asset: dict[str, Any]) -> Optional[Pat
 
 
 def copy_media(src: Path, media_dir: Path) -> str:
+    if is_git_lfs_pointer(src):
+        raise SystemExit(
+            f"Git LFS pointer at {src} — run `git lfs pull` for exhibit media "
+            "before rendering the timeline preview"
+        )
     media_dir.mkdir(parents=True, exist_ok=True)
     dest = media_dir / src.name
     if not dest.exists() or dest.stat().st_mtime < src.stat().st_mtime:
@@ -139,6 +145,20 @@ def render_html_widget(widget: dict[str, Any], rel_src: str) -> str:
     )
 
 
+def render_interactive_button_widget(widget: dict[str, Any]) -> str:
+    wid = widget.get("id") or "button"
+    start = float(widget.get("startSeconds") or 0)
+    duration = float(widget.get("durationSeconds") or 0)
+    label = str(widget.get("label") or widget.get("copy") or "Button").strip() or "Button"
+    return (
+        f'<div class="widget interactive-button-widget" data-widget '
+        f'data-id="{_esc(str(wid))}" data-start="{start}" data-duration="{duration}" '
+        f'data-transition-in="none" data-transition-out="none" data-transition-ms="0">'
+        f"{_esc(label)}"
+        f"</div>"
+    )
+
+
 def _esc(value: str) -> str:
     return (
         value.replace("&", "&amp;")
@@ -164,6 +184,11 @@ def build_layer_html(
         wtype = str(widget.get("type") or "").strip()
         if wtype == "text":
             parts.append(render_text_widget(widget))
+            continue
+        if wtype == "interactive-button":
+            parts.append(render_interactive_button_widget(widget))
+            continue
+        if wtype == "spacer":
             continue
 
         asset_id = str(widget.get("asset") or "").strip()
@@ -212,7 +237,7 @@ def layer_order_for_timeline(timeline: dict[str, Any]) -> tuple[str, ...]:
         "ticker",
     }:
         if "hero-bg" in region_names or "hero-still" in region_names:
-            return (
+            base = (
                 "insights-bg",
                 "hero-bg",
                 "hero-still",
@@ -221,10 +246,34 @@ def layer_order_for_timeline(timeline: dict[str, Any]) -> tuple[str, ...]:
                 "insights-copy",
                 "ticker",
             )
-        if "insights-art" in region_names or "insights-copy" in region_names:
-            return ("insights-bg", "hero", "insights-art", "insights-copy", "ticker")
-        return ("hero", "insights", "ticker")
+        elif "insights-art" in region_names or "insights-copy" in region_names:
+            base = ("insights-bg", "hero", "insights-art", "insights-copy", "ticker")
+        else:
+            base = ("hero", "insights", "ticker")
+        return _layer_order_with_extras(timeline, base)
     return ("background", "midground", "text", "accent")
+
+
+def _layer_order_with_extras(
+    timeline: dict[str, Any],
+    base: tuple[str, ...],
+) -> tuple[str, ...]:
+    """Keep the canonical stack, then append extra regions (e.g. touch-toggle) by z-index."""
+    regions = timeline.get("regions") or {}
+    region_names = set(regions.keys()) if isinstance(regions, dict) else set()
+    geometry = region_geometry_for_timeline(timeline)
+    seen = set(base)
+    extras = [
+        name
+        for name, _geo in sorted(
+            geometry.items(),
+            key=lambda item: (int(item[1].get("zIndex", 0)), item[0]),
+        )
+        if name in region_names and name not in seen
+    ]
+    if not extras:
+        return base
+    return base + tuple(extras)
 def render_exhibit(
     slug: str,
     *,

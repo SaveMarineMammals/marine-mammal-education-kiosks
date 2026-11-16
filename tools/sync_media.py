@@ -29,7 +29,7 @@ TOOLS = Path(__file__).resolve().parent
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
-from pathutil import resolve_manifest_path  # noqa: E402
+from pathutil import is_git_lfs_pointer, resolve_manifest_path  # noqa: E402
 
 LOG = logging.getLogger("mmek.sync_media")
 
@@ -149,6 +149,10 @@ def resolve_asset_bytes(asset: dict[str, Any], *, slug: str) -> Path:
     if uri and not _is_store_key(uri):
         path = resolve_manifest_path(uri, root=ROOT)
         if path.is_file():
+            if is_git_lfs_pointer(path):
+                raise FileNotFoundError(
+                    f"{path} is a Git LFS pointer — run `git lfs pull` before CMS sync"
+                )
             return path
         if filename:
             fallback = exhibit_dir / "media" / "assets" / filename
@@ -159,6 +163,10 @@ def resolve_asset_bytes(asset: dict[str, Any], *, slug: str) -> Path:
     if filename:
         local = exhibit_dir / "media" / "assets" / filename
         if local.is_file():
+            if is_git_lfs_pointer(local):
+                raise FileNotFoundError(
+                    f"{local} is a Git LFS pointer — run `git lfs pull` before CMS sync"
+                )
             return local
 
     store_root = _media_store_root()
@@ -290,10 +298,30 @@ def sync_exhibit_media(
                 existing, hash_tag
             ):
                 mid = int(existing.get("mediaId") or existing.get("id"))
-                media_ids[asset_id] = mid
-                reused += 1
-                LOG.info("Reuse mediaId=%s name=%s (sha256 match)", mid, name)
-                continue
+                # List search may omit fileSize; re-fetch before trusting reuse.
+                try:
+                    fresh = client.get_media(mid)
+                except Exception:  # noqa: BLE001 — fall back to search row
+                    fresh = existing
+                raw_size = fresh.get("fileSize")
+                if raw_size is None:
+                    raw_size = fresh.get("size")
+                try:
+                    size_int = int(raw_size) if raw_size not in (None, "") else -1
+                except (TypeError, ValueError):
+                    size_int = -1
+                if size_int == 0:
+                    LOG.warning(
+                        "Rejecting zero-byte Library mediaId=%s name=%s; re-uploading",
+                        mid,
+                        name,
+                    )
+                    client.delete_media(mid, force=True)
+                else:
+                    media_ids[asset_id] = mid
+                    reused += 1
+                    LOG.info("Reuse mediaId=%s name=%s (sha256 match)", mid, name)
+                    continue
 
             path = resolve_asset_bytes(asset, slug=slug)
             if path.name.startswith("mmek-media-"):

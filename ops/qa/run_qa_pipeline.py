@@ -1033,6 +1033,77 @@ class XiboClient:
         )
         return widget_id
 
+    def add_interactive_button_widget(
+        self,
+        playlist_id: int,
+        label: str,
+        duration: int,
+    ) -> int:
+        duration = max(1, int(duration))
+        text = " ".join(str(label or "Button").split()) or "Button"
+        widget = self.add_widget("interactive-button", playlist_id)
+        widget_id = int(widget.get("widgetId") or widget.get("widgetid") or 0)
+        if not widget_id:
+            raise PipelineError(f"interactive-button widget missing id: {widget}")
+        self.edit_widget(
+            widget_id,
+            {
+                "duration": duration,
+                "useDuration": 1,
+                "text": text,
+                "fontSize": 48,
+                "bold": 1,
+                "fontColor": "#e8f4f8",
+                "backgroundColor": "#163d4d",
+                "outline": 1,
+                "outlineColor": "#4db8d9",
+                "outlineWidth": 4,
+                "roundBorder": 1,
+                "borderRadius": 14,
+                "horizontalAlign": "center",
+                "verticalAlign": "center",
+                "fitToArea": 0,
+            },
+        )
+        return widget_id
+
+    def add_layout_action(
+        self,
+        *,
+        layout_id: int,
+        action_type: str,
+        target: str,
+        trigger_type: str = "touch",
+        source: str = "widget",
+        source_id: Optional[int] = None,
+        target_id: Optional[int] = None,
+        widget_id: Optional[int] = None,
+        layout_code: Optional[str] = None,
+        trigger_code: Optional[str] = None,
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = {
+            "layoutId": int(layout_id),
+            "actionType": str(action_type).strip(),
+            "target": str(target).strip(),
+            "triggerType": str(trigger_type).strip() or "touch",
+            "source": str(source).strip() or "widget",
+        }
+        if source_id is not None:
+            data["sourceId"] = int(source_id)
+        if target_id is not None:
+            data["targetId"] = int(target_id)
+        if widget_id is not None:
+            data["widgetId"] = int(widget_id)
+        if layout_code:
+            data["layoutCode"] = layout_code
+        if trigger_code:
+            data["triggerCode"] = trigger_code
+        payload = self.request("POST", "/api/action", data=data)
+        result = payload[0] if isinstance(payload, list) else payload
+        if not isinstance(result, dict):
+            return {"raw": payload}
+        return result
+
     def add_text_widget(
         self,
         playlist_id: int,
