@@ -1,0 +1,42 @@
+name: CMS preview layout probe
+
+# Temporary debug workflow (session b04d48): dump mmek-preview region/widget/media state.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: cms-preview
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe mmek-preview layout
+    runs-on: [self-hosted, mmek-cms]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prefer host venv when present
+        id: venv
+        run: |
+          if [[ -x /opt/mmek/venv/bin/python ]]; then
+            echo "python=/opt/mmek/venv/bin/python" >> "${GITHUB_OUTPUT}"
+          else
+            echo "python=python3" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Probe published preview layout
+        run: |
+          set -euo pipefail
+          ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+          set -a
+          # shellcheck disable=SC1090
+          source "${ENV_FILE}"
+          set +a
+          "${{ steps.venv.outputs.python }}" tools/debug_probe_preview_layout.py
+          if [[ -f debug-b04d48.log ]]; then
+            echo "----- debug-b04d48.log -----"
+            cat debug-b04d48.log
+          fi

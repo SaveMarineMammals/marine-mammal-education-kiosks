@@ -9,7 +9,9 @@ display group can stay scheduled while content is replaced each preview run.
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
@@ -20,6 +22,107 @@ LOG = logging.getLogger("mmek.xibo_layout")
 
 ROOT = Path(__file__).resolve().parents[1]
 EXHIBITS_DIR = ROOT / "exhibits"
+# region agent log
+_AGENT_DEBUG_LOG = ROOT / "debug-b04d48.log"
+
+
+def _agent_debug_log(
+    hypothesis_id: str,
+    location: str,
+    message: str,
+    data: dict[str, Any],
+    *,
+    run_id: str = "pre-fix",
+) -> None:
+    """NDJSON debug sink for CMS preview media wiring (session b04d48)."""
+    payload = {
+        "sessionId": "b04d48",
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with _AGENT_DEBUG_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, default=str) + "\n")
+    except OSError:
+        pass
+    LOG.info(
+        "DEBUG[%s] %s | %s",
+        hypothesis_id,
+        message,
+        json.dumps(data, default=str)[:1200],
+    )
+
+
+def _widgets_media_summary(layout: dict[str, Any]) -> dict[str, Any]:
+    """Summarize region playlists/widgets/media after publish for debug."""
+    regions_out: list[dict[str, Any]] = []
+    media_widget_count = 0
+    text_widget_count = 0
+    empty_region_count = 0
+    for region in layout.get("regions") or []:
+        if not isinstance(region, dict):
+            continue
+        rname = str(region.get("name") or "")
+        rid = region.get("regionId") or region.get("regionid")
+        width = region.get("width")
+        height = region.get("height")
+        playlists = region.get("regionPlaylist") or region.get("playlists") or []
+        if isinstance(playlists, dict):
+            playlists = [playlists]
+        widgets: list[dict[str, Any]] = []
+        playlist_id = None
+        for pl in playlists if isinstance(playlists, list) else []:
+            if not isinstance(pl, dict):
+                continue
+            playlist_id = pl.get("playlistId") or pl.get("playlistid") or playlist_id
+            for widget in pl.get("widgets") or []:
+                if isinstance(widget, dict):
+                    widgets.append(widget)
+        for widget in region.get("widgets") or []:
+            if isinstance(widget, dict):
+                widgets.append(widget)
+        media_ids: list[Any] = []
+        types: list[str] = []
+        for widget in widgets:
+            wtype = str(widget.get("type") or widget.get("typeId") or "")
+            types.append(wtype)
+            mids = widget.get("mediaIds") or widget.get("mediaids") or []
+            if isinstance(mids, list):
+                media_ids.extend(mids)
+            elif mids:
+                media_ids.append(mids)
+            if mids or wtype.lower() in {"image", "video", "audio", "htmlpackage"}:
+                media_widget_count += 1
+            if "text" in wtype.lower() or wtype.lower() in {"ticker"}:
+                text_widget_count += 1
+        if not widgets:
+            empty_region_count += 1
+        regions_out.append(
+            {
+                "name": rname,
+                "regionId": rid,
+                "playlistId": playlist_id,
+                "width": width,
+                "height": height,
+                "widgetCount": len(widgets),
+                "widgetTypes": types[:12],
+                "mediaIds": media_ids[:12],
+            }
+        )
+    return {
+        "regionCount": len(regions_out),
+        "emptyRegionCount": empty_region_count,
+        "mediaWidgetCount": media_widget_count,
+        "textWidgetCount": text_widget_count,
+        "regions": regions_out,
+    }
+
+
+# endregion agent log
 
 # Single CMS layout slot for manual branch preview (never mmek-<slug>).
 PREVIEW_LAYOUT_NAME = "mmek-preview"
@@ -349,7 +452,36 @@ def fill_playlist_from_widgets(
             media_id = media_ids.get(asset_id)
             if media_id is None:
                 raise XiboError(f"No uploaded media for asset {asset_id!r}")
-            client.assign_media_to_playlist(playlist_id, media_id, duration=duration)
+            # region agent log
+            assign_resp = client.assign_media_to_playlist(
+                playlist_id, media_id, duration=duration
+            )
+            resp_widget_count = None
+            resp_media_ids: list[Any] = []
+            if isinstance(assign_resp, dict):
+                for widget_row in assign_resp.get("widgets") or []:
+                    if isinstance(widget_row, dict):
+                        resp_widget_count = (resp_widget_count or 0) + 1
+                        mids = widget_row.get("mediaIds") or widget_row.get("mediaids")
+                        if isinstance(mids, list):
+                            resp_media_ids.extend(mids)
+                if resp_widget_count is None and assign_resp.get("playlistId"):
+                    resp_widget_count = -1
+            _agent_debug_log(
+                "B",
+                "xibo_layout.py:fill_playlist_from_widgets",
+                "assign_media_to_playlist",
+                {
+                    "playlistId": playlist_id,
+                    "assetId": asset_id,
+                    "mediaId": media_id,
+                    "duration": duration,
+                    "respType": type(assign_resp).__name__,
+                    "respWidgetCount": resp_widget_count,
+                    "respMediaIds": resp_media_ids[:8],
+                },
+            )
+            # endregion agent log
         else:
             raise XiboError(f"Unsupported timeline widget type: {wtype!r}")
         cursor = max(cursor, start) + duration
@@ -441,6 +573,22 @@ def upsert_exhibit_layout(
     resolved_media = upload_timeline_assets(
         client, slug=exhibit_slug, timeline=timeline, media_ids=media_ids
     )
+    # region agent log
+    _agent_debug_log(
+        "A",
+        "xibo_layout.py:upsert_exhibit_layout",
+        "media_ids_before_layout",
+        {
+            "exhibitSlug": exhibit_slug,
+            "layoutName": name,
+            "isPreviewLayout": name == PREVIEW_LAYOUT_NAME,
+            "stableWouldBe": stable_layout_name(exhibit_slug),
+            "mediaIdCount": len(resolved_media),
+            "mediaIdKeys": sorted(resolved_media.keys()),
+            "mediaIdValues": sorted(int(v) for v in resolved_media.values()),
+        },
+    )
+    # endregion agent log
 
     layout = client.ensure_layout(name)
     published_layout_id = int(layout.get("layoutId") or layout.get("layoutid"))
@@ -476,11 +624,13 @@ def upsert_exhibit_layout(
         refreshed = client.get_layout(layout_id=draft_layout_id) or {}
         playlist_id: Optional[int] = client._playlist_id_from_region(created)
         region_row: Optional[dict[str, Any]] = created if isinstance(created, dict) else None
+        resolve_path = "created"
         if not playlist_id:
             for region in refreshed.get("regions") or []:
                 if str(region.get("name") or "") == rname:
                     playlist_id = client._playlist_id_from_region(region)
                     region_row = region
+                    resolve_path = "name-match"
                     break
         if not playlist_id:
             for region in refreshed.get("regions") or []:
@@ -488,12 +638,34 @@ def upsert_exhibit_layout(
                 if rid and rid not in region_playlists.values():
                     playlist_id = rid
                     region_row = region
+                    resolve_path = "first-unused"
                     break
         if not playlist_id:
             raise XiboError(f"Could not resolve playlistId for region {rname!r}")
+        region_id = client._region_id(region_row or created)
+        # region agent log
+        created_keys = sorted(created.keys())[:20] if isinstance(created, dict) else []
+        _agent_debug_log(
+            "E",
+            "xibo_layout.py:ensure_region",
+            "region_resolved",
+            {
+                "rname": rname,
+                "playlistId": playlist_id,
+                "regionId": region_id,
+                "resolvePath": resolve_path,
+                "geom": {
+                    "w": geometry.get("width"),
+                    "h": geometry.get("height"),
+                    "l": geometry.get("left"),
+                    "t": geometry.get("top"),
+                },
+                "createdKeys": created_keys,
+            },
+        )
+        # endregion agent log
         # Fixed band behind native marqueeLeft text (scrolling HTML must stay transparent).
         if rname == "ticker" or rname.startswith("ticker-"):
-            region_id = client._region_id(region_row or created)
             if region_id is not None:
                 try:
                     client.edit_region(region_id, background_color=TICKER_BAND_BG)
@@ -502,7 +674,7 @@ def upsert_exhibit_layout(
                         "Could not set ticker region background (%s); continuing", exc
                     )
         region_playlists[rname] = playlist_id
-        LOG.info("Region %s -> playlistId=%s", rname, playlist_id)
+        LOG.info("Region %s -> playlistId=%s regionId=%s", rname, playlist_id, region_id)
         return playlist_id
 
     geometry_map = region_geometry_for_timeline(timeline)
@@ -553,6 +725,25 @@ def upsert_exhibit_layout(
         layout_duration,
         cycle_seconds,
     )
+    # region agent log
+    published_probe = client.get_layout(layout_id=final_layout_id) or published_layout
+    summary = _widgets_media_summary(
+        published_probe if isinstance(published_probe, dict) else {}
+    )
+    _agent_debug_log(
+        "C",
+        "xibo_layout.py:upsert_exhibit_layout",
+        "post_publish_layout_probe",
+        {
+            "layoutName": name,
+            "layoutId": final_layout_id,
+            "draftLayoutId": draft_layout_id,
+            "campaignId": campaign_id,
+            "expectedMediaIds": sorted(int(v) for v in resolved_media.values()),
+            **summary,
+        },
+    )
+    # endregion agent log
     return {
         "layout_name": name,
         "layout_id": final_layout_id,

@@ -163,6 +163,38 @@ def sync_one(
     if preview:
         layout_kwargs["layout_name"] = PREVIEW_LAYOUT_NAME
         layout_kwargs["extra_tags"] = [PREVIEW_TAG]
+    # region agent log
+    try:
+        import json
+        import time
+        from pathlib import Path as _Path
+
+        _dbg = {
+            "sessionId": "b04d48",
+            "runId": "pre-fix",
+            "hypothesisId": "A",
+            "location": "sync_cms.py:sync_one",
+            "message": "preview_vs_production_naming",
+            "data": {
+                "slug": slug,
+                "preview": preview,
+                "layoutName": layout_kwargs.get("layout_name") or f"mmek-{slug}",
+                "mediaIdMap": media_result.get("media_ids") or {},
+                "mediaCount": len(media_result.get("media_ids") or {}),
+            },
+            "timestamp": int(time.time() * 1000),
+        }
+        with (_Path(__file__).resolve().parents[1] / "debug-b04d48.log").open(
+            "a", encoding="utf-8"
+        ) as _fh:
+            _fh.write(json.dumps(_dbg, default=str) + "\n")
+        LOG.info(
+            "DEBUG[A] preview_vs_production_naming | %s",
+            json.dumps(_dbg["data"], default=str)[:1200],
+        )
+    except Exception:  # noqa: BLE001 — debug only
+        pass
+    # endregion agent log
     layout_result = upsert_exhibit_layout(client, **layout_kwargs)
 
     purged: list[int] = []
