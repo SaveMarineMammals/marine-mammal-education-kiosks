@@ -50,15 +50,81 @@ def main() -> int:
     layout_id = int(layout.get("layoutId") or layout.get("layoutid") or 0)
     full = client.get_layout(layout_id=layout_id) or layout
     summary = _widgets_media_summary(full if isinstance(full, dict) else {})
+
+    # Hypothesis F/G: image widgets present but duration/useDuration or library bytes bad.
+    widget_details: list[dict] = []
+    media_details: list[dict] = []
+    seen_media: set[int] = set()
+    for region in full.get("regions") or []:
+        if not isinstance(region, dict):
+            continue
+        playlists = region.get("regionPlaylist") or region.get("playlists") or []
+        if isinstance(playlists, dict):
+            playlists = [playlists]
+        widgets = []
+        for pl in playlists if isinstance(playlists, list) else []:
+            if isinstance(pl, dict):
+                for w in pl.get("widgets") or []:
+                    if isinstance(w, dict):
+                        widgets.append(w)
+        for w in region.get("widgets") or []:
+            if isinstance(w, dict):
+                widgets.append(w)
+        for w in widgets:
+            wtype = str(w.get("type") or "")
+            mids = w.get("mediaIds") or w.get("mediaids") or []
+            if not isinstance(mids, list):
+                mids = [mids] if mids else []
+            widget_details.append(
+                {
+                    "regionId": region.get("regionId") or region.get("regionid"),
+                    "widgetId": w.get("widgetId") or w.get("widgetid"),
+                    "type": wtype,
+                    "duration": w.get("duration"),
+                    "useDuration": w.get("useDuration"),
+                    "mediaIds": mids,
+                }
+            )
+            for mid in mids:
+                try:
+                    mid_i = int(mid)
+                except (TypeError, ValueError):
+                    continue
+                if mid_i in seen_media:
+                    continue
+                seen_media.add(mid_i)
+                try:
+                    item = client.get_media(mid_i)
+                except XiboError as exc:
+                    media_details.append({"mediaId": mid_i, "error": str(exc)})
+                    continue
+                media_details.append(
+                    {
+                        "mediaId": mid_i,
+                        "name": item.get("name"),
+                        "mediaType": item.get("mediaType") or item.get("type"),
+                        "duration": item.get("duration"),
+                        "fileSize": item.get("fileSize") or item.get("size"),
+                        "storedAs": item.get("storedAs") or item.get("filename"),
+                        "md5": item.get("md5"),
+                        "retired": item.get("retired"),
+                        "width": item.get("width"),
+                        "height": item.get("height"),
+                    }
+                )
+
     payload = {
         "layoutName": PREVIEW_LAYOUT_NAME,
         "layoutId": layout_id,
         "campaignId": full.get("campaignId") or full.get("campaignid"),
         "publishedStatus": full.get("publishedStatus"),
+        "status": full.get("status"),
         **summary,
+        "widgetDetails": widget_details,
+        "mediaDetails": media_details,
     }
     _agent_debug_log(
-        "C",
+        "F",
         "debug_probe_preview_layout.py:main",
         "existing_preview_layout_probe",
         payload,

@@ -290,10 +290,32 @@ def sync_exhibit_media(
                 existing, hash_tag
             ):
                 mid = int(existing.get("mediaId") or existing.get("id"))
-                media_ids[asset_id] = mid
-                reused += 1
-                LOG.info("Reuse mediaId=%s name=%s (sha256 match)", mid, name)
-                continue
+                # Prefer a fresh record so fileSize is present (list search may omit it).
+                try:
+                    fresh = client.get_media(mid)
+                except Exception:  # noqa: BLE001 — fall back to search row
+                    fresh = existing
+                raw_size = fresh.get("fileSize")
+                if raw_size is None:
+                    raw_size = fresh.get("size")
+                try:
+                    size_int = int(raw_size) if raw_size not in (None, "") else -1
+                except (TypeError, ValueError):
+                    size_int = -1
+                if size_int == 0:
+                    # region agent log
+                    LOG.warning(
+                        "DEBUG[G] rejecting zero-byte reuse mediaId=%s name=%s; re-uploading",
+                        mid,
+                        name,
+                    )
+                    # endregion agent log
+                    client.delete_media(mid)
+                else:
+                    media_ids[asset_id] = mid
+                    reused += 1
+                    LOG.info("Reuse mediaId=%s name=%s (sha256 match)", mid, name)
+                    continue
 
             path = resolve_asset_bytes(asset, slug=slug)
             if path.name.startswith("mmek-media-"):

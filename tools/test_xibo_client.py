@@ -61,6 +61,45 @@ class RedirectRequestTests(unittest.TestCase):
         second_url = mock_request.call_args_list[1][0][1]
         self.assertIn("server.kiosks.local", second_url)
 
+    def test_upload_redirect_rewinds_file_handle(self) -> None:
+        client = xibo_client.XiboClient("http://127.0.0.1:8080")
+        handle = xibo_client.io.BytesIO(b"real-image-bytes")
+        redirect = MagicMock()
+        redirect.status_code = 307
+        redirect.headers = {"Location": "https://127.0.0.1/api/library"}
+        redirect.content = b""
+
+        ok = MagicMock()
+        ok.status_code = 200
+        ok.content = b'{"files":[{"mediaId":9,"name":"x","size":16}]}'
+        ok.headers = {"Content-Type": "application/json"}
+        ok.text = ok.content.decode()
+        ok.json.return_value = {"files": [{"mediaId": 9, "name": "x", "size": 16}]}
+
+        def side_effect(method, url, allow_redirects=False, **kwargs):
+            files = kwargs.get("files") or {}
+            upload = files.get("files")
+            if upload is not None:
+                body = upload[1]
+                # Consume the body like a real HTTP stack would.
+                body.read()
+            if side_effect.calls == 0:
+                side_effect.calls += 1
+                return redirect
+            return ok
+
+        side_effect.calls = 0
+        with patch.object(client.session, "request", side_effect=side_effect):
+            payload = client.request(
+                "POST",
+                "/api/library",
+                files={"files": ("x.png", handle, "image/png")},
+                data={"name": "x"},
+            )
+        self.assertEqual(payload["files"][0]["mediaId"], 9)
+        # After rewind+retry the handle must be readable again from start.
+        self.assertEqual(handle.tell(), len(b"real-image-bytes"))
+
 
 class EditMediaTests(unittest.TestCase):
     def test_edit_sends_existing_duration_and_retired(self) -> None:
