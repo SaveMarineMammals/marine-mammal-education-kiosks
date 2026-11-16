@@ -43,6 +43,22 @@ jobs:
             python3 -m pip install --user -r tools/requirements.txt
           fi
 
+      - name: Probe existing mmek-preview (pre-sync)
+        run: |
+          set -euo pipefail
+          ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+          set -a
+          # shellcheck disable=SC1090
+          source "${ENV_FILE}"
+          set +a
+          rm -f debug-b04d48.log
+          echo "===== PRE-SYNC PROBE ====="
+          "${{ steps.venv.outputs.python }}" tools/debug_probe_preview_layout.py || true
+          if [[ -f debug-b04d48.log ]]; then
+            echo "----- debug-b04d48.log (pre) -----"
+            cat debug-b04d48.log
+          fi
+
       - name: Sync preview layout
         id: sync
         env:
@@ -91,3 +107,22 @@ jobs:
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
           exit "${STATUS}"
+
+      - name: Probe mmek-preview (post-sync)
+        if: always()
+        run: |
+          set -euo pipefail
+          ENV_FILE="${MMEK_ENV_FILE:-/etc/mmek/cms-sync.env}"
+          set -a
+          # shellcheck disable=SC1090
+          source "${ENV_FILE}"
+          set +a
+          echo "===== POST-SYNC PROBE ====="
+          "${{ steps.venv.outputs.python }}" tools/debug_probe_preview_layout.py || true
+          if [[ -f debug-b04d48.log ]]; then
+            echo "----- debug-b04d48.log (all) -----"
+            cat debug-b04d48.log
+          fi
+          echo "----- DEBUG lines from sync -----"
+          # Best-effort; sync step already printed DEBUG via logger
+          true
