@@ -310,7 +310,7 @@ def sync_exhibit_media(
                         name,
                     )
                     # endregion agent log
-                    client.delete_media(mid)
+                    client.delete_media(mid, force=True)
                 else:
                     media_ids[asset_id] = mid
                     reused += 1

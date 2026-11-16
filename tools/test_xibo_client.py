@@ -208,7 +208,17 @@ class PreviewMediaApiTests(unittest.TestCase):
         client = xibo_client.XiboClient("http://cms.example")
         with patch.object(client, "request", return_value=None) as mock_request:
             client.delete_media(99)
-        mock_request.assert_called_once_with("DELETE", "/api/library/99")
+        mock_request.assert_called_once_with(
+            "DELETE", "/api/library/99", data={"forceDelete": 0}
+        )
+
+    def test_delete_media_force_sets_force_delete(self) -> None:
+        client = xibo_client.XiboClient("http://cms.example")
+        with patch.object(client, "request", return_value=None) as mock_request:
+            client.delete_media(99, force=True)
+        mock_request.assert_called_once_with(
+            "DELETE", "/api/library/99", data={"forceDelete": 1}
+        )
 
 
 if __name__ == "__main__":

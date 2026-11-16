@@ -328,9 +328,10 @@ class XiboClient:
                 matched.append(item)
         return matched
 
-    def delete_media(self, media_id: int) -> None:
-        LOG.info("Deleting mediaId=%s", media_id)
-        self.request("DELETE", f"/api/library/{int(media_id)}")
+    def delete_media(self, media_id: int, *, force: bool = False) -> None:
+        LOG.info("Deleting mediaId=%s force=%s", media_id, force)
+        data = {"forceDelete": 1} if force else {"forceDelete": 0}
+        self.request("DELETE", f"/api/library/{int(media_id)}", data=data)
 
     def upload_media(self, file_path: Path, name: Optional[str] = None) -> int:
         LOG.info("Uploading media %s", file_path)
