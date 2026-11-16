@@ -6,6 +6,7 @@ cannot mutate facility schedules.
 
 from __future__ import annotations
 
+import io
 import logging
 import mimetypes
 import os
@@ -164,6 +165,27 @@ class XiboClient:
             path = "/" + path
         return f"{self.base_url}{path}"
 
+    @staticmethod
+    def _rewind_upload_handles(kwargs: dict[str, Any]) -> None:
+        """Reset file handles so a redirect retry does not upload 0 bytes."""
+        files = kwargs.get("files")
+        if not files:
+            return
+        handles: list[Any] = []
+        if isinstance(files, dict):
+            handles.extend(files.values())
+        elif isinstance(files, (list, tuple)):
+            handles.extend(files)
+        for item in handles:
+            handle = (
+                item[1] if isinstance(item, (list, tuple)) and len(item) >= 2 else item
+            )
+            if hasattr(handle, "seek"):
+                try:
+                    handle.seek(0)
+                except OSError:
+                    pass
+
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         kwargs.setdefault("timeout", self.timeout)
         allow_redirects = kwargs.pop("allow_redirects", True)
@@ -184,6 +206,8 @@ class XiboClient:
                 location = urljoin(url, location)
             location = _rewrite_loopback_https(location)
             redirects += 1
+            # Multipart uploads leave the file pointer at EOF after the first try.
+            self._rewind_upload_handles(kwargs)
             url = location
             response = self.session.request(
                 method, url, allow_redirects=False, **kwargs
@@ -298,9 +322,10 @@ class XiboClient:
                 matched.append(item)
         return matched
 
-    def delete_media(self, media_id: int) -> None:
-        LOG.info("Deleting mediaId=%s", media_id)
-        self.request("DELETE", f"/api/library/{int(media_id)}")
+    def delete_media(self, media_id: int, *, force: bool = False) -> None:
+        LOG.info("Deleting mediaId=%s force=%s", media_id, force)
+        data = {"forceDelete": 1 if force else 0}
+        self.request("DELETE", f"/api/library/{int(media_id)}", data=data)
 
     def upload_media(self, file_path: Path, name: Optional[str] = None) -> int:
         LOG.info("Uploading media %s", file_path)
@@ -315,10 +340,15 @@ class XiboClient:
         else:
             upload_name = f"{display_name}{file_path.suffix.lower()}"
 
-        with file_path.open("rb") as handle:
-            files = {"files": (upload_name, handle, mime)}
-            data = {"name": display_name}
-            payload = self.request("POST", "/api/library", files=files, data=data)
+        # Buffer into memory so redirect retries cannot upload an EOF'd handle
+        # (which previously created 0-byte Library files that still got mediaIds).
+        raw = file_path.read_bytes()
+        if not raw:
+            raise XiboError(f"Refusing to upload empty media file: {file_path}")
+        handle = io.BytesIO(raw)
+        files = {"files": (upload_name, handle, mime)}
+        data = {"name": display_name}
+        payload = self.request("POST", "/api/library", files=files, data=data)
 
         if isinstance(payload, dict):
             for item in payload.get("files") or []:
@@ -343,7 +373,26 @@ class XiboClient:
         media_id = _extract_id(payload, keys=("mediaId", "id"))
         if media_id is None:
             raise XiboError(f"Could not parse mediaId from upload response: {payload}")
-        LOG.info("Uploaded mediaId=%s name=%s", media_id, display_name)
+
+        stored = self.get_media(media_id)
+        stored_size = stored.get("fileSize")
+        if stored_size is None:
+            stored_size = stored.get("size")
+        try:
+            size_int = int(stored_size) if stored_size not in (None, "") else -1
+        except (TypeError, ValueError):
+            size_int = -1
+        if size_int == 0:
+            raise XiboError(
+                f"Library stored 0-byte file for mediaId={media_id} name={display_name} "
+                f"(source had {len(raw)} bytes); refusing empty media"
+            )
+        LOG.info(
+            "Uploaded mediaId=%s name=%s fileSize=%s",
+            media_id,
+            display_name,
+            size_int if size_int >= 0 else "unknown",
+        )
         return media_id
 
     def get_media(self, media_id: int) -> dict[str, Any]:
