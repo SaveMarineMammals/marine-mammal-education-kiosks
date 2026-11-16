@@ -43,8 +43,11 @@ Prerequisites: Xibo CMS already running ([install-cms-host.md](install-cms-host.
    `XIBO_CLIENT_ID` / `XIBO_CLIENT_SECRET` (and `MEDIA_STORE_URI` if large
    masters live on a NAS/S3 mount). After TLS + **Force HTTPS**, ensure
    `XIBO_CMS_TLS_HOST` matches the CMS hostname (deploy and
-   `enable-cms-tls.sh` set it from `/etc/caddy/Caddyfile`). The deploy script
-   keeps this file `root:mmek-runner` mode `640`.
+   `enable-cms-tls.sh` set it from `/etc/caddy/Caddyfile`). Without that
+   host, Library uploads can 308-redirect and historically wrote **0-byte**
+   files; sync now buffers/rewinds uploads and refuses empty Library items,
+   but the TLS host should still be set. The deploy script keeps this file
+   `root:mmek-runner` mode `640`.
 5. Re-run deploy to enable the timer and smoke OAuth:
 
    ```bash
