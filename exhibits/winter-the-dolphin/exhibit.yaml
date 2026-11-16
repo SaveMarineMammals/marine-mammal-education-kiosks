@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../schemas/exhibit.schema.json
+id: "00000000-0000-4000-8000-000000000005"
+slug: winter-the-dolphin
+title: Winter the Dolphin
+status: draft
+version: 0.1.0
+summary: >
+  A Glance & Match panel celebrating Winter, a rescued Atlantic bottlenose
+  dolphin. Static hero ID, paging insight cards on rescue science and ocean
+  care, and a continuous CTA for marine mammal rehabilitation support.
+species:
+  - Tursiops truncatus
+topics:
+  - dolphins
+  - rescue
+  - rehabilitation
+  - conservation
+  - florida
+tags:
+  - dolphins
+  - glance-and-match
+  - rescue
+  - kids
+displayGroups:
+  - lobby
+layoutTemplate: glance-and-match
