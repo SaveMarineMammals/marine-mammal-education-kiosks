@@ -1,0 +1,123 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: winter-the-dolphin
+store: media-store-primary
+assets:
+  # --- Zone A: Hero identification ---
+  - id: graphic-winter-id
+    role: hero-id
+    filename: graphic-winter-id.png
+    sha256: "75df60f01da3d0b021a3c824240979e06014cfb1979c049577ff310bc7eeceba"
+    uri: exhibits/winter-the-dolphin/media/assets/graphic-winter-id.png
+    mime: image/png
+    bytes: 2547
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:hero-id
+      - zone:a
+    preview: graphic-winter-id-thumb.jpg
+
+  - id: bg-hero-pool
+    role: hero-bg
+    filename: bg-hero-pool.jpg
+    sha256: "0e58c1ee45edaa927448bbfdb605892ac77c0c7cc967c77a0876486f54846eae"
+    uri: exhibits/winter-the-dolphin/media/assets/bg-hero-pool.jpg
+    mime: image/jpeg
+    bytes: 59270
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:hero-bg
+      - zone:a
+    preview: bg-hero-pool-thumb.jpg
+
+  # --- Zone B: Right pane + cards ---
+  - id: bg-insights-panel
+    role: insights-bg
+    filename: bg-insights-panel.jpg
+    sha256: "26955e97ff3cefd1ce092f2b4280259f88c14b634e05a21ed8112000acc86b96"
+    uri: exhibits/winter-the-dolphin/media/assets/bg-insights-panel.jpg
+    mime: image/jpeg
+    bytes: 24299
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insights-bg
+      - zone:b
+    preview: bg-insights-panel-thumb.jpg
+
+  - id: bg-insights-copy-scrim
+    role: insights-copy-scrim
+    filename: bg-insights-copy-scrim.png
+    sha256: "dc3a91b075a0088bb30030481e363433bcdbec56a634cf9f55046c7df8b6f3c1"
+    uri: exhibits/winter-the-dolphin/media/assets/bg-insights-copy-scrim.png
+    mime: image/png
+    bytes: 1805
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insights-copy-scrim
+      - zone:b
+    preview: bg-insights-copy-scrim-thumb.jpg
+
+  - id: graphic-diet-fish
+    role: insight-card
+    filename: graphic-diet-fish.png
+    sha256: "c6d5724e7c580e7ebadfd5a7df48b2f99f07c73c9fc2e7377f1ceb7e7bab7074"
+    uri: exhibits/winter-the-dolphin/media/assets/graphic-diet-fish.png
+    mime: image/png
+    bytes: 3681
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insight-card
+      - card:food
+    preview: graphic-diet-fish-thumb.jpg
+
+  - id: graphic-threat-line
+    role: insight-card
+    filename: graphic-threat-line.png
+    sha256: "96d3818c9f005077b92f51242f6ed52ed0f800e0d8ee85a748141eda3596a402"
+    uri: exhibits/winter-the-dolphin/media/assets/graphic-threat-line.png
+    mime: image/png
+    bytes: 2835
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insight-card
+      - card:threat
+    preview: graphic-threat-line-thumb.jpg
+
+  - id: graphic-fact-tail
+    role: insight-card
+    filename: graphic-fact-tail.png
+    sha256: "9f04285bafc4d76bbe3d96882a602d875e79020a371f4be0f442ccb9b1cab4aa"
+    uri: exhibits/winter-the-dolphin/media/assets/graphic-fact-tail.png
+    mime: image/png
+    bytes: 2433
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insight-card
+      - card:hidden-fact
+    preview: graphic-fact-tail-thumb.jpg
+
+  - id: graphic-help-rescue
+    role: insight-card
+    filename: graphic-help-rescue.png
+    sha256: "02271e705f0b9528e5ee4ebfbbf8478d91ce190845e5f930eb7b4b7814a4b1af"
+    uri: exhibits/winter-the-dolphin/media/assets/graphic-help-rescue.png
+    mime: image/png
+    bytes: 2289
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:insight-card
+      - card:how-to-help
+    preview: graphic-help-rescue-thumb.jpg
+
+  # --- Zone C: Ticker scrim ---
+  - id: bg-ticker-scrim
+    role: ticker
+    filename: bg-ticker-scrim.png
+    sha256: "e1ab216e05c864b0d514b68aef81238713533c248665fbe0b9b93ca0d97289e1"
+    uri: exhibits/winter-the-dolphin/media/assets/bg-ticker-scrim.png
+    mime: image/png
+    bytes: 1015
+    xiboTags:
+      - exhibit:winter-the-dolphin
+      - role:ticker
+      - zone:c
+    preview: bg-ticker-scrim-thumb.jpg

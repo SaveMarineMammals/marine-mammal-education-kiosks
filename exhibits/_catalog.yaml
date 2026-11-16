@@ -44,4 +44,15 @@ exhibits:
       - migration
       - pacific
       - kids
+  - id: "00000000-0000-4000-8000-000000000005"
+    slug: winter-the-dolphin
+    title: Winter the Dolphin
+    status: draft
+    version: 0.1.0
+    path: exhibits/winter-the-dolphin
+    tags:
+      - dolphins
+      - glance-and-match
+      - rescue
+      - kids
 

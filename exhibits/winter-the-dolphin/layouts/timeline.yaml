@@ -1,0 +1,184 @@
+# Widget timeline script — Winter the Dolphin
+# Glance & Match: full-bleed hero wash | ID still | insight art + copy | ticker.
+# Bind widgets in Xibo to these start/duration marks within each region playlist.
+# Copy is plain text only (no Markdown, no emoji) — Xibo text widgets escape HTML.
+
+layoutId: winter-the-dolphin-glance-and-match
+template: glance-and-match
+# One insight cycle (4 x 6s). CMS hold keeps hero/ticker alive while cards repeat.
+durationSeconds: 24
+layoutHoldSeconds: 3600
+loop: true
+resolution: { width: 1920, height: 1080 }
+
+regions:
+  insights-bg:
+    widgets:
+      - id: panel-insights
+        type: image
+        asset: bg-insights-panel
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-bg:
+    widgets:
+      - id: hero-pool
+        type: image
+        asset: bg-hero-pool
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+
+  hero-still:
+    widgets:
+      - id: hero-winter-id
+        type: image
+        asset: graphic-winter-id
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        notes: Transparent PNG in the lower hero frame for 3-second tank match.
+
+  hero-labels:
+    widgets:
+      - id: hero-labels
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: none
+        copy: |
+          Winter the Dolphin
+          Tursiops truncatus
+
+          About 7 feet long
+          Rescued in 2005
+          Rescue ambassador
+
+  insights-art:
+    widgets:
+      - id: icon-diet
+        type: image
+        asset: graphic-diet-fish
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: none
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-threat
+        type: image
+        asset: graphic-threat-line
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-hidden-fact
+        type: image
+        asset: graphic-fact-tail
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+
+      - id: icon-how-to-help
+        type: image
+        asset: graphic-help-rescue
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: none
+        transitionDurationMs: 500
+
+  insights-copy:
+    widgets:
+      - id: card-diet
+        type: text
+        card: 1
+        startSeconds: 0
+        durationSeconds: 6
+        transitionIn: none
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Diet
+
+          - Eat fish, squid, and shrimp
+          - Hunt with clicks to find prey
+          - Adults may eat many pounds each day
+
+      - id: card-threat
+        type: text
+        card: 2
+        startSeconds: 6
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Threat
+
+          - Fishing line can wrap tails tightly
+          - Plastic and trash pollute their homes
+          - Fast boats can strike dolphins
+
+      - id: card-hidden-fact
+        type: text
+        card: 3
+        startSeconds: 12
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: fade
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          Hidden Fact
+
+          - Winter lost her tail in a crab trap line
+          - She swam with a custom prosthetic tail
+          - Her story inspired books and a film
+
+      - id: card-how-to-help
+        type: text
+        card: 4
+        startSeconds: 18
+        durationSeconds: 6
+        transitionIn: fade
+        transitionOut: none
+        transitionDurationMs: 500
+        effect: none
+        copy: |
+          How to Help
+
+          - Never throw fishing line in the water
+          - Report hurt or stranded sea animals
+          - Share what you learned today
+
+  ticker:
+    widgets:
+      - id: ticker-cta
+        type: text
+        startSeconds: 0
+        durationSeconds: 24
+        transitionIn: none
+        transitionOut: none
+        effect: tickerScroll
+        copy: |
+          Support marine mammal rescue and rehabilitation near you
+
+cueSheet:
+  - { t: 0, action: "hero full-bleed; Diet art + copy; ticker on" }
+  - { t: 6, action: "insights: Threat art + copy" }
+  - { t: 12, action: "insights: Hidden Fact art + copy" }
+  - { t: 18, action: "insights: How to Help art + copy" }
+  - { t: 24, action: "insight cycle repeats (hero/ticker held; no layout reload)" }
