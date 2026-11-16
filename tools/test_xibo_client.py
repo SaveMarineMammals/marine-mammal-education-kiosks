@@ -61,6 +61,45 @@ class RedirectRequestTests(unittest.TestCase):
         second_url = mock_request.call_args_list[1][0][1]
         self.assertIn("server.kiosks.local", second_url)
 
+    def test_upload_redirect_rewinds_file_handle(self) -> None:
+        import io
+
+        client = xibo_client.XiboClient("http://127.0.0.1:8080")
+        handle = io.BytesIO(b"real-image-bytes")
+        redirect = MagicMock()
+        redirect.status_code = 308
+        redirect.headers = {"Location": "https://127.0.0.1/api/library"}
+        redirect.content = b""
+
+        ok = MagicMock()
+        ok.status_code = 200
+        ok.content = b'{"files":[{"mediaId":9,"name":"x","size":16}]}'
+        ok.headers = {"Content-Type": "application/json"}
+        ok.text = ok.content.decode()
+        ok.json.return_value = {"files": [{"mediaId": 9, "name": "x", "size": 16}]}
+
+        def side_effect(method, url, allow_redirects=False, **kwargs):
+            files = kwargs.get("files") or {}
+            upload = files.get("files")
+            if upload is not None:
+                body = upload[1]
+                body.read()  # consume like a real HTTP stack
+            if side_effect.calls == 0:
+                side_effect.calls += 1
+                return redirect
+            return ok
+
+        side_effect.calls = 0
+        with patch.object(client.session, "request", side_effect=side_effect):
+            payload = client.request(
+                "POST",
+                "/api/library",
+                files={"files": ("x.png", handle, "image/png")},
+                data={"name": "x"},
+            )
+        self.assertEqual(payload["files"][0]["mediaId"], 9)
+        self.assertEqual(handle.tell(), len(b"real-image-bytes"))
+
 
 class EditMediaTests(unittest.TestCase):
     def test_edit_sends_existing_duration_and_retired(self) -> None:
@@ -169,7 +208,17 @@ class PreviewMediaApiTests(unittest.TestCase):
         client = xibo_client.XiboClient("http://cms.example")
         with patch.object(client, "request", return_value=None) as mock_request:
             client.delete_media(99)
-        mock_request.assert_called_once_with("DELETE", "/api/library/99")
+        mock_request.assert_called_once_with(
+            "DELETE", "/api/library/99", data={"forceDelete": 0}
+        )
+
+    def test_delete_media_force_sets_force_delete(self) -> None:
+        client = xibo_client.XiboClient("http://cms.example")
+        with patch.object(client, "request", return_value=None) as mock_request:
+            client.delete_media(99, force=True)
+        mock_request.assert_called_once_with(
+            "DELETE", "/api/library/99", data={"forceDelete": 1}
+        )
 
 
 if __name__ == "__main__":
