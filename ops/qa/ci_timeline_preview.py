@@ -177,6 +177,29 @@ def preview_one(slug: str, out_root: Path) -> dict[str, Any]:
         return result
 
     index_html = Path(meta["index_html"]).resolve()
+    html_text = index_html.read_text(encoding="utf-8")
+    if "touch-toggle" in regions and 'id="layer-touch-toggle"' not in html_text:
+        result["errors"].append(
+            "timeline defines touch-toggle region but render omitted layer-touch-toggle"
+        )
+        return result
+    if "touch-info" in regions and 'id="layer-touch-info"' not in html_text:
+        result["errors"].append(
+            "timeline defines touch-info region but render omitted layer-touch-info"
+        )
+        return result
+    if "touch-toggle" in regions and "interactive-button-widget" not in html_text:
+        # Preview should paint a native-button stand-in when the timeline uses one.
+        toggle_widgets = (regions.get("touch-toggle") or {}).get("widgets") or []
+        if any(
+            isinstance(w, dict)
+            and str(w.get("type") or "").strip() == "interactive-button"
+            for w in toggle_widgets
+        ):
+            result["errors"].append(
+                "touch-toggle interactive-button missing from timeline preview HTML"
+            )
+            return result
     still_path = (exhibit_out / "still.png").resolve()
     width = 1920
     height = 1080

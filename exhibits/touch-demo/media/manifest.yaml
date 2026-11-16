@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../../../schemas/media-manifest.schema.json
+exhibit: touch-demo
+store: media-store-primary
+# No binary media — Interactive Button is a native Xibo widget.
+assets: []

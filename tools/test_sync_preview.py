@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import sync_cms
 import sync_media
+import xibo_client
 import xibo_layout
+from pathutil import is_git_lfs_pointer
 
 
 class PreviewMediaNamingTests(unittest.TestCase):
@@ -126,6 +130,48 @@ class SyncOnePreviewTests(unittest.TestCase):
         client.list_media_by_tag.assert_not_called()
         client.delete_media.assert_not_called()
         self.assertEqual(result["purged_media_ids"], [])
+
+
+class LfsPointerGuardTests(unittest.TestCase):
+    def test_detects_pointer_stub(self) -> None:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(b"version https://git-lfs.github.com/spec/v1\noid sha256:abc\n")
+            path = Path(tmp.name)
+        try:
+            self.assertTrue(is_git_lfs_pointer(path))
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_resolve_asset_bytes_rejects_pointer(self) -> None:
+        assets_dir = sync_media.EXHIBITS / "touch-demo" / "media" / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        bad = assets_dir / "_test-lfs-pointer.zip"
+        bad.write_bytes(
+            b"version https://git-lfs.github.com/spec/v1\noid sha256:dead\nsize 1\n"
+        )
+        try:
+            asset = {
+                "id": "probe",
+                "uri": "exhibits/touch-demo/media/assets/_test-lfs-pointer.zip",
+                "filename": "_test-lfs-pointer.zip",
+            }
+            with self.assertRaises(FileNotFoundError) as ctx:
+                sync_media.resolve_asset_bytes(asset, slug="touch-demo")
+            self.assertIn("LFS pointer", str(ctx.exception))
+        finally:
+            bad.unlink(missing_ok=True)
+
+    def test_upload_media_rejects_pointer(self) -> None:
+        client = xibo_client.XiboClient(base_url="http://example.invalid")
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(b"version https://git-lfs.github.com/spec/v1\n")
+            path = Path(tmp.name)
+        try:
+            with self.assertRaises(xibo_client.XiboError) as ctx:
+                client.upload_media(path, name="probe")
+            self.assertIn("LFS pointer", str(ctx.exception))
+        finally:
+            path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

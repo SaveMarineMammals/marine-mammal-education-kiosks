@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+TOOLS = Path(__file__).resolve().parent
+if str(TOOLS) not in sys.path:
+    sys.path.insert(0, str(TOOLS))
+from pathutil import is_git_lfs_pointer  # noqa: E402
+
 EXHIBITS = ROOT / "exhibits"
 FRAMEWORK = ROOT / "framework"
 SCHEMAS = ROOT / "schemas"
@@ -172,17 +177,6 @@ def validate_catalog(catalog: dict[str, Any], exhibit_dirs: list[Path]) -> list[
     return errors
 
 
-def is_git_lfs_pointer(path: Path) -> bool:
-    """True when the working tree file is an unresolved Git LFS pointer stub."""
-    try:
-        if path.stat().st_size > 1024:
-            return False
-        head = path.read_bytes()[:120]
-    except OSError:
-        return False
-    return head.startswith(b"version https://git-lfs.github.com/spec/")
-
-
 def file_sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -324,9 +318,13 @@ def validate_timeline(
     errors: list[str] = []
     timeline_path = exhibit_dir / "layouts" / "timeline.yaml"
     if not timeline_path.is_file():
-        # Timelines are expected for Glance & Match / layered stills packages.
+        # Timelines are expected for Glance & Match / layered stills / html-interactive.
         layout_template = str(exhibit.get("layoutTemplate") or "")
-        if layout_template in {"glance-and-match", "layered-stills-loop"}:
+        if layout_template in {
+            "glance-and-match",
+            "layered-stills-loop",
+            "html-interactive",
+        }:
             errors.append("missing layouts/timeline.yaml")
         return errors
 
@@ -340,6 +338,13 @@ def validate_timeline(
     if not isinstance(regions, dict) or not regions:
         errors.append("timeline.regions must be a non-empty mapping")
         return errors
+
+    if template == "html-interactive" or exhibit.get("layoutTemplate") == "html-interactive":
+        if set(regions.keys()) != {"html"}:
+            errors.append(
+                "html-interactive must use exactly one region named html "
+                f"(got: {', '.join(sorted(regions)) or '(none)'})"
+            )
 
     if template == "glance-and-match" or exhibit.get("layoutTemplate") == "glance-and-match":
         missing = [name for name in GLANCE_AND_MATCH_REGIONS if name not in regions]
