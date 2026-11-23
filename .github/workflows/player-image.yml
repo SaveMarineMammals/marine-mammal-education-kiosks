@@ -137,7 +137,7 @@ jobs:
 
       - name: Build image (pi-gen)
         id: build
-        uses: usimd/pi-gen-action@v1
+        uses: usimd/pi-gen-action@v2
         with:
           image-name: ${{ steps.ver.outputs.image_name }}
           pi-gen-version: arm64
